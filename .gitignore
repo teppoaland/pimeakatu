@@ -1,0 +1,34 @@
+# Riippuvuudet
+node_modules/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Käyttöjärjestelmä
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build-tuotokset
+dist/
+build/
+*.log
+
+# Varmuuskopiot
+*.bak
+*.backup
+*.old
+
+# Väliaikaiset tiedostot
+tmp/
+temp/
+*.tmp
+
+# Ympäristömuuttujat
+.env
+.env.local
+.env.*.local

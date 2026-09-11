@@ -1,0 +1,302 @@
+/* ═══════════════════════════════════════════════════════════
+   style.css – Pimeä Katu -peliportaali
+   CRT/Retro-teema, pikselityyli, tumma tunnelma
+   ═══════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+/* ── Perustyylit ──────────────────────────────────────── */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0a0a0a;
+    font-family: 'Press Start 2P', 'Courier New', monospace;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    overscroll-behavior: none;
+}
+
+/* ── CRT Scanline -efekti ───────────────────────────── */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.03) 0px,
+        rgba(0, 0, 0, 0.03) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+}
+
+/* ── Päänäkymä ───────────────────────────────────────── */
+#game-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#game-canvas {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    border: 3px solid #1a1a3e;
+    box-shadow:
+        0 0 30px rgba(100, 50, 200, 0.3),
+        inset 0 0 60px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    outline: none;
+}
+
+/* ── Palkki yläreunassa ──────────────────────────────── */
+#hud-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    padding: 6px 16px;
+    margin-bottom: 4px;
+    background: rgba(10, 10, 30, 0.9);
+    border: 1px solid #1a1a3e;
+    border-radius: 4px;
+    font-size: 0.55rem;
+    color: #7a7aaa;
+    letter-spacing: 1px;
+}
+
+#hud-bar .title {
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+
+#hud-bar .hint {
+    color: #555;
+    animation: blink-hint 2s ease-in-out infinite;
+}
+
+@keyframes blink-hint {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
+#hud-bar .inventory {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#hud-bar .inv-item {
+    opacity: 0.3;
+    transition: opacity 0.3s;
+}
+
+#hud-bar .inv-item.has {
+    opacity: 1;
+    text-shadow: 0 0 6px rgba(255, 215, 0, 0.7);
+}
+
+/* ── Ohjaimet (mobiili) ──────────────────────────────── */
+#touch-controls {
+    display: none;
+    margin-top: 8px;
+    gap: 20px;
+    align-items: center;
+}
+
+.touch-dpad {
+    display: grid;
+    grid-template-areas:
+        '. up .'
+        'left . right'
+        '. down .';
+    gap: 4px;
+}
+
+.touch-btn {
+    width: 55px;
+    height: 55px;
+    font-size: 1.4rem;
+    background: rgba(22, 33, 62, 0.85);
+    border: 2px solid #0f3460;
+    color: #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+}
+
+.touch-btn:active {
+    background: #0f3460;
+    transform: scale(0.9);
+    border-color: #ffd700;
+}
+
+.touch-btn.up    { grid-area: up; }
+.touch-btn.down  { grid-area: down; }
+.touch-btn.left  { grid-area: left; }
+.touch-btn.right { grid-area: right; }
+
+#action-btn {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    font-family: 'Press Start 2P', monospace;
+    font-weight: bold;
+    letter-spacing: 1px;
+    background: rgba(180, 30, 30, 0.7);
+    border: 2px solid #ff4444;
+    color: #fff;
+}
+
+#action-btn:active {
+    background: #cc0000;
+    transform: scale(0.9);
+    box-shadow: 0 0 20px rgba(255, 50, 50, 0.6);
+}
+
+/* ── Peli-iframe (alapelit) ──────────────────────────── */
+#game-iframe-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 1000;
+    display: none;
+}
+
+#game-iframe-overlay.active {
+    display: block;
+}
+
+#game-iframe-overlay iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+/* ── Iframe-sulkunappi ───────────────────────────────── */
+#iframe-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1100;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(180, 30, 30, 0.85);
+    border: 2px solid #ff4444;
+    color: #fff;
+    font-size: 1.4rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+#iframe-close-btn:hover {
+    background: #cc0000;
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(255, 50, 50, 0.5);
+}
+/* ── Reset-nappi ──────────────────────────────────────── */
+#reset-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 500;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(60, 60, 60, 0.7);
+    border: 1px solid #555;
+    color: #999;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+}
+#reset-btn:hover {
+    background: rgba(180, 40, 40, 0.85);
+    border-color: #ff4444;
+    color: #fff;
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgba(255, 50, 50, 0.4);
+}
+
+/* ── Ilmoitus palkki ─────────────────────────────────── */
+#notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(22, 33, 62, 0.95);
+    border: 2px solid #ffd700;
+    border-radius: 10px;
+    padding: 16px 32px;
+    font-size: 0.7rem;
+    color: #ffd700;
+    text-align: center;
+    z-index: 500;
+    animation: popIn 0.3s ease-out, fadeOut 0.5s 2.5s forwards;
+    pointer-events: none;
+    letter-spacing: 1px;
+}
+
+@keyframes popIn {
+    from { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+    to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; }
+}
+
+/* ── Responsiivisuus ─────────────────────────────────── */
+@media (max-width: 768px) {
+    #touch-controls {
+        display: flex;
+    }
+    #hud-bar {
+        font-size: 0.4rem;
+        padding: 4px 10px;
+    }
+    #game-canvas {
+        border-width: 2px;
+    }
+}
+
+@media (min-width: 769px) {
+    #touch-controls {
+        display: none !important;
+    }
+}

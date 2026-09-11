@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🏮 Pimeä Katu – Peliportaali</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ═══ PÄÄNÄKYMÄ ═══════════════════════════════════ -->
+    <div id="game-wrapper">
+        <!-- Reset-nappi -->
+        <button id="reset-btn" title="Aloita alusta">✕</button>
+
+        <!-- HUD-palkki -->
+        <div id="hud-bar">
+            <span class="title">🏮 PIMEÄ KATU</span>
+            <span class="inventory" id="hud-inventory">
+                <span class="inv-item inv-coin">💰</span>
+            </span>
+            <span class="hint">Nuolilla liiku · Välilyönti = potkaise lamppua / avaa ovi</span>
+        </div>
+
+        <!-- Pää-canvas (street.js) -->
+        <canvas id="game-canvas" tabindex="0"></canvas>
+
+        <!-- Mobiiliohjaimet -->
+        <div id="touch-controls">
+            <div class="touch-dpad">
+                <button class="touch-btn up"    id="btn-up">▲</button>
+                <button class="touch-btn left"  id="btn-left">◄</button>
+                <button class="touch-btn right" id="btn-right">►</button>
+                <button class="touch-btn down"  id="btn-down">▼</button>
+            </div>
+            <button class="touch-btn" id="action-btn">POTKU</button>
+        </div>
+
+        <!-- Ilmoitus -->
+        <div id="notification"></div>
+    </div>
+
+    <!-- ═══ PELI-IFRAME (alapelit) ═══════════════════════ -->
+    <div id="game-iframe-overlay">
+        <button id="iframe-close-btn" title="Takaisin kadulle">✕</button>
+        <iframe src="" allow="autoplay"></iframe>
+    </div>
+
+    <!-- ═══ SKRIPTIT ═════════════════════════════════════ -->
+    <script src="gameState.js"></script>
+    <script src="street.js"></script>
+
+    <!-- Reset-nappi + Iframe-sulkunappi -->
+    <script>
+        // Sulkunappi (iframe)
+        document.getElementById('iframe-close-btn').addEventListener('click', () => {
+            if (typeof Street !== 'undefined' && Street.closeGame) {
+                Street.closeGame();
+            }
+        });
+
+        // Reset-nappi – tyhjennä localStorage ja aloita alusta
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            if (confirm('Haluatko varmasti aloittaa alusta?\nKaikki edistyminen katoaa.')) {
+                localStorage.removeItem('pimeakatu_gamestate');
+                location.reload();
+            }
+        });
+    </script>
+</body>
+</html>
