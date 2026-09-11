@@ -30,7 +30,7 @@ if(r<0.12){gf.push({wx,t:'b',w:30+Math.random()*70,h:25+Math.random()*55});if(Ma
 else if(r<0.22)gf.push({wx,t:'r',w:180+Math.random()*300,h:20});
 else if(r<0.28)gf.push({wx,t:'rv',w:130+Math.random()*250,h:40});
 }
-for(let i=0;i<12;i++){let wx=500+i*350+Math.random()*150;gt.push({wx,t:Math.random()<0.5?'tk':'aa',al:true,hp:1,pts:100});}
+let afps=[1000,2300,3600];for(let i=0;i<12;i++){let wx=500+i*350+Math.random()*150;if(afps.some(af=>Math.abs(wx-af)<100))wx+=150;gt.push({wx,t:Math.random()<0.5?'tk':'aa',al:true,hp:1,pts:100});}
 for(let i=0;i<3;i++)gf.push({wx:1000+i*1300,t:'af',w:160,h:40});
 }
 
@@ -60,7 +60,7 @@ if(ks['ArrowLeft']||ks['KeyA'])mx=-ms;
 if(ks['ArrowRight']||ks['KeyD'])mx=ms;
 pl.x+=mx;pl.y+=my;pl.x=Math.max(30,Math.min(W-30,pl.x));pl.y=Math.max(40,Math.min(H-80,pl.y));
 if(my<-0.5&&pl.alt<3)pl.alt=3;else if(my<-0.2&&pl.alt<2)pl.alt=2;else if(my>0.2&&pl.alt>1)pl.alt=1;else if(my>0.5&&pl.alt>0&&pl.y>GB-40)pl.alt=0;
-if(st!==ST.L&&pl.alt===0&&pl.y>GB-12){pl.y=GB-12;if(st===ST.P)kP('CRASH!');}
+if(st!==ST.L&&pl.alt===0&&pl.y>GB){pl.y=GB;if(st===ST.P)kP('CRASH!');}
 }
 
 /* ═══ KK-TULI ══════════════════════════════════ */
@@ -88,7 +88,7 @@ function uP(dt){for(let i=pt.length-1;i>=0;i--){let p=pt[i];p.x+=p.vx*dt;p.y+=p.
 function sEP(){ep.push({x:W+50,y:60+Math.random()*300,alt:Math.floor(Math.random()*3)+1,vx:-1.5-Math.random()*2,vy:(Math.random()-0.5)*1.5,hp:1,sht:200+Math.random()*400,tp:Math.random()<0.7?'f':'b'});} // DEBUG: sht 200-600 (oli 20-60)
 function uEP(dt){for(let i=ep.length-1;i>=0;i--){let e=ep[i];e.x+=e.vx*dt;e.y+=e.vy*dt;if(e.y<40){e.y=40;e.vy*=-1;}if(e.y>H-60){e.y=H-60;e.vy*=-1;}e.sht-=dt;if(e.sht<=0&&e.x>50&&e.x<W){e.sht=150+Math.random()*400; // DEBUG: 150-550 (oli 15-40)
         let dx=pl.x-e.x,dy=pl.y-e.y,ds=Math.hypot(dx,dy)||1;eb.push({x:e.x-10,y:e.y,vx:(dx/ds)*4,vy:(dy/ds)*4,lf:60});}if(e.x<-80)ep.splice(i,1);}}
-function uGT(dt){for(let t of gt){if(!t.al)continue;let sx=t.wx-pl.wx+200;if(sx<0||sx>W+100)continue;if(t.t==='aa'&&Math.random()<0.003*dt)fb.push({x:sx,y:GB,vy:-(2+Math.random()*3),lf:40});if(t.t==='tk'&&Math.random()<0.002*dt){let dy=pl.y-GB;eb.push({x:sx,y:GB-5,vx:1,vy:dy>0?2:-1,lf:50});}}} // DEBUG: minimoitu AA 0.003 (oli 0.03), TK 0.002 (oli 0.02)
+function uGT(dt){for(let t of gt){if(!t.al)continue;let sx=t.wx-pl.wx+200;if(sx<0||sx>W+100)continue;if(t.t==='tk'&&Math.random()<0.003*dt)fb.push({x:sx,y:GB,vy:-(2+Math.random()*3),lf:40});if(t.t==='aa'&&Math.random()<0.002*dt){let dy=pl.y-GB;eb.push({x:sx,y:GB-5,vx:1,vy:dy>0?2:-1,lf:50});}}}
 function cC(){
 if(!pl.al)return;
 for(let bi=bl.length-1;bi>=0;bi--){let b=bl[bi];for(let ei=ep.length-1;ei>=0;ei--){if(Math.hypot(b.x-ep[ei].x,b.y-ep[ei].y)<18){ep[ei].hp--;bl.splice(bi,1);if(ep[ei].hp<=0){ex.push({x:ep[ei].x,y:ep[ei].y,r:0,lf:18});sc+=ep[ei].tp==='b'?200:100;sPt(ep[ei].x,ep[ei].y,8);ep.splice(ei,1);}else sPt(ep[ei].x,ep[ei].y,3);break;}}}
