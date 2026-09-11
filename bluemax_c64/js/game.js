@@ -46,7 +46,7 @@ if(bjp&&st===ST.P&&pl.bm>0)dB();
 uB(dt);uEB(dt);uBM(dt);uE(dt);uF(dt);uP(dt);
 if(st===ST.P&&Math.random()<0.0012*dt)sEP(); // DEBUG: minimoitu spawnaus (oli 0.012)
 uEP(dt);uGT(dt);
-bal.ph+=dt*0.02;if(bal.al&&st===ST.P){let sx=bal.wx-pl.wx+200;bal.x=sx;bal.y=80+Math.sin(bal.ph)*15;ky.x=sx;ky.y=bal.y+50;}
+bal.ph+=dt*0.016;if(bal.al&&st===ST.P){let sx=bal.wx-pl.wx+200;bal.x=sx;bal.y=80+Math.sin(bal.ph)*40;ky.x=sx;ky.y=bal.y+50;}
 cC();uH();
 if(st===ST.L){pl.ldt+=dt/60;pl.y+=(pl.lty-pl.y)*0.12*dt;pl.x+=(pl.ltx-pl.x)*0.08*dt;if(pl.ldt>1.5){st=ST.R;stt=0;pl.fl=Math.min(pl.fl+20,hc?FMC:FM);pl.bm=BM;pl.dmg=0;pl.alt=2;AudioFX.playRefuel();sn('TANKATTU!');}}
 if(st===ST.R){stt+=dt/60;if(stt>1.5){st=ST.TO;stt=0;pl.sp=0;pl.alt=2;}}
@@ -167,32 +167,30 @@ function dBM2(){for(let b of bmbs){ctx.fillStyle='#222';ctx.fillRect(Math.round(
 function dE(){for(let e of ex){let a=e.lf/25,r=e.r;ctx.fillStyle='rgba(255,100,0,'+a*0.5+')';ctx.beginPath();ctx.arc(Math.round(e.x),Math.round(e.y),Math.max(1,r),0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(255,200,0,'+a*0.7+')';ctx.beginPath();ctx.arc(Math.round(e.x),Math.round(e.y),Math.max(1,r*0.6),0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(255,255,200,'+a+')';ctx.beginPath();ctx.arc(Math.round(e.x),Math.round(e.y),Math.max(1,r*0.3),0,Math.PI*2);ctx.fill();}}
 function dF(){for(let f of fb){let a=Math.min(1,f.lf/10);ctx.fillStyle='rgba(50,50,50,'+a+')';ctx.beginPath();ctx.arc(Math.round(f.x),Math.round(f.y),7,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(180,150,100,'+a+')';for(let j=0;j<4;j++){let ang=(j/4)*Math.PI*2+f.lf*0.1;ctx.fillRect(Math.round(f.x+Math.cos(ang)*8),Math.round(f.y+Math.sin(ang)*5),2,2);}}}
 function dPT(){for(let p of pt){ctx.globalAlpha=p.lf/25;ctx.fillStyle=p.cl;ctx.fillRect(Math.round(p.x),Math.round(p.y),2,2);}ctx.globalAlpha=1;}
-function dBA(){if(!bal.al)return;let bx=Math.round(bal.x),by=Math.round(bal.y);ctx.fillStyle='#e44';ctx.beginPath();ctx.ellipse(bx,by,25,30,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(bx,by-4,25,30,0,0,Math.PI*2);ctx.fill();for(let i=0;i<5;i++){ctx.fillStyle=['#e44','#fc0','#48f','#4c4','#e4f'][i];ctx.fillRect(bx-20,by-20+i*10,40,6);}ctx.fillStyle='#888';ctx.fillRect(bx-8,by+30,6,5);ctx.fillStyle='#a64';ctx.fillRect(bx-12,by+32,14,10);ctx.fillStyle='#630';ctx.fillRect(bx-4,by+30,2,20);}
+function dBA(){if(!bal.al)return;let bx=Math.round(bal.x),by=Math.round(bal.y);ctx.fillStyle='#e44';ctx.beginPath();ctx.ellipse(bx,by,25,30,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(bx,by-4,15,18,0,0,Math.PI*2);ctx.fill();for(let i=0;i<5;i++){ctx.fillStyle=['#e44','#fc0','#48f','#4c4','#e4f'][i];ctx.fillRect(bx-20,by-20+i*10,40,6);}ctx.fillStyle='#888';ctx.fillRect(bx-8,by+30,6,5);ctx.fillStyle='#a64';ctx.fillRect(bx-12,by+32,14,10);ctx.fillStyle='#630';ctx.fillRect(bx-4,by+30,2,20);}
 function dKY(){if(ky.gr||!bal.al)return;let kx=Math.round(ky.x),kyv=Math.round(ky.y);ctx.fillStyle='#fd0';ctx.fillRect(kx-6,kyv,12,3);ctx.fillRect(kx-2,kyv-8,4,10);ctx.fillRect(kx+3,kyv-3,8,3);ctx.fillRect(kx+3,kyv+1,8,3);}
 function dWN(){
 ctx.fillStyle='rgba(0,0,20,0.85)';ctx.fillRect(0,0,W,H);
 ctx.fillStyle='#fd0';ctx.font='bold 28px "Press Start 2P",monospace';ctx.textAlign='center';
-ctx.fillText('MISSION COMPLETE!',W/2,80);
-ctx.fillStyle='#fff';ctx.font='14px "Press Start 2P",monospace';
-ctx.fillText('KEY SECURED!',W/2,120);
-ctx.fillStyle='#aaa';ctx.font='10px "Press Start 2P",monospace';
-ctx.fillText('YOU MAY ENTER THE 4 HOUSES',W/2,155);
-// 4 taloa
-let hw=60,hh=70,gy=280,gap=20,tw=hw*4+gap*3,sx=W/2-tw/2;
-for(let i=0;i<4;i++){
-let hx=sx+i*(hw+gap);
+ctx.fillText('MISSION COMPLETE!',W/2,70);
+ctx.fillStyle='#fff';ctx.font='12px "Press Start 2P",monospace';
+ctx.fillText('KEY SECURED!',W/2,105);
+// yksi talo isona
+let hx=W/2-50,hh=100,hw=100,gy=290;
 ctx.fillStyle='#4a3020';ctx.fillRect(hx,gy-hh,hw,hh);
 ctx.fillStyle='#6b4c3b';ctx.fillRect(hx+5,gy-hh+5,hw-10,hh-5);
-ctx.fillStyle='#2a1a10';ctx.beginPath();ctx.moveTo(hx-8,gy-hh);ctx.lineTo(hx+hw/2,gy-hh-35);ctx.lineTo(hx+hw+8,gy-hh);ctx.fill();
-ctx.fillStyle='#fd8';ctx.fillRect(hx+10,gy-35,12,18);ctx.fillRect(hx+hw-22,gy-35,12,18);
-ctx.fillStyle='#6b3a2a';ctx.fillRect(hx+hw/2-8,gy-18,16,18);
-}
-ctx.fillStyle='#fd0';ctx.font='18px "Press Start 2P",monospace';
-// avain symboli keskellä
-ctx.fillText('🔑',W/2,gy+40);
+ctx.fillStyle='#2a1a10';ctx.beginPath();ctx.moveTo(hx-10,gy-hh);ctx.lineTo(hx+hw/2,gy-hh-50);ctx.lineTo(hx+hw+10,gy-hh);ctx.fill();
+ctx.fillStyle='#fd8';ctx.fillRect(hx+15,gy-50,16,24);ctx.fillRect(hx+hw-31,gy-50,16,24);
+ctx.fillStyle='#6b3a2a';ctx.fillRect(hx+hw/2-10,gy-25,20,25);
+ctx.fillStyle='#ff8';ctx.fillRect(hx+hw/2-12,gy-10,14,3); // oven kahva kultainen
+// avain menossa oveen
+ctx.fillStyle='#fd0';ctx.font='40px sans-serif';
+ctx.fillText('🔑',W/2-10,gy-25);
+ctx.fillStyle='#fff';ctx.font='10px "Press Start 2P",monospace';
+ctx.fillText('THE KEY OPENS THE NEXT HOUSE',W/2,360);
 ctx.fillStyle='#fff';ctx.font='11px "Press Start 2P",monospace';
-ctx.fillText('SCORE: '+sc,W/2,430);
-if(Math.sin(Date.now()/500)>0){ctx.fillStyle='#fd0';ctx.font='12px "Press Start 2P",monospace';ctx.fillText('PAINA ENTER',W/2,465);}
+ctx.fillText('SCORE: '+sc,W/2,400);
+if(Math.sin(Date.now()/500)>0){ctx.fillStyle='#fd0';ctx.font='12px "Press Start 2P",monospace';ctx.fillText('PAINA ENTER',W/2,440);}
 ctx.textAlign='start';
 }
 
