@@ -1013,12 +1013,8 @@ const Street = (() => {
         const wrapper = document.getElementById('game-wrapper');
         if (!wrapper) return;
         const maxW = wrapper.clientWidth - 16;
-        // HUD (~50px) + pelialueen gap (8px) + ohjainrivi mobiilissa (~70px)
-        const tl = document.getElementById('touch-left');
-        const touchVisible = tl && tl.offsetParent !== null;
-        const hudH = 50;
-        const touchH = touchVisible ? 78 : 0;
-        const maxH = wrapper.clientHeight - hudH - touchH;
+        // Vain HUD (~50px), ohjaimet overlayna → ei vie tilaa
+        const maxH = wrapper.clientHeight - 60;
         const scale = Math.min(maxW / WORLD_W, maxH / WORLD_H);
         canvas.width = WORLD_W;
         canvas.height = WORLD_H;

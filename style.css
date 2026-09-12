@@ -312,10 +312,33 @@ body::after {
 }
 
 /* ── Responsiivisuus ─────────────────────────────────── */
-/* Mobiili pysty: ohjaimet canvaksen alla */
-@media (max-width: 768px) {
-    #touch-row {
+/* Mobiili (pysty + vaaka): ohjaimet overlayna canvaksen päällä */
+@media (max-width: 768px), (max-height: 768px) {
+    #game-area {
+        position: relative;
+        flex: 1;
+        width: 100%;
         display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    #touch-row {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        right: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        pointer-events: none;
+        z-index: 10;
+        gap: 0;
+    }
+    #touch-row > * {
+        pointer-events: auto;
+    }
+    .touch-btn {
+        opacity: 0.65;
     }
     #hud-bar {
         font-size: 0.4rem;
@@ -326,36 +349,8 @@ body::after {
     }
 }
 
-/* Mobiili vaaka: action vasen, d-pad oikea, canvas keskellä */
-@media (orientation: landscape) and (max-height: 768px) {
-    #game-wrapper {
-        justify-content: center;
-    }
-    #game-area {
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        width: 100%;
-    }
-    #game-canvas {
-        flex: 1 1 auto;
-        max-width: calc(100vw - 150px);
-        order: 1;
-    }
-    #touch-row {
-        display: contents;
-    }
-    #touch-left {
-        order: 0;
-    }
-    #touch-right {
-        order: 2;
-    }
-}
-
 /* Työpöytä: piilota kosketusohjaimet */
-@media (min-width: 769px) {
+@media (min-width: 769px) and (min-height: 769px) {
     #touch-row {
         display: none !important;
     }
