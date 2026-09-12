@@ -77,7 +77,7 @@
 
 | Ominaisuus | Tila | Huomiot |
 |-----------|------|---------|
-| `.clinerules/` säännöt | ✅ Valmis | `01-general-architecture.md`, `02-game-core.md` |
+| `.clinerules/` säännöt | ✅ Valmis | `01-general-architecture.md`, `02-game-core.md`, `03-versioning.md` |
 | `memory-bank/` muisti | ✅ Valmis | `activeContext.md`, `systemPatterns.md`, `progress.md` |
 | `.clineignore` | ✅ Valmis | Tokenien säästö |
 | MCP memory-palvelin | ✅ Valmis | `cline_mcp_settings.json` konfiguroitu |

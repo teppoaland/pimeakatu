@@ -21,6 +21,9 @@
 
 | Pvm | Mitä tehty |
 |-----|-----------|
+| 12.9.2026 | Versionumero `v1.0` lisätty portaaliin + `.clinerules/03-versioning.md` |
+| 12.9.2026 | GitHub Pages deploy: `https://teppoaland.github.io/pimeakatu/` |
+| 12.9.2026 | `start_server.bat` luotu sisäverkon web-palvelinta varten |
 | 12.9.2026 | `.clinerules/` hakemisto luotu: `01-general-architecture.md` + `02-game-core.md` |
 | 12.9.2026 | `memory-bank/` hakemisto luotu: `activeContext.md`, `systemPatterns.md`, `progress.md` |
 | 12.9.2026 | `.clineignore` luotu projektin juureen |
