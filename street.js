@@ -125,6 +125,13 @@ const Street = (() => {
        SYÖTTEET
        ═══════════════════════════════════════════════════ */
     function setupInput() {
+        // ⚡ Pakota D-pad näkyviin kaikilla kosketuslaitteilla
+        //    (varmempi kuin pelkkä CSS @media, toimii myös HTTPS/Pagesissa)
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            const tc = document.getElementById('touch-controls');
+            if (tc) tc.classList.add('force-show');
+        }
+
         window.addEventListener('keydown', e => {
             keys[e.key] = true;
             if (e.key === ' ' || e.key === 'Enter') {

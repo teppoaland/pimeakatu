@@ -12,7 +12,7 @@
 | Lamppujen potkiminen | ✅ Valmis | 5 lamppua sytytettävissä |
 | Ovista sisään astuminen | ✅ Valmis | 5 aktiivista ovea |
 | Kolikon kerääminen | ✅ Valmis | Kadun oikeassa reunassa |
-| Mobiiliohjaimet | ✅ Valmis | D-pad + toimintonappi |
+| Mobiiliohjaimet | ✅ Valmis | v1.2: JS force-show + D-pad + ⚡-nappi |
 | CRT-retro-teema | ✅ Valmis | Scanline-efekti, vihreä fontti |
 | Ääniefektit | ❌ Ei vielä | Web Audio API -äänet puuttuvat |
 | Päivä-/yökierto | ❌ Ei vielä | Mahdollinen jatkokehitys |

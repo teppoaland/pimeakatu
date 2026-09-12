@@ -3,8 +3,6 @@
    CRT/Retro-teema, pikselityyli, tumma tunnelma
    ═══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
 /* ── Perustyylit ──────────────────────────────────────── */
 *, *::before, *::after {
     margin: 0;
@@ -164,10 +162,8 @@ body::after {
     width: 65px;
     height: 65px;
     border-radius: 50%;
-    font-size: 1.2rem;
-    font-family: 'Press Start 2P', monospace;
-    font-weight: bold;
-    letter-spacing: 1px;
+    font-size: 2rem;
+    line-height: 1;
     background: rgba(180, 30, 30, 0.7);
     border: 2px solid #ff4444;
     color: #fff;
@@ -177,6 +173,11 @@ body::after {
     background: #cc0000;
     transform: scale(0.9);
     box-shadow: 0 0 20px rgba(255, 50, 50, 0.6);
+}
+
+/* JS-pakotettu näkyvyys touch-laitteille */
+#touch-controls.force-show {
+    display: flex !important;
 }
 
 /* ── Peli-iframe (alapelit) ──────────────────────────── */
