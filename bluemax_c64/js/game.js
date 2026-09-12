@@ -42,7 +42,7 @@ for(let i=0;i<30;i++){let wx=500+i*350+Math.random()*150;if(afps.some(af=>Math.a
 function up(dt){
 if(st===ST.T||st===ST.GO||st===ST.W)return;
 if(st===ST.P){pl.fl-=dt/60;if(pl.fl<=0){pl.fl=0;st=ST.FO;AudioFX.stopEngine();sn('OUT OF FUEL!');}flightTime+=dt/60;}
-if(st===ST.P||st===ST.TO)hi(dt);
+if(st===ST.P)hi(dt);
 if(st===ST.FO){pl.y+=4*dt;pl.x-=0.6*dt;if(pl.y>GB-40)pl.alt=0;else if(pl.y>GB-200)pl.alt=1;if(pl.y>=GB){kP('OUT OF FUEL!');}}
 if(st===ST.P){pl.wx+=SS*dt;if(pl.wx>=WL){pl.wx-=WL;bldgDestroyed=0;allB=0;bal.al=false;cT();}}
 if(st===ST.P&&(ks['Space']||ks['KeyG'])&&gtm<=0)fG();
@@ -52,8 +52,8 @@ if(st===ST.P&&Math.random()<0.0077*dt)sEP(); // normaali spawn
 uEP(dt);uGT(dt);if(!bal.al&&bldgDestroyed>=8&&flightTime>=60){bal.al=true;bal.wx=pl.wx+500+Math.random()*400;bal.ph=0;ky.wx=bal.wx;}
 bal.ph+=dt*0.018;if(bal.al&&st===ST.P){let sx=bal.wx-pl.wx+200;bal.x=sx;bal.y=80+Math.sin(bal.ph)*50;ky.x=sx;ky.y=bal.y+50;}
 cC();uH();
-if(st===ST.L){pl.ldt+=dt/60;pl.y+=(pl.lty-pl.y)*0.12*dt;pl.x+=(pl.ltx-pl.x)*0.08*dt;if(pl.ldt>1.5){st=ST.R;stt=0;pl.fl=Math.min(pl.fl+20,hc?FMC:FM);pl.bm=BM;pl.dmg=0;pl.alt=2;AudioFX.playRefuel();sn('TANKATTU!');}}
-if(st===ST.R){stt+=dt/60;if(stt>1.5){st=ST.TO;stt=0;pl.sp=0;pl.alt=2;}}
+if(st===ST.L){pl.ldt+=dt/60;pl.y+=(pl.lty-pl.y)*0.12*dt;pl.x+=(pl.ltx-pl.x)*0.08*dt;if(pl.ldt>1.5){st=ST.R;stt=0;pl.fl=Math.min(pl.fl+20,hc?FMC:FM);pl.bm=BM;pl.dmg=0;pl.alt=1;AudioFX.playRefuel();sn('TANKATTU!');}}
+if(st===ST.R){stt+=dt/60;if(stt>1.5){st=ST.TO;stt=0;pl.sp=0;pl.alt=1;}}
 if(st===ST.TO){stt+=dt/60;pl.sp=Math.min(pl.sp+0.3*dt,8);if(stt>1.5&&pl.sp>5){st=ST.P;pl.toClimb=180;AudioFX.startEngine();}}
 }
 function hi(dt){
@@ -65,6 +65,8 @@ if(ks['ArrowLeft']||ks['KeyA'])mx=-ms;
 if(ks['ArrowRight']||ks['KeyD'])mx=ms;
 pl.x+=mx;pl.y+=my;pl.x=Math.max(30,Math.min(W-30,pl.x));pl.y=Math.max(40,Math.min(H-80,pl.y));
 if(my<-0.5&&pl.alt<3)pl.alt=3;else if(my<-0.2&&pl.alt<2)pl.alt=2;else if(my>0.2&&pl.alt>1)pl.alt=1;else if(my>0.5&&pl.alt>0&&pl.y>GB-40&&pl.toClimb<=0)pl.alt=0;
+    // Nousupakote: ilman ylösvetoa kone vajoaa
+    if(pl.toClimb>0&&my>=-0.1)pl.y+=2*dt;
 if(st!==ST.L&&pl.alt===0&&pl.y>GB){pl.y=GB;if(st===ST.P)kP('CRASH!');}
 }
 
@@ -181,28 +183,32 @@ function dBA(){if(!bal.al)return;let bx=Math.round(bal.x),by=Math.round(bal.y);c
 function dKY(){if(ky.gr||!bal.al)return;let kx=Math.round(ky.x),kyv=Math.round(ky.y);ctx.fillStyle='#fd0';ctx.fillRect(kx-6,kyv,12,3);ctx.fillRect(kx-2,kyv-8,4,10);ctx.fillRect(kx+3,kyv-3,8,3);ctx.fillRect(kx+3,kyv+1,8,3);}
 function dHU(){
     let p=Math.max(0,pl.fl/(hc?FMC:FM)),fb=pl.fl<=10&&Math.sin(Date.now()/250)>0;
-    // Taustapalkki – sotilasvihreä, kojelautamainen
-    ctx.fillStyle='rgba(10,40,10,0.7)';ctx.fillRect(0,0,W,28);
-    ctx.fillStyle='rgba(0,30,0,0.9)';ctx.fillRect(0,26,W,2);
-    // Polttoainepalkki – suuri, hallitseva
-    let bx=4,by=4,bw=Math.floor((W-170)*p),bh=14;
-    let fc=p>0.5?'#3a3':p>0.2?'#ca3':'#e33';
+    let pw=Math.floor(W/3); // ⅓ leveä paneeli
+    // Musta paneelitausta
+    ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(0,0,pw,52);
+    ctx.fillStyle='rgba(60,60,60,0.5)';ctx.fillRect(0,50,pw,2);
+    // Polttoainepalkki – hallitseva ylhäällä
+    let bx=6,by=6,bw=pw-12,bh=12,fc=p>0.5?'#4a4':p>0.2?'#ca3':'#e33';
     if(fb)fc='#f55';
-    ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillRect(bx,by,W-170,bh);
-    ctx.fillStyle=fc;ctx.fillRect(bx,by,bw,bh);
-    // Polttoainenumero – päällä
-    ctx.font='bold 10px "Press Start 2P",monospace';ctx.textAlign='center';
-    ctx.fillStyle=fb?'#f55':'#fff';ctx.fillText(Math.ceil(pl.fl)+'s',bx+(W-170)/2,by+12);
-    // Oikea puoli: ikonit + luvut
-    ctx.textAlign='right';ctx.font='bold 9px "Press Start 2P",monospace';
-    let rx=W-6;
-    ctx.fillStyle='#ff0';ctx.fillText('⭐'+sc,rx,20);rx-=60;
-    ctx.fillStyle='#fff';ctx.fillText('💣'+pl.bm,rx,20);rx-=50;
-    ctx.fillStyle='#f66';ctx.fillText('❤️'+(DM-pl.dmg),rx,20);
-    // Korkeus – vasen alakulma
-    let altT=['MAA','MATALA','KESKI','KORKEA'],altC=['#666','#8c6','#48f','#88f'];
+    ctx.fillStyle='#222';ctx.fillRect(bx,by,bw,bh);
+    ctx.fillStyle=fc;ctx.fillRect(bx,by,Math.floor(bw*p),bh);
+    // Polttoainenumero oikealle
+    ctx.font='bold 9px "Press Start 2P",monospace';ctx.textAlign='right';
+    ctx.fillStyle=fb?'#f55':'#ccc';ctx.fillText(Math.ceil(pl.fl)+'s',pw-6,by+11);
+    // Alarivi: ikonit vasemmalle
     ctx.textAlign='left';ctx.font='bold 8px "Press Start 2P",monospace';
-    ctx.fillStyle=altC[pl.alt];ctx.fillText('▲'+altT[pl.alt],6,42);
+    let ry=36;
+    ctx.fillStyle='#ff0';ctx.fillText('⭐'+sc,8,ry);
+    ctx.fillStyle='#ccc';ctx.fillText('💣'+pl.bm,98,ry);
+    ctx.fillStyle='#f66';ctx.fillText('❤️'+(DM-pl.dmg),170,ry);
+    // Korkeus alaoikealla
+    let altT=['MAA','MATALA','KESKI','KORKEA'],altC=['#666','#8c6','#48f','#88f'];
+    ctx.textAlign='right';ctx.fillStyle=altC[pl.alt];ctx.fillText('▲'+altT[pl.alt],pw-8,ry);
+    // Nousuvaroitus
+    if(pl.toClimb>0&&Math.sin(Date.now()/300)>0){
+        ctx.textAlign='center';ctx.font='bold 7px "Press Start 2P",monospace';
+        ctx.fillStyle='#fa0';ctx.fillText('PULL UP!',pw/2,24);
+    }
     ctx.textAlign='start';
 }
 function dWN(){
@@ -233,7 +239,7 @@ ctx.textAlign='start';
 function kD(e){ks[e.code]=true;if(e.code==='Space'){let nw=Date.now();if(nw-lst<300&&st===ST.P&&pl.bm>0)dB();lst=nw;e.preventDefault();}if(e.code==='KeyB'&&st===ST.P&&pl.bm>0){dB();e.preventDefault();}if(e.code==='Enter'){if(st===ST.T)sG();else if(st===ST.GO||st===ST.W)rT();e.preventDefault();}if(e.code==='KeyR'&&(st===ST.GO||st===ST.W))rT();if(e.code==='KeyL'&&st===ST.P)tL();}
 function kU(e){ks[e.code]=false;}
 function tcVis(v){let tc=document.getElementById('touch-controls');if(tc){if(v)tc.classList.remove('hidden-tc');else tc.classList.add('hidden-tc');}}
-function sG(){AudioFX.init();iG();st=ST.TO;stt=0;pl.sp=0;pl.alt=2;tcVis(true);AudioFX.playRuleBritannia();setTimeout(()=>{if(st===ST.TO)AudioFX.startEngine();},2000);sn('TAKE OFF!');}
+function sG(){AudioFX.init();iG();st=ST.TO;stt=0;pl.sp=0;pl.alt=1;tcVis(true);AudioFX.playRuleBritannia();setTimeout(()=>{if(st===ST.TO)AudioFX.startEngine();},2000);sn('TAKE OFF!');}
 function rT(){st=ST.T;AudioFX.stopEngine();iG();tcVis(false);}
 function tL(){if(pl.alt<=1&&st===ST.P){let nr=false,afx=0;for(let f of gf){if(f.t!=='af')continue;let sx=f.wx-pl.wx+200;if(Math.abs(sx-pl.x)<f.w/2+40){nr=true;afx=sx+f.w/2;break;}}if(nr){st=ST.L;pl.ldt=0;pl.alt=0;pl.ltx=afx;pl.lty=GB-2;AudioFX.playLanding();sn('LANDING...');}else sn('EI KENTTAA ALLA!');}}
 
