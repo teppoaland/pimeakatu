@@ -349,6 +349,18 @@ body::after {
     }
 }
 
+/* Vaakamoodin hienosäätö: ohjaimet keskelle, canvas vasemmalle */
+@media (orientation: landscape) and (max-height: 768px) {
+    #touch-row {
+        bottom: 50%;
+        transform: translateY(50%);
+    }
+    #game-area {
+        padding-right: 185px;  /* tilaa D-padille → oikea reuna näkyviin */
+        padding-left: 70px;    /* tilaa ⚡-napille vasemmalla */
+    }
+}
+
 /* Työpöytä: piilota kosketusohjaimet */
 @media (min-width: 769px) and (min-height: 769px) {
     #touch-row {
