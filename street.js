@@ -618,12 +618,12 @@ const Street = (() => {
     }
 
     function showNotification(text) {
-        notifTimer = 150;
+        notifTimer = 240;  // ~4s @ 60fps
         const el = document.getElementById('notification');
         el.textContent = text;
         el.style.animation = 'none';
         void el.offsetWidth;
-        el.style.animation = 'popIn 0.3s ease-out, fadeOut 0.5s 2.5s forwards';
+        el.style.animation = 'popIn 0.3s ease-out, fadeOut 0.5s 3.5s forwards';
     }
 
     function spawnParticles(x, y, color, count) {
