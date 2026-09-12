@@ -6,6 +6,7 @@ const Commando = (() => {
     const CW = 400, CH = 600;
     const PW = 16, PH = 20, PS = 180, SS = 60, BS = 350;
     const ESB = 1.2, GM = 6, GS = 250, GF = 1.2, GR = 50, INV = 2, WIN = 2000;
+    const MINY = CH * 0.4, MAXY = CH - PH / 2 - 10;
 
     let canvas, ctx, livesEl, grenadeEl, scoreEl, progressEl;
     let overlay, overlayTitle, overlayMsg, overlayBtn;
@@ -156,7 +157,7 @@ const Commando = (() => {
         // Try Y movement
         const ny = pl.y + inp.y * PS * dt;
         const saveY = pl.y;
-        pl.y = Math.max(PH / 2 + 40, Math.min(CH - PH / 2 - 10, ny));
+        pl.y = Math.max(MINY, Math.min(MAXY, ny));
         if (collidesWithObstacles()) pl.y = saveY;
     }
     
@@ -392,13 +393,13 @@ const Commando = (() => {
 
     /* ── SCROLL ───────────────────────────────────────── */
     function updateScroll(dt) {
-        // Camera follows player: scroll when player passes midline
-        const upperZone = CH * 0.5;
-        const lowerZone = CH * 0.65;
-        if (pl.y < upperZone) {
-            scrollY += (upperZone - pl.y) * 4 * dt;
-        } else if (pl.y > lowerZone && scrollY > 0) {
-            scrollY = Math.max(0, scrollY - (pl.y - lowerZone) * 4 * dt);
+        // Push edge to scroll: player pushes against top/bottom boundary
+        const inp = getInput();
+        if (inp.y < 0 && pl.y <= MINY + 2) {
+            scrollY += PS * dt;
+        }
+        if (inp.y > 0 && pl.y >= MAXY - 2 && scrollY > 0) {
+            scrollY = Math.max(0, scrollY - PS * dt);
         }
         genObs(scrollY + CH);
         for (let i = obstacles.length - 1; i >= 0; i--) { if (obstacles[i].wy < scrollY - 100) obstacles.splice(i, 1); }
