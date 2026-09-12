@@ -8,9 +8,9 @@
 
 **Päivämäärä:** 12.9.2026
 
-**Vaihe:** Mobiilin D-pad-korjauksen v2 – JS-pohjainen touch-detection + Google Fonts -blokkauksen korjaus
+**Vaihe:** v1.3 – Overlay-ohjaimet mobiilissa (canvas koko ruutu, ohjaimet läpikuultavana pohjassa)
 
-**Nykyinen alataski:** ✅ Valmis – v1.2: laskuritekstit pois + vaakamoodin tuki
+**Nykyinen alataski:** ✅ Valmis – v1.3: overlay-ohjaimet
 
 ## 🔜 Seuraavaksi
 
@@ -25,6 +25,8 @@
 
 | Pvm | Mitä tehty |
 |-----|-----------|
+| 12.9.2026 | v1.3: Overlay-ohjaimet – canvas koko ruutu, ohjaimet `position: absolute` + `opacity: 0.65` |
+| 12.9.2026 | v1.3: `resize()` yksinkertaistettu – ohjaimet ei vie tilaa |
 | 12.9.2026 | v1.2: Potku-laskuritekstit ("X/5") pois lamppuilmoituksista |
 | 12.9.2026 | v1.2: Vaakamoodin tuki mobiilissa – ⚡ vasen, canvas keskellä, D-pad oikea |
 | 12.9.2026 | v1.2: HTML-rakenne: `#game-area` + `#touch-row` + `display: contents` |
@@ -44,12 +46,11 @@
 
 ## ⚠️ Avoimet asiat / huomiot
 
-- **v1.2 D-pad-korjaus:** Kolme kerrosta:
-  1. CSS `@media (max-width: 768px)` – perustason responsiivisuus
-  2. JS `'ontouchstart' in window` – `.force-show`-luokka `#touch-row`:lle
-  3. Google Fonts `<link>`-tagina – ei blokkaa CSS:n latautumista
-- **v1.2 Vaakamoodi:** `display: contents` avaa `#touch-row`:n lapset `#game-area`:n flex-riville → ⚡ vasemmalla, canvas keskellä, D-pad oikealla
-- **v1.2 Ilmoitukset:** Potkun laskuritekstit ("1/5" jne.) poistettu – vain "💡 Lamppu syttyi!" / "🌑 Lamppu sammui."
+- **v1.3 Overlay-ohjaimet:** Canvas täyttää koko ruudun, D-pad ja ⚡ läpikuultavina (`opacity: 0.65`) pohjassa. `#touch-row` = `position: absolute; pointer-events: none`, lapset `pointer-events: auto`
+- **CSS:** Yksi mobiili-`@media` `(max-width: 768px), (max-height: 768px)` – sama overlay sekä pysty- että vaakamoodissa
+- **Työpöytä:** `@media (min-width: 769px) and (min-height: 769px)` piilottaa ohjaimet
+- **Ilmoitukset:** Laskuritekstit poistettu, ovi-ohjetekstit säilytetty
+- **Action-nappi:** ⚡-salama, `title="Potku"`
 - **Action-nappi:** ⚡-salama, `title="Potku"` hover-tekstinä
 - **Blue Max** on pelikunnossa debug-moodissa (viholliset minimoitu) – D-pad-korjaus tehty myös tänne
 - **Commando** ei ole vielä aloitettu (tyhjä kansio)
