@@ -59,6 +59,16 @@ const Street = (() => {
 
     /* ── Avain (Dig Gamesta) ───────────────────────── */
     let digKeyCollected = false;
+    let boulderKeyCollected = false;
+    let bmKeyCollected = false;
+    let darkRoom = false;
+    let firstHouseWindowsLit = false;
+    let firstHouseKickCount = 0;
+    let firstHouseKickTarget = 0;    // random 3-6, arvotaan ekan potkun yhteydessä
+    let firstHouseWindowTimer = 0;   // 20s laskuri, nollautuu joka potkusta
+
+    let savedPlayerX = 40;
+    let savedPlayerY = GROUND_Y - 30;
 
     /* ── Tila ────────────────────────────────────────── */
     let state;
@@ -67,6 +77,8 @@ const Street = (() => {
     let particles = [];
     let notifTimer = 0;
     let stars = [];
+    let shootingStar = null;   // Tähdenlento
+    let satellite = null;      // Satelliitti
 
     // Apufunktio: oven keskipiste
     function doorCenter(bldg) {
@@ -92,6 +104,8 @@ const Street = (() => {
         coin.collected = state.inventory.coin;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
         digKeyCollected = state.digKeyCollected || false;
+        boulderKeyCollected = state.boulderKeyCollected || false;
+        bmKeyCollected = state.bmKeyCollected || false;
         stars = [];
         for (let i = 0; i < 80; i++) {
             stars.push({
@@ -170,6 +184,12 @@ const Street = (() => {
        PÄIVITYS
        ═══════════════════════════════════════════════════ */
     function update(dt) {
+        // Dark room – pysäytä kaikki, vain Exit
+        if (darkRoom) {
+            if (actionJustPressed) { darkRoom = false; actionJustPressed = false; }
+            return;
+        }
+
         // ── Liike ──────────────────────────────────
         let moveX = 0;
         if (keys['ArrowLeft'] || keys['a'] || keys['A'])  moveX = -1;
@@ -263,6 +283,63 @@ const Street = (() => {
             }
         }
         coin.sparkle += 0.05 * dt;
+
+        // ── Talon 0 ikkunoiden ajastin (20s ilman potkua → sammuu) ──
+        if (firstHouseWindowsLit && firstHouseWindowTimer > 0) {
+            firstHouseWindowTimer -= dt;
+            if (firstHouseWindowTimer <= 0) {
+                firstHouseWindowsLit = false;
+                firstHouseKickCount = 0;
+                firstHouseKickTarget = 0;
+            }
+        }
+
+        // ── Tähdenlento ─────────────────────────────
+        if (!shootingStar || !shootingStar.active) {
+            if (shootingStar) { shootingStar.timer -= dt; }
+            if (!shootingStar || shootingStar.timer <= 0) {
+                const ang = -0.3 - Math.random() * 0.5;
+                const spd = 1.5 + Math.random() * 2.5;
+                shootingStar = {
+                    x: -10 + Math.random() * WORLD_W * 0.4,
+                    y: 15 + Math.random() * 100,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd,
+                    active: true, life: 120 + Math.random() * 180,
+                    trail: [], timer: 600 + Math.random() * 2100
+                };
+            }
+        } else {
+            shootingStar.x += shootingStar.vx * dt;
+            shootingStar.y -= shootingStar.vy * dt;
+            shootingStar.trail.push({x: shootingStar.x, y: shootingStar.y});
+            if (shootingStar.trail.length > 18) shootingStar.trail.shift();
+            shootingStar.life -= dt;
+            if (shootingStar.life <= 0 || shootingStar.x > WORLD_W + 30 || shootingStar.y < -30 || shootingStar.y > GROUND_Y) {
+                shootingStar.active = false;
+            }
+        }
+
+        // ── Satelliitti ─────────────────────────────
+        if (!satellite || !satellite.active) {
+            if (satellite) { satellite.timer -= dt; }
+            if (!satellite || satellite.timer <= 0) {
+                const dir = Math.random() < 0.5 ? 1 : -1;
+                satellite = {
+                    x: dir > 0 ? -10 : WORLD_W + 10,
+                    y: 25 + Math.random() * 70,
+                    vx: dir * (0.25 + Math.random() * 0.5),
+                    active: true, blinkPhase: Math.random() * Math.PI * 2,
+                    timer: 400 + Math.random() * 900
+                };
+            }
+        } else {
+            satellite.x += satellite.vx * dt;
+            satellite.blinkPhase += 0.08 * dt;
+            if ((satellite.vx > 0 && satellite.x > WORLD_W + 15) || (satellite.vx < 0 && satellite.x < -15)) {
+                satellite.active = false;
+            }
+        }
     }
 /* ── Toimintopainikkeen käsittely ──────────────── */
     function handleAction() {
@@ -281,13 +358,38 @@ const Street = (() => {
                         showNotification('🔑 Avain puuttuu.\nLäpäise Dig Game ensin!');
                         return;
                     }
+                    // Blue Max vaatii Boulder Dashista kerätyn avaimen
+                    if (lamp.gameUrl && lamp.gameUrl.includes('bluemax') && !boulderKeyCollected) {
+                        showNotification('🔑 Avain puuttuu.\nLäpäise Boulder Dash ensin!');
+                        return;
+                    }
                     if (lamp.gameUrl) { enterGame(lamp.gameUrl); }
-                    else { showNotification('🚧 Tämä peli ei ole\nvielä valmis...'); }
+                    else {
+                        if (i === 3 && bmKeyCollected) { darkRoom = true; }
+                        else { showNotification('🚧 Tämä peli ei ole\nvielä valmis...'); }
+                    }
                 } else {
                     showNotification('💡 Ovi on lukossa.\nSytytä lamppu ensin!');
                 }
                 return;
             }
+        }
+// Talon 0 ovi – potkimalla ikkunoihin syttyy valot (3-6 potkua)
+        const dc0 = doorCenter(buildings[0]);
+        const dx0 = px - dc0.x, dy0 = py - dc0.y;
+        if (Math.sqrt(dx0*dx0 + dy0*dy0) < DOOR_RADIUS) {
+            player.kicking = true;
+            player.kickFrame = 0;
+            if (firstHouseKickTarget === 0) {
+                firstHouseKickTarget = 3 + Math.floor(Math.random() * 4); // 3-6
+            }
+            firstHouseKickCount++;
+            firstHouseWindowTimer = 1200; // 20s
+            if (firstHouseKickCount >= firstHouseKickTarget && !firstHouseWindowsLit) {
+                firstHouseWindowsLit = true;
+                spawnParticles(dc0.x, dc0.y, '#ffdd88', 10);
+            }
+            return;
         }
         for (let i = 0; i < buildings.length; i++) {
             if (lamps.some(l => l.bldgIdx === i)) continue;
@@ -320,6 +422,21 @@ const Street = (() => {
                 lamps[i].kickCount = (lamps[i].kickCount || 0) + 1;
 
                 if (lamps[i].kickCount >= 5) {
+// Salainen lamppu: 5 potkua → avaa kaikki ovet (vain viimeinen lamppu)
+                    if (i === 4) {
+                        for (let j = 0; j < lamps.length; j++) {
+                            lamps[j].lit = true;
+                            state.litLamps[j] = true;
+                        }
+                        digKeyCollected = true;
+                        state.digKeyCollected = true;
+                        boulderKeyCollected = true;
+                        state.boulderKeyCollected = true;
+                        bmKeyCollected = true;
+                        state.bmKeyCollected = true;
+                        lamps[i].kickCount = 0;
+                        GameState.save(state);
+                    } else {
                     // 5 potkua putkeen → ylikuumenee 20 sekunniksi
                     lamps[i].lit = false;
                     lamps[i].overheat = true;
@@ -328,6 +445,7 @@ const Street = (() => {
                     GameState.save(state);
                     showNotification('⚡ Lamppu ylikuumeni!\n20s jäähtymisaika...');
                     spawnParticles(lamp.x, GROUND_Y - LAMP_POST_H - 10, '#ff4400', 20);
+                    }
                     return;
                 }
 
@@ -344,6 +462,9 @@ const Street = (() => {
     }
 
     function enterGame(url) {
+        // Tallenna pelaajan sijainti ennen peliin menoa
+        savedPlayerX = player.x;
+        savedPlayerY = player.y;
         GameState.save(state);
         // Tyhjennä näppäintila, ettei jää jumiin
         clearKeys();
@@ -361,6 +482,16 @@ const Street = (() => {
             if (e.data === 'KEY_COLLECTED') {
                 digKeyCollected = true;
                 state.digKeyCollected = true;
+                GameState.save(state);
+            }
+            if (e.data === 'BM_KEY_COLLECTED') {
+                bmKeyCollected = true;
+                state.bmKeyCollected = true;
+                GameState.save(state);
+            }
+            if (e.data === 'BOULDER_KEY_COLLECTED') {
+                boulderKeyCollected = true;
+                state.boulderKeyCollected = true;
                 GameState.save(state);
             }
         };
@@ -401,7 +532,9 @@ const Street = (() => {
         coin.collected = state.inventory.coin;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
         digKeyCollected = state.digKeyCollected || false;
-        player.x = 40; player.y = GROUND_Y - 30;
+        boulderKeyCollected = state.boulderKeyCollected || false;
+        bmKeyCollected = state.bmKeyCollected || false;
+        player.x = savedPlayerX; player.y = savedPlayerY;
         player.vx = 0; player.vy = 0;
         updateHUD();
     }
@@ -443,6 +576,8 @@ const Street = (() => {
     function render() {
         ctx.clearRect(0, 0, WORLD_W, WORLD_H);
 
+        if (darkRoom) { drawDarkRoom(); return; }
+
         // Taivas
         const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
         skyGrad.addColorStop(0, '#0a0a1e');
@@ -457,11 +592,43 @@ const Street = (() => {
         ctx.fillStyle = '#0a0a1e';
         ctx.beginPath(); ctx.arc(692, 64, 26, 0, Math.PI*2); ctx.fill();
 
-        // Tähdet
+        // Tähdet (jokaisella oma random twinkle)
         for (const s of stars) {
-            const a = 0.4 + 0.4 * Math.sin(Date.now()/2000 + s.blink);
-            ctx.fillStyle = `rgba(255,255,255,${a})`;
+            const freq = 800 + s.blink * 3000;
+            const twinkle = Math.sin(Date.now() / freq + s.blink) * 0.5 + 0.5;
+            const a = 0.15 + twinkle * 0.7;
+            ctx.fillStyle = 'rgba(255,255,' + Math.floor(200 + twinkle * 55) + ',' + a + ')';
             ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+            // Kirkas pilkahdus
+            if (twinkle > 0.92) {
+                ctx.fillStyle = 'rgba(255,255,255,' + (a * 1.5) + ')';
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 0.5, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        // Tähdenlento
+        if (shootingStar && shootingStar.active) {
+            for (let t = 0; t < shootingStar.trail.length; t++) {
+                const tr = shootingStar.trail[t];
+                const alpha = (t / shootingStar.trail.length) * 0.5;
+                ctx.fillStyle = 'rgba(255,255,255,' + alpha + ')';
+                ctx.beginPath(); ctx.arc(tr.x, tr.y, 0.5, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.beginPath(); ctx.arc(shootingStar.x, shootingStar.y, 0.8, 0, Math.PI*2); ctx.fill();
+            const sg = ctx.createRadialGradient(shootingStar.x, shootingStar.y, 0, shootingStar.x, shootingStar.y, 4);
+            sg.addColorStop(0, 'rgba(255,255,255,0.35)');
+            sg.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = sg;
+            ctx.beginPath(); ctx.arc(shootingStar.x, shootingStar.y, 4, 0, Math.PI*2); ctx.fill();
+        }
+
+        // Satelliitti (pieni vilkkuva piste)
+        if (satellite && satellite.active) {
+            const blink = Math.sin(satellite.blinkPhase) * 0.5 + 0.5;
+            const alpha = 0.25 + blink * 0.65;
+            ctx.fillStyle = 'rgba(255,255,255,' + alpha + ')';
+            ctx.beginPath(); ctx.arc(satellite.x, satellite.y, 1.5, 0, Math.PI*2); ctx.fill();
         }
 
         drawBuildings();
@@ -490,18 +657,35 @@ const Street = (() => {
 
     function drawBuildings() {
         for (const b of buildings) {
+            const idx = buildings.indexOf(b);
             // Runko
             ctx.fillStyle = '#1a1a2e';
             ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
             // Ikkunat
+            const houseLit = idx === 0 && firstHouseWindowsLit;
             for (let wy = GROUND_Y - b.h + 25; wy < GROUND_Y - 35; wy += 32) {
                 for (let wx = b.x + 10; wx < b.x + b.w - 15; wx += 24) {
                     if (wx + 10 > b.x + b.w - 6) continue;
-                    const lit = Math.sin(b.x * 13 + wy * 7) > 0.2;
-                    ctx.fillStyle = lit ? 'rgba(255,200,80,0.12)' : '#0a0a15';
-                    ctx.fillRect(wx, wy, 10, 14);
-                    ctx.strokeStyle = '#2a2a3e'; ctx.lineWidth = 1;
-                    ctx.strokeRect(wx, wy, 10, 14);
+                    if (houseLit) {
+                        // Kaikki ikkunat kirkkaina + lämmin hehku
+                        const flicker = 0.85 + Math.sin(Date.now() * 0.005 + wx * 0.1 + wy * 0.07) * 0.15;
+                        ctx.fillStyle = 'rgba(255,220,120,' + (0.7 * flicker) + ')';
+                        ctx.fillRect(wx, wy, 10, 14);
+                        ctx.strokeStyle = 'rgba(255,200,100,0.6)'; ctx.lineWidth = 1;
+                        ctx.strokeRect(wx, wy, 10, 14);
+                        // Pieni hehku ikkunan ympärille
+                        const glow = ctx.createRadialGradient(wx + 5, wy + 7, 1, wx + 5, wy + 7, 12);
+                        glow.addColorStop(0, 'rgba(255,200,80,0.25)');
+                        glow.addColorStop(1, 'rgba(255,200,80,0)');
+                        ctx.fillStyle = glow;
+                        ctx.fillRect(wx - 6, wy - 5, 22, 24);
+                    } else {
+                        const lit = Math.sin(b.x * 13 + wy * 7) > 0.2;
+                        ctx.fillStyle = lit ? 'rgba(255,200,80,0.12)' : '#0a0a15';
+                        ctx.fillRect(wx, wy, 10, 14);
+                        ctx.strokeStyle = '#2a2a3e'; ctx.lineWidth = 1;
+                        ctx.strokeRect(wx, wy, 10, 14);
+                    }
                 }
             }
             // Yläreuna
@@ -518,6 +702,87 @@ const Street = (() => {
         ctx.fillStyle = '#3a3a3a';
         ctx.fillRect(0, GROUND_Y - 2, WORLD_W, 2);
     }
+
+    /* ── Pimeä huone (COMMANDO + BM-avain) ──────── */
+    function drawDarkRoom() {
+        // Täysin pimeä tausta
+        ctx.fillStyle = '#050508';
+        ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+        // Pieni valokeila katosta
+        const g = ctx.createRadialGradient(400, 30, 10, 400, 120, 220);
+        g.addColorStop(0, 'rgba(255,240,200,0.15)');
+        g.addColorStop(0.6, 'rgba(255,200,100,0.04)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(200, 0, 400, 300);
+
+        // Pöytä
+        const tx = 350, ty = 280, tw = 100, th = 12;
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(tx - 2, ty, tw + 4, th);
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(tx, ty - 2, tw, th + 2);
+        // Pöydän jalat
+        ctx.fillStyle = '#2a1808';
+        ctx.fillRect(tx + 5, ty + th, 8, 60);
+        ctx.fillRect(tx + tw - 13, ty + th, 8, 60);
+
+        // Kultainen pokaali pöydällä
+        const cx = tx + tw / 2, cy = ty - 5;
+        // Jalusta
+        ctx.fillStyle = '#b8860b';
+        ctx.fillRect(cx - 12, cy, 24, 6);
+        ctx.fillStyle = '#daa520';
+        ctx.fillRect(cx - 8, cy - 4, 16, 4);
+        // Varsi
+        ctx.fillStyle = '#daa520';
+        ctx.fillRect(cx - 3, cy - 30, 6, 26);
+        // Malja
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.moveTo(cx - 18, cy - 30);
+        ctx.lineTo(cx - 14, cy - 55);
+        ctx.quadraticCurveTo(cx, cy - 62, cx + 14, cy - 55);
+        ctx.lineTo(cx + 18, cy - 30);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#daa520';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // Pokaalin kahvat
+        ctx.strokeStyle = '#daa520';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx - 16, cy - 42, 7, -0.5, 1.8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx + 16, cy - 42, 7, 1.3, -1.8, true);
+        ctx.stroke();
+
+        // Kiilto pokaalissa
+        const gg = ctx.createRadialGradient(cx - 5, cy - 48, 2, cx, cy - 40, 20);
+        gg.addColorStop(0, 'rgba(255,255,255,0.5)');
+        gg.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gg;
+        ctx.beginPath();
+        ctx.arc(cx - 3, cy - 45, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // "To be continued..."
+        ctx.fillStyle = '#ccaa44';
+        ctx.font = 'italic 16px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('To be continued...', 400, 370);
+
+        // Poistumisvihje
+        const pulse = Math.sin(Date.now() / 800) * 0.3 + 0.7;
+        ctx.fillStyle = `rgba(255,255,255,${pulse})`;
+        ctx.font = '10px Arial, sans-serif';
+        ctx.fillText('Paina Space poistuaksesi', 400, 390);
+        ctx.textAlign = 'start';
+    }
+
 /* ── Lampputolppa ─────────────────────────────── */
     function drawLampPost(lamp) {
         const bx = lamp.x;                    // tolpan juuri (x)

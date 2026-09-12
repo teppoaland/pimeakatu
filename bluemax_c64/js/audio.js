@@ -51,16 +51,16 @@ const AudioFX = (() => {
     }
 
     function stopEngine() {
-        if (!engineRunning) return;
         try {
             const now = ctx.currentTime;
-            engineGain.gain.linearRampToValueAtTime(0, now + 0.4);
-            if (engineOsc._gain2) engineOsc._gain2.gain.linearRampToValueAtTime(0, now + 0.4);
-            setTimeout(() => {
-                try { engineOsc.stop(); if (engineOsc._osc2) engineOsc._osc2.stop(); } catch(e) {}
-            }, 500);
-            engineRunning = false;
-        } catch(e) {}
+            if(engineGain){engineGain.gain.cancelScheduledValues(now);engineGain.gain.linearRampToValueAtTime(0,now+0.2);}
+            if(engineOsc&&engineOsc._gain2){engineOsc._gain2.gain.cancelScheduledValues(now);engineOsc._gain2.gain.linearRampToValueAtTime(0,now+0.2);}
+            setTimeout(()=>{
+                try{if(engineOsc){engineOsc.stop();if(engineOsc._osc2)engineOsc._osc2.stop();}}catch(e){}
+                engineOsc=null;engineGain=null;
+            },300);
+            engineRunning=false;
+        } catch(e) { engineRunning = false; engineOsc = null; engineGain = null; }
     }
 
     /* ── Konekivääri ──────────────────────────────────── */

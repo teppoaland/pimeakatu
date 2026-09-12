@@ -80,6 +80,7 @@ class Game {
 
     loadLevel(index) {
         if (index >= LEVEL_DATA.length) {
+            try { window.parent.postMessage('BOULDER_KEY_COLLECTED', '*'); } catch(e) {}
             this.showOverlay('🎉 Onnittelut!',
                 'Läpäisit kaikki tasot! Lopulliset pisteet: ' + this.score,
                 'Pelaa uudelleen');
@@ -242,6 +243,7 @@ class Game {
         this.keyCollected = true;
         this.score += SCORE_KEY;
         AudioFX.playDiamond();
+        try { window.parent.postMessage('BOULDER_KEY_COLLECTED', '*'); } catch(e) {}
     }
 
     applyGravity() {

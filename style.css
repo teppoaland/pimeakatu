@@ -267,7 +267,7 @@ body::after {
     color: #ffd700;
     text-align: center;
     z-index: 500;
-    animation: popIn 0.3s ease-out, fadeOut 0.5s 2.5s forwards;
+    opacity: 0;
     pointer-events: none;
     letter-spacing: 1px;
 }

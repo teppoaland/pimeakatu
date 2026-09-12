@@ -15,6 +15,8 @@ const GameState = (() => {
         },
         // Onko Dig Game -pelin avain kerätty (avaa Boulder Dashin)
         digKeyCollected: false,
+        boulderKeyCollected: false,
+        bmKeyCollected: false,
         // Boulder Dash -tason 5 custom-kartta (tyhjä oletus)
         customLevel5: null
     };
