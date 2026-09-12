@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.15** | 12.9.2026 | Moskiittojen näkyvyys +50% (alpha 0.06→0.09, säde 0.6→0.9), jotta näkyvät myös mobiilin pienellä näytöllä.
+**v3.16** | 12.9.2026 | Commando MVP-pelimoottori: game_main.html + css + js/game.js + js/audio.js – ylhäältä kuvattu vierivä sotapeli, kivääri + kranaatit, viholliset, esteet, 3 elämää
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 
