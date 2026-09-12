@@ -89,7 +89,7 @@ const Commando = (() => {
     /* ── GAME START ───────────────────────────────────── */
     function startGame() {
         AudioFX.init();
-        score = 0; scrollY = 0; genUpTo = 0;
+        score = 0; scrollY = 0; genUpTo = CH;
         pl.x = CW / 2; pl.y = CH - 80;
         pl.lives = 3; pl.grenades = GM; pl.invTimer = INV; pl.dirX = 0; pl.dirY = -1;
         enemies = []; pBullets = []; eBullets = []; grenades = []; explosions = []; obstacles = []; particles = [];
@@ -164,8 +164,10 @@ const Commando = (() => {
     }
 
     function updateAutoFire(dt) {
+        const inp = getInput();
+        const moving = inp.x !== 0 || inp.y !== 0;
         gunCD -= dt;
-        if (gunCD <= 0) {
+        if (moving && gunCD <= 0) {
             gunCD = 0.15;
             pBullets.push({ x: pl.x, y: pl.y - PH/2, vx: 0, vy: -BS, life: 1.5 });
             AudioFX.playGun();
@@ -376,7 +378,15 @@ const Commando = (() => {
 
     /* ── SCROLL ───────────────────────────────────────── */
     function updateScroll(dt) {
-        scrollY += SS * dt; genObs(scrollY + CH);
+        // Camera follows player upward: when player is in upper third, scroll up
+        const upperZone = CH * 0.35;
+        const lowerZone = CH * 0.75;
+        if (pl.y < upperZone) {
+            scrollY += (upperZone - pl.y) * 3 * dt;
+        } else if (pl.y > lowerZone && scrollY > 0) {
+            scrollY = Math.max(0, scrollY - (pl.y - lowerZone) * 3 * dt);
+        }
+        genObs(scrollY + CH);
         for (let i = obstacles.length - 1; i >= 0; i--) { if (obstacles[i].wy < scrollY - 100) obstacles.splice(i, 1); }
         if (scrollY >= WIN) { state = ST.WIN; AudioFX.playWin(); showOverlay('🏆 MISSION COMPLETE!', 'Super Joe voitti!', 'Pelaa uudestaan');
             try { window.parent.postMessage({ type: 'commandoKeyCollected', value: true }, '*'); } catch(e) {} }
