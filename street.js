@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════
    street.js – "Pimeä Katu" -päävalikkopeli
    2D-sivukuvattu pimeä kaupunkikatu: 9 taloa, ovet,
    5 katulamppua talojen väleissä.
@@ -16,7 +16,8 @@ const Street = (() => {
         x: 40, y: GROUND_Y - 30, w: 20, h: 30,
         vx: 0, vy: 0, facing: 1, walking: false,
         walkFrame: 0, walkTimer: 0,
-        kicking: false, kickFrame: 0
+        kicking: false, kickFrame: 0,
+        knockedDown: false, knockdownTimer: 0
     };
     const PLAYER_SPEED = 2.5;
     const GRAVITY = 0.4;
@@ -66,7 +67,25 @@ const Street = (() => {
     let firstHouseKickCount = 0;
     let firstHouseKickTarget = 0;    // random 3-6, arvotaan ekan potkun yhteydessä
     let firstHouseWindowTimer = 0;   // 20s laskuri, nollautuu joka potkusta
+    let flowerPot = null;            // { x, y, vx, vy, active, rotation }
+    const smallHouseLights = {};     // { '2': { lit: false, timer: 0 }, ... }
+    let groundAnimal = null;         // { type, x, y, vx, direction, hopY, hopVel, animTimer, pauseTimer }
+    let animalSpawnTimer = 900;      // 15s välein
 
+    /* ── Kukkaruukun pudotus ──────────────────────── */
+    function spawnFlowerPot(bldg) {
+        const dc = doorCenter(bldg);
+        spawnParticles(dc.x, dc.y, '#ff6644', 8);
+        const windowY = GROUND_Y - bldg.h + 40;
+        flowerPot = { x: dc.x, y: windowY, vx: 0, vy: 0, rotation: 0, active: true };
+    }
+
+    /* ── Pienten talojen valot ──────────────────── */
+    for (let i = 0; i < buildings.length; i++) {
+        if (i !== 0 && !lamps.some(l => l.bldgIdx === i)) {
+            smallHouseLights[i] = { lit: false, timer: 0 };
+        }
+    }
     let savedPlayerX = 40;
     let savedPlayerY = GROUND_Y - 30;
 
@@ -103,11 +122,28 @@ const Street = (() => {
             filter.type = 'highpass';
             filter.frequency.value = 800;
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.setValueAtTime(0.24, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
             src.connect(filter).connect(gain).connect(audioCtx.destination);
             src.start(now);
             src.stop(now + 0.06);
+        } catch(e) {}
+    }
+    /* ── Kävelyääni ──────────────────────────────── */
+    function playWalk() {
+        try {
+            initAudio();
+            const now = audioCtx.currentTime;
+            const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.05), audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = (Math.random()*2-1) * Math.exp(-i/(audioCtx.sampleRate*0.012));
+            const src = audioCtx.createBufferSource(); src.buffer = buf;
+            const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 300;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+            src.connect(filter).connect(gain).connect(audioCtx.destination);
+            src.start(now); src.stop(now + 0.05);
         } catch(e) {}
     }
 
@@ -255,9 +291,27 @@ const Street = (() => {
        PÄIVITYS
        ═══════════════════════════════════════════════════ */
     function update(dt) {
-        // Dark room – pysäytä kaikki, vain Exit
+        // Dark room
         if (darkRoom) {
             if (actionJustPressed) { darkRoom = false; actionJustPressed = false; }
+            return;
+        }
+
+        // Tainnutus - kukkaruukku osui
+        if (player.knockedDown) {
+            player.knockdownTimer -= dt;
+            player.vx = 0; player.vy += GRAVITY * dt; player.y += player.vy * dt;
+            if (player.y + player.h >= GROUND_Y) { player.y = GROUND_Y - player.h; player.vy = 0; }
+            if (player.knockdownTimer <= 0) { player.knockedDown = false; player.knockdownTimer = 0; }
+            if (player.kicking) { player.kickFrame += dt; if (player.kickFrame >= KICK_DURATION) { player.kicking = false; player.kickFrame = 0; } }
+            for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.x += p.vx; p.y += p.vy; p.life--; if (p.life <= 0) particles.splice(i, 1); }
+            coin.sparkle += 0.05 * dt;
+            if (firstHouseWindowsLit && firstHouseWindowTimer > 0) { firstHouseWindowTimer -= dt; if (firstHouseWindowTimer <= 0) { firstHouseWindowsLit = false; firstHouseKickCount = 0; firstHouseKickTarget = 0; } }
+            for (const idx in smallHouseLights) { const sh = smallHouseLights[idx]; if (sh.lit && sh.timer > 0) { sh.timer -= dt; if (sh.timer <= 0) { sh.lit = false; sh.timer = 0; } } }
+            for (let i = 0; i < lamps.length; i++) { if (lamps[i].overheatTimer > 0) { lamps[i].overheatTimer -= dt; if (lamps[i].overheatTimer <= 0) { lamps[i].overheatTimer = 0; lamps[i].overheat = false; lamps[i].kickCount = 0; } } }
+            if (!shootingStar || !shootingStar.active) { if (shootingStar) { shootingStar.timer -= dt; } if (!shootingStar || shootingStar.timer <= 0) { const ang = -0.3 - Math.random() * 0.5; const spd = 1.5 + Math.random() * 2.5; shootingStar = { x: -10 + Math.random() * WORLD_W * 0.4, y: 15 + Math.random() * 100, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, active: true, life: 120 + Math.random() * 180, trail: [], timer: 600 + Math.random() * 2100 }; } } else { shootingStar.x += shootingStar.vx * dt; shootingStar.y -= shootingStar.vy * dt; shootingStar.trail.push({x: shootingStar.x, y: shootingStar.y}); if (shootingStar.trail.length > 18) shootingStar.trail.shift(); shootingStar.life -= dt; if (shootingStar.life <= 0 || shootingStar.x > WORLD_W + 30 || shootingStar.y < -30 || shootingStar.y > GROUND_Y) { shootingStar.active = false; } }
+            if (!satellite || !satellite.active) { if (satellite) { satellite.timer -= dt; } if (!satellite || satellite.timer <= 0) { const dir2 = Math.random() < 0.5 ? 1 : -1; satellite = { x: dir2 > 0 ? -10 : WORLD_W + 10, y: 25 + Math.random() * 70, vx: dir2 * (0.25 + Math.random() * 0.5), active: true, blinkPhase: Math.random() * Math.PI * 2, timer: 400 + Math.random() * 900 }; } } else { satellite.x += satellite.vx * dt; satellite.blinkPhase += 0.08 * dt; if ((satellite.vx > 0 && satellite.x > WORLD_W + 15) || (satellite.vx < 0 && satellite.x < -15)) { satellite.active = false; } }
+            actionJustPressed = false;
             return;
         }
 
@@ -289,6 +343,7 @@ const Street = (() => {
             if (player.walkTimer > 8) {
                 player.walkFrame = (player.walkFrame + 1) % 4;
                 player.walkTimer = 0;
+                if (onGround) playWalk();
             }
         } else {
             player.walking = false;
@@ -357,6 +412,52 @@ const Street = (() => {
                 firstHouseKickCount = 0;
                 firstHouseKickTarget = 0;
             }
+        }
+
+        // ── Pienten talojen valoajastin ────────────────
+        for (const idx in smallHouseLights) {
+            const sh = smallHouseLights[idx];
+            if (sh.lit && sh.timer > 0) { sh.timer -= dt; if (sh.timer <= 0) { sh.lit = false; sh.timer = 0; } }
+        }
+
+        // ── Kukkaruukun fysiikka ──────────────────────
+        if (flowerPot && flowerPot.active) {
+            flowerPot.vy += 0.12 * dt; flowerPot.x += flowerPot.vx * dt; flowerPot.y += flowerPot.vy * dt; flowerPot.rotation += 0.08 * dt;
+            const fpx = flowerPot.x, fpy = flowerPot.y, ppx = player.x + player.w/2, ppy = player.y;
+            if (Math.sqrt((fpx-ppx)*(fpx-ppx)+(fpy-ppy)*(fpy-ppy)) < 20) {
+                player.knockedDown = true; player.knockdownTimer = 600; player.kicking = false; player.kickFrame = 0;
+                spawnParticles(ppx, ppy, '#ff6644', 15); flowerPot = null;
+            } else if (flowerPot.y > GROUND_Y + 20 || flowerPot.x < -30 || flowerPot.x > WORLD_W + 30) {
+                if (flowerPot.y > GROUND_Y) spawnParticles(flowerPot.x, GROUND_Y, '#8B4513', 5);
+                flowerPot = null;
+            }
+        }
+
+        // ── Katueläin ────────────────────────────────
+        if (!groundAnimal) {
+            animalSpawnTimer -= dt;
+            if (animalSpawnTimer <= 0) {
+                const types = ['mouse','mouse','rat','rat','rabbit']; const type = types[Math.floor(Math.random()*types.length)];
+                const dir = Math.random()<0.5?1:-1; const baseY = GROUND_Y - 2;
+                let w,h,speed;
+                if (type==='mouse') { w=8; h=4; speed=1.8+Math.random()*1.2; }
+                else if (type==='rat') { w=14; h=6; speed=1.2+Math.random()*0.8; }
+                else { w=10; h=10; speed=1.5+Math.random()*0.8; }
+                groundAnimal = { type,w,h,x:dir>0?-w:WORLD_W+w,y:baseY-h,vx:dir*speed,direction:dir,hopY:0,hopVel:0,animTimer:0,pauseTimer:0 };
+                animalSpawnTimer = 900;
+            }
+        } else {
+            const a = groundAnimal;
+            if (!(a.type==='rabbit'&&a.pauseTimer>0)) { a.x += a.vx * dt; a.animTimer += dt; }
+            if (a.type === 'rabbit') {
+                if (a.pauseTimer > 0) { a.pauseTimer -= dt; a.vx = 0; if (a.pauseTimer<=0) a.vx = a.direction*(1.5+Math.random()*0.8); }
+                else {
+                    if (a.hopY===0 && Math.random()<0.08*dt) a.hopVel = -0.9 - Math.random()*0.5;
+                    if (a.hopVel!==0 || a.hopY<0) { a.hopY += a.hopVel*dt; a.hopVel += 0.15*dt; if (a.hopY>=0) { a.hopY=0; a.hopVel=0; } }
+                    if (Math.random() < 0.002*dt) a.pauseTimer = 120 + Math.floor(Math.random()*480);
+                }
+            }
+            if ((a.direction>0 && a.x>WORLD_W+a.w+10) || (a.direction<0 && a.x<-a.w-10)) groundAnimal = null;
         }
 
         // ── Tähdenlento ─────────────────────────────
@@ -446,6 +547,7 @@ const Street = (() => {
             playKick();
             player.kicking = true;
             player.kickFrame = 0;
+            if (firstHouseWindowsLit) { spawnFlowerPot(buildings[0]); return; }
             if (firstHouseKickTarget === 0) {
                 firstHouseKickTarget = 3 + Math.floor(Math.random() * 4); // 3-6
             }
@@ -459,10 +561,14 @@ const Street = (() => {
         }
         for (let i = 0; i < buildings.length; i++) {
             if (lamps.some(l => l.bldgIdx === i)) continue;
+            if (i === 0) continue;
             const dc = doorCenter(buildings[i]);
             const dx = px - dc.x, dy = py - dc.y;
             if (Math.sqrt(dx*dx + dy*dy) < DOOR_RADIUS) {
-                showNotification('🔒 Tämä ovi on\npysyvästi lukossa.');
+                playKick(); player.kicking = true; player.kickFrame = 0;
+                const sh = smallHouseLights[i];
+                if (sh.lit) { spawnFlowerPot(buildings[i]); }
+                else { sh.lit = true; sh.timer = 1200; spawnParticles(dc.x, dc.y, '#ffdd88', 6); }
                 return;
             }
         }
@@ -719,6 +825,12 @@ const Street = (() => {
         // Kolikko
         if (!coin.collected) drawCoin();
 
+        // Kukkaruukku
+        if (flowerPot && flowerPot.active) drawFlowerPot();
+
+        // Katueläin
+        if (groundAnimal) drawAnimal();
+
         // Pelaaja
         drawPlayer();
 
@@ -738,23 +850,25 @@ const Street = (() => {
             ctx.fillStyle = '#1a1a2e';
             ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
             // Ikkunat
-            const houseLit = idx === 0 && firstHouseWindowsLit;
+            const houseLit = (idx === 0 && firstHouseWindowsLit) || (smallHouseLights[idx] && smallHouseLights[idx].lit);
             for (let wy = GROUND_Y - b.h + 25; wy < GROUND_Y - 35; wy += 32) {
                 for (let wx = b.x + 10; wx < b.x + b.w - 15; wx += 24) {
                     if (wx + 10 > b.x + b.w - 6) continue;
                     if (houseLit) {
-                        // Kaikki ikkunat kirkkaina + lämmin hehku
-                        const flicker = 0.85 + Math.sin(Date.now() * 0.005 + wx * 0.1 + wy * 0.07) * 0.15;
-                        ctx.fillStyle = 'rgba(255,220,120,' + (0.7 * flicker) + ')';
+                        const dt = Date.now() * 0.001;
+                        const f1 = 0.92 + Math.sin(dt*2.3 + wx*0.07 + wy*0.13)*0.08;
+                        const r = Math.floor(240 + Math.sin(dt*1.9+wy*0.1)*10);
+                        const g = Math.floor(210 + Math.sin(dt*2.1+wx*0.08)*10);
+                        const b = Math.floor(100 + Math.sin(dt*1.5+wy*0.06)*15);
+                        ctx.fillStyle = 'rgba('+r+','+g+','+b+','+(0.72*f1)+')';
                         ctx.fillRect(wx, wy, 10, 14);
-                        ctx.strokeStyle = 'rgba(255,200,100,0.6)'; ctx.lineWidth = 1;
+                        ctx.strokeStyle = 'rgba(255,200,100,0.55)'; ctx.lineWidth = 1;
                         ctx.strokeRect(wx, wy, 10, 14);
-                        // Pieni hehku ikkunan ympärille
-                        const glow = ctx.createRadialGradient(wx + 5, wy + 7, 1, wx + 5, wy + 7, 12);
-                        glow.addColorStop(0, 'rgba(255,200,80,0.25)');
+                        const glow = ctx.createRadialGradient(wx+5, wy+7, 1, wx+5, wy+7, 12);
+                        glow.addColorStop(0, 'rgba(255,200,80,0.22)');
                         glow.addColorStop(1, 'rgba(255,200,80,0)');
                         ctx.fillStyle = glow;
-                        ctx.fillRect(wx - 6, wy - 5, 22, 24);
+                        ctx.fillRect(wx-6, wy-5, 22, 24);
                     } else {
                         const lit = Math.sin(b.x * 13 + wy * 7) > 0.2;
                         ctx.fillStyle = lit ? 'rgba(255,200,80,0.12)' : '#0a0a15';
@@ -929,6 +1043,18 @@ const Street = (() => {
             ctx.beginPath();
             ctx.arc(bx, bulbY + 4, 4, 0, Math.PI*2);
             ctx.fill();
+            // Moskiitot lampun valossa
+            const t = Date.now() * 0.001;
+            for (let m = 0; m < 4; m++) {
+                const mt = t * (1.1 + m * 0.25);
+                const mx = bx + Math.cos(mt + m * 2.3) * (10 + Math.sin(mt * 0.6) * 5);
+                const my = bulbY + 6 + Math.sin(mt * 1.2 + m * 1.7) * (8 + Math.cos(mt * 0.8) * 4);
+                const malpha = 0.06 + Math.sin(mt * 2.5 + m) * 0.03;
+                ctx.fillStyle = 'rgba(255,220,140,' + malpha + ')';
+                ctx.beginPath();
+                ctx.arc(mx, my, 0.6, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
         if (lamp.overheat) {
             const flicker = Math.sin(Date.now() * 0.03) * 0.4 + 0.6;
@@ -994,10 +1120,82 @@ const Street = (() => {
         ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
     }
 
+    /* ── Kukkaruukku ──────────────────────────────── */
+    function drawFlowerPot() {
+        const fp = flowerPot;
+        ctx.save(); ctx.translate(fp.x, fp.y); ctx.rotate(fp.rotation);
+        ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.moveTo(-6,3); ctx.lineTo(-8,-5); ctx.lineTo(8,-5); ctx.lineTo(6,3); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#5a2d0c'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = '#3d2817'; ctx.fillRect(-6,-5,12,2);
+        ctx.fillStyle = '#2d8a2d'; ctx.beginPath(); ctx.ellipse(2,-7,4,2.5,0.3,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(-3,-6,3,2,-0.4,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+
+    /* ── Katueläin ───────────────────────────────── */
+    function drawAnimal() {
+        const a = groundAnimal; if (!a) return;
+        const ax = Math.round(a.x), ay = Math.round(a.y + a.hopY), dir = a.direction;
+        const t = a.animTimer;
+        ctx.save();
+        if (a.type === 'mouse') {
+            const bob = Math.sin(t*0.25)*0.8;
+            ctx.fillStyle = '#999aaa'; ctx.fillRect(ax+1, ay+bob, 10, 4);
+            const hx = dir>0?ax+9:ax-3;
+            ctx.fillStyle = '#aaaabb'; ctx.fillRect(hx, ay-1+bob, 5, 5);
+            ctx.fillStyle = '#111'; ctx.fillRect(hx+(dir>0?3:1), ay+bob, 1.5, 1.5);
+            ctx.fillStyle = '#cc9999'; ctx.beginPath(); ctx.arc(hx+2, ay-3+bob+Math.sin(t*0.3)*1, 2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#777788'; const lp = t*0.5;
+            for (let l=0;l<4;l++) { const lx=ax+2+l*2.5; ctx.fillRect(lx, ay+3+bob, 1.5, 2+Math.sin(lp+l*1.5)*1.5); }
+            ctx.strokeStyle = '#8877aa'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(dir>0?ax:ax+10, ay+2+bob);
+            ctx.quadraticCurveTo(dir>0?ax-5:ax+15, ay+Math.sin(t*0.35)*4+bob, dir>0?ax-10:ax+20, ay-1+Math.sin(t*0.35)*4+bob); ctx.stroke();
+        } else if (a.type === 'rat') {
+            const bob = Math.sin(t*0.2)*0.6;
+            ctx.fillStyle = '#776655'; ctx.fillRect(ax+1, ay+1+bob, 16, 5);
+            const hx = dir>0?ax+14:ax-5;
+            ctx.fillStyle = '#887766'; ctx.fillRect(hx, ay-2+bob, 6, 6);
+            ctx.fillStyle = '#330000'; ctx.fillRect(hx+(dir>0?4:1), ay-1+bob, 2, 2);
+            ctx.fillStyle = '#aa8877'; ctx.beginPath(); ctx.arc(hx+2, ay-4+bob+Math.sin(t*0.25)*0.8, 2.5, 0, Math.PI); ctx.fill();
+            ctx.fillStyle = '#554433'; const lp = t*0.4;
+            for (let l=0;l<4;l++) { const lx=ax+3+l*3.5; ctx.fillRect(lx, ay+5+bob, 1.5, 2.5+Math.sin(lp+l*1.4)*1.8); }
+            ctx.strokeStyle = '#aa9988'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(dir>0?ax:ax+16, ay+3+bob);
+            ctx.bezierCurveTo(dir>0?ax-6:ax+22, ay+Math.sin(t*0.22)*5+bob, dir>0?ax-12:ax+28, ay+Math.sin(t*0.28+1.5)*4+bob, dir>0?ax-18:ax+34, ay-2+bob); ctx.stroke();
+        } else {
+            const bodyY = ay;
+            ctx.fillStyle = '#b0a090'; ctx.fillRect(ax+2, bodyY+2, 10, 7);
+            ctx.fillStyle = '#c0b0a0'; ctx.fillRect(ax+(dir>0?8:0), bodyY-3+Math.sin(t*0.15)*1.2, 5, 5);
+            ctx.fillStyle = '#111'; ctx.fillRect(ax+(dir>0?11:1), bodyY-1+Math.sin(t*0.15)*1.2, 1.5, 1.5);
+            const ew = Math.sin(t*0.25)*2;
+            ctx.fillStyle = '#c0b0a0'; ctx.fillRect(ax+(dir>0?9:3), bodyY-9+ew, 2, 6); ctx.fillRect(ax+(dir>0?11:5), bodyY-8-ew, 2, 6);
+            ctx.fillStyle = '#e0c0c0'; ctx.fillRect(ax+(dir>0?10:4), bodyY-8+ew, 1, 3); ctx.fillRect(ax+(dir>0?12:6), bodyY-7-ew, 1, 3);
+            ctx.fillStyle = '#f0f0f0'; ctx.beginPath(); ctx.arc(dir>0?ax+1:ax+11, bodyY+5+Math.sin(t*0.3)*1.5, 3, 0, Math.PI*2); ctx.fill();
+            if (a.hopY >= -1) { ctx.fillStyle = '#a09080'; ctx.fillRect(ax+(dir>0?6:0), bodyY+7, 2, 2); ctx.fillRect(ax+(dir>0?9:3), bodyY+7, 2, 2); }
+        }
+        ctx.restore();
+    }
+
     /* ── Pelaaja ────────────────────────────────── */
     function drawPlayer() {
         const px = Math.round(player.x), py = Math.round(player.y);
         const pw = player.w, ph = player.h;
+
+        if (player.knockedDown) {
+            ctx.save();
+            const cx = px + pw/2, gy = py + ph;
+            ctx.translate(cx, gy);
+            if (player.facing === -1) ctx.scale(-1, 1);
+            ctx.fillStyle = '#3366cc'; ctx.fillRect(-ph+5, -6, ph-10, 10);
+            ctx.fillStyle = '#ffcc99'; ctx.beginPath(); ctx.arc(ph/2-1, -1, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#553300'; ctx.beginPath(); ctx.arc(ph/2-1, -3, 5, Math.PI, 0); ctx.fill();
+            const t = Date.now()*0.005;
+            ctx.strokeStyle = '#ffdd44'; ctx.lineWidth = 1;
+            for (let s=0;s<3;s++) { const ang=t+s*2.1; ctx.beginPath(); ctx.moveTo(ph/2+Math.cos(ang)*10-2, -8+Math.sin(ang)*8-2); ctx.lineTo(ph/2+Math.cos(ang)*10+2, -8+Math.sin(ang)*8+2); ctx.moveTo(ph/2+Math.cos(ang)*10+2, -8+Math.sin(ang)*8-2); ctx.lineTo(ph/2+Math.cos(ang)*10-2, -8+Math.sin(ang)*8+2); ctx.stroke(); }
+            ctx.restore();
+            return;
+        }
+
         ctx.save();
         if (player.facing === -1) {
             ctx.translate(px+pw/2, 0);

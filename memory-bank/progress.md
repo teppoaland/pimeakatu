@@ -14,7 +14,10 @@
 | Kolikon kerääminen | ✅ Valmis | Kadun oikeassa reunassa |
 | Mobiiliohjaimet | ✅ Valmis | v1.2: JS force-show + D-pad + ⚡-nappi |
 | CRT-retro-teema | ✅ Valmis | Scanline-efekti, vihreä fontti |
-| Ääniefektit | ❌ Ei vielä | Web Audio API -äänet puuttuvat |
+| Ääniefektit | ✅ Valmis | Potku (0.24) + kävely (0.12 lowpass-kahina) |
+| Kukkaruukku-taloista | ✅ Valmis | Talot 0,2,4,6: valo varoituksena, potku → ruukku → tainnutus 10s |
+| Katueläimet | ✅ Valmis | Hiiri/rotta (lineaarinen), jänis (loikkii, pysähtyy), 15s välein |
+| Valojen elävöitys | ✅ Valmis | RGB-tuikinta ikkunoissa, moskiitot lampuissa |
 | Päivä-/yökierto | ❌ Ei vielä | Mahdollinen jatkokehitys |
 
 ---

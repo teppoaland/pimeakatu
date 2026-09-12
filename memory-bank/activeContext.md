@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v2.2** | 12.9.2026 | Mobiili-D-pad overlay, potkuääni, HUD kompaktoitu, lampputekstit pois
+**v2.7** | 12.9.2026 | Ikkunoiden valot elävöity (RGB-tuikinta + moskiitot), jäniksen loikat korjattu
 
 ## 🔜 Seuraavaksi
 
