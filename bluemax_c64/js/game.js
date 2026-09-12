@@ -6,7 +6,7 @@ let cnv, ctx, afid, lt=0;
 const W=800,H=480,GB=380,SS=1.2,FM=60,FMC=70,DM=5,BM=30,WL=12000;
 const ST={T:0,TO:1,P:2,L:3,R:4,GO:5,W:6,FO:7};
 let st=ST.T,stt=0,sc=0,hc=false;
-let pl={x:150,y:240,wx:0,alt:2,fl:0,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0,toClimb:0};
+let pl={x:150,y:240,wx:0,alt:2,fl:0,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0,toClimb:0,stallT:0};
 let gf=[],gt=[],ep=[],bl=[],eb=[],bmbs=[],ex=[],fb=[],pt=[];
 const ks={};
 let gtm=0,lst=0,nt='',ntt=0,hasKey=false,bal={wx:4700,al:false,ph:0},ky={wx:4700,gr:false},bldgDestroyed=0,flightTime=0,tB=0,allB=0;
@@ -18,7 +18,7 @@ function sn(m){nt=m;ntt=90;}
 function iG(){
 AudioFX.stopEngine();
 gf=[];gt=[];ep=[];bl=[];eb=[];bmbs=[];ex=[];fb=[];pt=[];
-pl={x:150,y:240,wx:0,alt:2,fl:hc?FMC:FM,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0,toClimb:0};
+pl={x:150,y:240,wx:0,alt:2,fl:hc?FMC:FM,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0,toClimb:0,stallT:0};
 sc=0;stt=0;gtm=0;lst=0;pl.fl=hc?FMC:FM;
 hasKey=false;bal={wx:4700,al:false,ph:0};ky={wx:4700,gr:false};bldgDestroyed=0;flightTime=0;tB=0;allB=0;
 cT();
@@ -42,7 +42,7 @@ for(let i=0;i<30;i++){let wx=500+i*350+Math.random()*150;if(afps.some(af=>Math.a
 function up(dt){
 if(st===ST.T||st===ST.GO||st===ST.W)return;
 if(st===ST.P){pl.fl-=dt/60;if(pl.fl<=0){pl.fl=0;st=ST.FO;AudioFX.stopEngine();sn('OUT OF FUEL!');}flightTime+=dt/60;}
-if(st===ST.P)hi(dt);
+if(st===ST.P||st===ST.TO)hi(dt);
 if(st===ST.FO){pl.y+=4*dt;pl.x-=0.6*dt;if(pl.y>GB-40)pl.alt=0;else if(pl.y>GB-200)pl.alt=1;if(pl.y>=GB){kP('OUT OF FUEL!');}}
 if(st===ST.P){pl.wx+=SS*dt;if(pl.wx>=WL){pl.wx-=WL;bldgDestroyed=0;allB=0;bal.al=false;cT();}}
 if(st===ST.P&&(ks['Space']||ks['KeyG'])&&gtm<=0)fG();
@@ -52,8 +52,8 @@ if(st===ST.P&&Math.random()<0.0077*dt)sEP(); // normaali spawn
 uEP(dt);uGT(dt);if(!bal.al&&bldgDestroyed>=8&&flightTime>=60){bal.al=true;bal.wx=pl.wx+500+Math.random()*400;bal.ph=0;ky.wx=bal.wx;}
 bal.ph+=dt*0.018;if(bal.al&&st===ST.P){let sx=bal.wx-pl.wx+200;bal.x=sx;bal.y=80+Math.sin(bal.ph)*50;ky.x=sx;ky.y=bal.y+50;}
 cC();uH();
-if(st===ST.L){pl.ldt+=dt/60;pl.y+=(pl.lty-pl.y)*0.12*dt;pl.x+=(pl.ltx-pl.x)*0.08*dt;if(pl.ldt>1.5){st=ST.R;stt=0;pl.fl=Math.min(pl.fl+20,hc?FMC:FM);pl.bm=BM;pl.dmg=0;pl.alt=1;AudioFX.playRefuel();sn('TANKATTU!');}}
-if(st===ST.R){stt+=dt/60;if(stt>1.5){st=ST.TO;stt=0;pl.sp=0;pl.alt=1;}}
+if(st===ST.L){pl.ldt+=dt/60;pl.y+=(pl.lty-pl.y)*0.12*dt;pl.x+=(pl.ltx-pl.x)*0.08*dt;if(pl.ldt>1.5){st=ST.R;stt=0;pl.fl=Math.min(pl.fl+20,hc?FMC:FM);pl.bm=BM;pl.dmg=0;pl.alt=2;AudioFX.playRefuel();sn('TANKATTU!');}}
+if(st===ST.R){stt+=dt/60;if(stt>1.5){st=ST.TO;stt=0;pl.sp=0;pl.alt=2;}}
 if(st===ST.TO){stt+=dt/60;pl.sp=Math.min(pl.sp+0.3*dt,8);if(stt>1.5&&pl.sp>5){st=ST.P;AudioFX.startEngine();}}
 }
 function hi(dt){
@@ -63,7 +63,6 @@ if(ks['ArrowDown']||ks['KeyS'])my=ms;
 if(ks['ArrowLeft']||ks['KeyA'])mx=-ms;
 if(ks['ArrowRight']||ks['KeyD'])mx=ms;
 pl.x+=mx;pl.y+=my;pl.x=Math.max(30,Math.min(W-30,pl.x));pl.y=Math.max(40,Math.min(H-80,pl.y));
-    if(st===ST.P&&pl.alt<=1){let oa=false;for(let f of gf)if(f.t==='af'&&Math.abs(pl.wx-f.wx)<f.w/2+60)oa=true;if(!oa)kP('STALL!');}
     if(my<-0.5&&pl.alt<3)pl.alt=3;else if(my<-0.2&&pl.alt<2)pl.alt=2;else if(my>0.2&&pl.alt>1)pl.alt=1;else if(my>0.5&&pl.alt>0&&pl.y>GB-40)pl.alt=0;
 if(st!==ST.L&&pl.alt===0&&pl.y>GB){pl.y=GB;if(st===ST.P)kP('CRASH!');}
 }
@@ -147,7 +146,7 @@ ctx.fillStyle='#68a';ctx.font='8px monospace';ctx.fillText('\"Rule, Britannia!\"
 function dC(){ctx.fillStyle='rgba(255,255,255,0.18)';for(let i=0;i<5;i++){let cx=((i*310+pl.wx*0.3)%(W+200))-100;let cy=50+i*40;ctx.beginPath();ctx.ellipse(cx,cy,40,15,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(cx+20,cy-8,30,12,0,0,Math.PI*2);ctx.fill();}}
 function dGO(){
 ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#f22';ctx.font='bold 30px \"Press Start 2P\",monospace';ctx.textAlign='center';
-
+ctx.fillText('GAME OVER',W/2,H/2-20);
 ctx.fillText('PAINA ENTER / TAP',W/2,H/2+65);ctx.textAlign='start';
 }
 function dT(){
@@ -200,7 +199,6 @@ function dHU(){
     ctx.textAlign='right';ctx.fillStyle=altC[pl.alt];ctx.fillText('\u{25b2}'+altT[pl.alt],pw-8,ry);
     ctx.textAlign='start';
 }
-}
 function dWN(){
 ctx.fillStyle='rgba(0,0,20,0.85)';ctx.fillRect(0,0,W,H);
 ctx.fillStyle='#fd0';ctx.font='bold 18px "Press Start 2P",monospace';ctx.textAlign='center';
@@ -229,7 +227,7 @@ ctx.textAlign='start';
 function kD(e){ks[e.code]=true;if(e.code==='Space'){let nw=Date.now();if(nw-lst<300&&st===ST.P&&pl.bm>0)dB();lst=nw;e.preventDefault();}if(e.code==='KeyB'&&st===ST.P&&pl.bm>0){dB();e.preventDefault();}if(e.code==='Enter'){if(st===ST.T)sG();else if(st===ST.GO||st===ST.W)rT();e.preventDefault();}if(e.code==='KeyR'&&(st===ST.GO||st===ST.W))rT();if(e.code==='KeyL'&&st===ST.P)tL();}
 function kU(e){ks[e.code]=false;}
 function tcVis(v){let tc=document.getElementById('touch-controls');if(tc){if(v)tc.classList.remove('hidden-tc');else tc.classList.add('hidden-tc');}}
-function sG(){AudioFX.init();iG();st=ST.TO;stt=0;pl.sp=0;pl.alt=1;tcVis(true);AudioFX.playRuleBritannia();setTimeout(()=>{if(st===ST.TO)AudioFX.startEngine();},2000);sn('TAKE OFF!');}
+function sG(){AudioFX.init();iG();st=ST.TO;stt=0;pl.sp=0;pl.alt=2;tcVis(true);AudioFX.playRuleBritannia();setTimeout(()=>{if(st===ST.TO)AudioFX.startEngine();},2000);sn('TAKE OFF!');}
 function rT(){st=ST.T;AudioFX.stopEngine();iG();tcVis(false);}
 function tL(){if(pl.alt<=1&&st===ST.P){let nr=false,afx=0;for(let f of gf){if(f.t!=='af')continue;let sx=f.wx-pl.wx+200;if(Math.abs(sx-pl.x)<f.w/2+40){nr=true;afx=sx+f.w/2;break;}}if(nr){st=ST.L;pl.ldt=0;pl.alt=0;pl.ltx=afx;pl.lty=GB-2;AudioFX.playLanding();sn('LANDING...');}else sn('EI KENTTAA ALLA!');}}
 

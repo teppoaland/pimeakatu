@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.7** | 12.9.2026 | Blue Mäx: polttoaineen loppuessa kone syöksyy maahan, maailma wrapPaa ja regeneroituu uudeksi kierrokseksi
+**v3.14** | 12.9.2026 | Blue Mäx: Palautettu v2.9 lentologiikka — ei STALL-tarkistusta, start alt=2, laskeutumiskynnys my>0.2, tankkaus alt=2, hi() ajetaan myös ST.TO:n aikana.
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 
