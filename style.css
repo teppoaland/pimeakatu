@@ -67,50 +67,17 @@ body::after {
 
 /* ── Palkki yläreunassa ──────────────────────────────── */
 #hud-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    text-align: center;
     width: 100%;
     max-width: 800px;
-    padding: 6px 16px;
+    padding: 3px 16px;
     margin-bottom: 4px;
-    background: rgba(10, 10, 30, 0.9);
+    background: rgba(10, 10, 30, 0.85);
     border: 1px solid #1a1a3e;
     border-radius: 4px;
-    font-size: 0.55rem;
-    color: #7a7aaa;
-    letter-spacing: 1px;
-}
-
-#hud-bar .title {
-    color: #ffd700;
-    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
-}
-
-#hud-bar .hint {
-    color: #555;
-    animation: blink-hint 2s ease-in-out infinite;
-}
-
-@keyframes blink-hint {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 1; }
-}
-
-#hud-bar .inventory {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-#hud-bar .inv-item {
-    opacity: 0.3;
-    transition: opacity 0.3s;
-}
-
-#hud-bar .inv-item.has {
-    opacity: 1;
-    text-shadow: 0 0 6px rgba(255, 215, 0, 0.7);
+    font-size: 0.48rem;
+    color: #5a5a7a;
+    letter-spacing: 0.5px;
 }
 
 /* ── Pelialue (canvas + ohjaimet) ───────────────────── */
