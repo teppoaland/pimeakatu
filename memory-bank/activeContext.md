@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v2.9** | 12.9.2026 | Blue Mäx: nimi vaihdettu, action-napit piiloon aloitusruudusta, pino oikealle, "PAINA ENTER / TAP"
+**v3.0** | 12.9.2026 | Blue Mäx: talot tuhottavissa (pommi+KK), ilmapallo 8 tuhotun talon jälkeen, viholliset ~60% aggressiolla
 
 ## 🔜 Seuraavaksi
 

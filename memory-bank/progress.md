@@ -65,7 +65,9 @@
 |-----------|------|---------|
 | Pelin runko | ✅ Pelikunnossa | Debug-moodi, viholliset minimoitu helpompaa testausta varten |
 | Mobiiliohjaimet | ✅ Valmis | D-pad + B/G/L-napit, landscape-tuki, läpinäkyvä overlay |
-| Viholliset | 🚧 Debug | Minimoidut viholliset; täysi vaikeus vaatii debugin poistoa |
+| Rakennusten tuho | ✅ Valmis | Pommi + KK-tuli, raunio-grafiikka, laskuri 0/8 |
+| Ilmapallo + avain | ✅ Valmis | Ilmestyy 8 tuhotun talon jälkeen |
+| Viholliset | ✅ Valmis | ~60% aggressio: spawn 0.0077, sht 92-276, AA random-korkeus |
 
 ---
 
