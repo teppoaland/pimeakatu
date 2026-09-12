@@ -32,5 +32,5 @@
 - **Blue Max** on jo pelikunnossa (debug-moodissa, viholliset minimoitu helpompaa pelaamista varten)
 - **Commando** ei ole vielä aloitettu
 - **Dig Game (BD1)** = yksi iso kenttä, täysin valmis
-- **Boulder Däsh (BD2)** = **5 kenttää** (ei 4), debug-moodissa avain heti kentästä 1
+- **Boulder Däsh (BD2)** = **4 kenttää** (ei 5), debug-moodissa avain heti kentästä 1
 - Jatkokehitysideat löytyvät `docs/`-kansion memo-tiedostoista

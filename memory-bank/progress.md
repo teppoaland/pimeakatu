@@ -40,7 +40,7 @@
 
 | Ominaisuus | Tila | Huomiot |
 |-----------|------|---------|
-| 5 tasoa | ✅ Valmis | Eri teemat ja vaikeudet |
+| 4 tasoa | ✅ Valmis | Eri teemat ja vaikeudet |
 | Painovoima | ✅ Valmis | Keikahdusviive 1 kehys |
 | Viholliset | ✅ Valmis | Tulikärpänen, perhonen |
 | Elämät (3) | ✅ Valmis | INITIAL_LIVES = 3 |
