@@ -25,11 +25,11 @@ Versionumeroa nostetaan **aina +0.1** kun:
 
 Versionumeroa **ei** nosteta kun:
 
-- Pelkkiä asetusarvoja säädetään (esim. vihollisten määrä, nopeudet, debug-tilan kytkimet)
+- Pelkkiä asetusarvoja säädetään (esim. vihollisten aggressiivisuus, määrä, nopeudet, debug-kytkimet)
 - Vain `README.md`, `PROJECT.md`, `CHANGELOG.md`, `start_server.bat` muuttuu
 - Buildattuja tiedostoja (`dig_game.html`, `boulder_dash.html`) regeneroidaan
 
-**Nyrkkisääntö:** Jos muutos vaikuttaa pelattavuuteen tai ulkoasuun → +0.1. Jos pelkkä asetusarvo → ei.
+**Nyrkkisääntö:** Jos muutos vaikuttaa pelilogiikkaan, rakenteeseen tai ulkoasuun → +0.1. Jos pelkkä parametrin/arvon säätö → ei. Asetuksiin saa ja pitää koskea tarvittaessa, ne eivät vaan nosta versionumeroa.
 
 ---
 
