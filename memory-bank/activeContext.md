@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v2.7** | 12.9.2026 | Ikkunoiden valot elävöity (RGB-tuikinta + moskiitot), jäniksen loikat korjattu
+**v2.8** | 12.9.2026 | BlueMax mobiiliohjaus: B/G/L-napit, landscape-tuki, touchActive-suoja; banneriteksti päivitetty
 
 ## 🔜 Seuraavaksi
 

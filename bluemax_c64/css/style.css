@@ -102,6 +102,7 @@ html, body {
     line-height: 0;
     width: 100%;
     max-width: 800px;
+    position: relative;
 }
 
 canvas {
@@ -137,9 +138,14 @@ canvas {
 
 #touch-controls {
     display: none;
-    gap: 16px;
+    gap: 10px;
     align-items: center;
     justify-content: center;
+}
+
+/* JS-pakotettu näkyvyys touch-laitteille */
+#touch-controls.force-show {
+    display: flex !important;
 }
 
 .touch-dpad {
@@ -164,6 +170,7 @@ canvas {
     align-items: center;
     justify-content: center;
     -webkit-tap-highlight-color: transparent;
+    touch-action: none;
 }
 
 .touch-btn:active {
@@ -178,11 +185,10 @@ canvas {
 .touch-btn.right { grid-area: right; }
 
 #bomb-btn {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    font-size: 1.5rem;
-    font-weight: bold;
+    font-size: 1.4rem;
     background: rgba(180,30,30,0.7);
     border: 2px solid #ff4444;
     color: #fff;
@@ -192,6 +198,38 @@ canvas {
     background: #cc0000;
     transform: scale(0.9);
     box-shadow: 0 0 20px rgba(255,50,50,0.6);
+}
+
+#gun-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    font-size: 1.3rem;
+    background: rgba(30,120,30,0.7);
+    border: 2px solid #44cc44;
+    color: #fff;
+}
+
+#gun-btn:active {
+    background: #0a5a0a;
+    transform: scale(0.9);
+    box-shadow: 0 0 20px rgba(50,255,50,0.5);
+}
+
+#land-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    font-size: 1.3rem;
+    background: rgba(30,80,180,0.7);
+    border: 2px solid #4488ff;
+    color: #fff;
+}
+
+#land-btn:active {
+    background: #0a2a6a;
+    transform: scale(0.9);
+    box-shadow: 0 0 20px rgba(50,130,255,0.5);
 }
 
 #overlay {
@@ -255,9 +293,60 @@ canvas {
     transform: scale(0.95);
 }
 
-@media (max-width: 768px) {
-    #touch-controls { display: flex; }
-    #keyboard-hints { display: none; }
+@media (max-width: 768px), (max-height: 768px) {
     #game-header h1 { font-size: 1rem; }
     #game-info { font-size: 0.4rem; gap: 8px; padding: 4px 8px; }
+    #keyboard-hints { display: none; }
+
+    #canvas-wrapper {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        max-width: none;
+    }
+
+    #touch-controls {
+        position: absolute;
+        bottom: 10px;
+        left: 6px;
+        right: 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        pointer-events: none;
+        z-index: 10;
+        gap: 4px;
+    }
+
+    #touch-controls > * {
+        pointer-events: auto;
+    }
+
+    #touch-controls .touch-dpad {
+        opacity: 0.65;
+    }
+
+    #bomb-btn, #gun-btn, #land-btn {
+        opacity: 0.75;
+        flex-shrink: 0;
+    }
+
+    /* Action-napit oikealle pinottuna */
+    #touch-controls .touch-dpad {
+        order: 1;
+    }
+    #bomb-btn { order: 2; }
+    #gun-btn { order: 3; }
+    #land-btn { order: 4; }
+}
+
+/* Vaakamoodi: ohjaimet keskelle pystysuunnassa */
+@media (orientation: landscape) and (max-height: 768px) {
+    #touch-controls {
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        align-items: center;
+    }
 }

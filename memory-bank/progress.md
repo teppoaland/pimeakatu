@@ -64,6 +64,7 @@
 | Ominaisuus | Tila | Huomiot |
 |-----------|------|---------|
 | Pelin runko | ✅ Pelikunnossa | Debug-moodi, viholliset minimoitu helpompaa testausta varten |
+| Mobiiliohjaimet | ✅ Valmis | D-pad + B/G/L-napit, landscape-tuki, läpinäkyvä overlay |
 | Viholliset | 🚧 Debug | Minimoidut viholliset; täysi vaikeus vaatii debugin poistoa |
 
 ---

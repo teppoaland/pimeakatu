@@ -44,7 +44,7 @@ if(st===ST.T||st===ST.GO||st===ST.W)return;
 if(st===ST.P){pl.fl-=dt/60;if(pl.fl<=0){pl.fl=0;kP('FUEL EMPTY!');return;}}
 if(st===ST.P||st===ST.TO)hi(dt);
 if(st===ST.P)pl.wx+=SS*dt;
-if(st===ST.P&&ks['Space']&&gtm<=0)fG();
+if(st===ST.P&&(ks['Space']||ks['KeyG'])&&gtm<=0)fG();
 gtm-=dt;
 uB(dt);uEB(dt);uBM(dt);uE(dt);uF(dt);uP(dt);
 if(st===ST.P&&Math.random()<0.0012*dt)sEP(); // DEBUG: minimoitu spawnaus (oli 0.012)
@@ -198,7 +198,7 @@ ctx.textAlign='start';
 }
 
 /* ═══ INPUT ═══════════════════════════════════ */
-function kD(e){ks[e.code]=true;if(e.code==='Space'){let nw=Date.now();if(nw-lst<300&&st===ST.P&&pl.bm>0)dB();lst=nw;e.preventDefault();}if(e.code==='Enter'){if(st===ST.T)sG();else if(st===ST.GO||st===ST.W)rT();e.preventDefault();}if(e.code==='KeyR'&&(st===ST.GO||st===ST.W))rT();if(e.code==='KeyL'&&st===ST.P)tL();}
+function kD(e){ks[e.code]=true;if(e.code==='Space'){let nw=Date.now();if(nw-lst<300&&st===ST.P&&pl.bm>0)dB();lst=nw;e.preventDefault();}if(e.code==='KeyB'&&st===ST.P&&pl.bm>0){dB();e.preventDefault();}if(e.code==='Enter'){if(st===ST.T)sG();else if(st===ST.GO||st===ST.W)rT();e.preventDefault();}if(e.code==='KeyR'&&(st===ST.GO||st===ST.W))rT();if(e.code==='KeyL'&&st===ST.P)tL();}
 function kU(e){ks[e.code]=false;}
 function sG(){AudioFX.init();iG();st=ST.TO;stt=0;pl.sp=0;pl.alt=2;AudioFX.playRuleBritannia();setTimeout(()=>{if(st===ST.TO)AudioFX.startEngine();},2000);sn('TAKE OFF!');}
 function rT(){st=ST.T;AudioFX.stopEngine();iG();}
@@ -206,12 +206,49 @@ function tL(){if(pl.alt<=1&&st===ST.P){let nr=false,afx=0;for(let f of gf){if(f.
 
 /* ═══ LUUPPI ═════════════════════════════════ */
 function gl(ts){if(!lt)lt=ts;let dt=(ts-lt)/16.667;lt=ts;if(dt>5)dt=5;up(dt);uN(dt);dr();afid=requestAnimationFrame(gl);}
-function init(cEl){cnv=cEl;cnv.width=W;cnv.height=H;try{let r=localStorage.getItem('pimeakatu_gamestate');if(r){let gs=JSON.parse(r);hc=gs.inventory&&gs.inventory.coin===true;}}catch(e){}document.addEventListener('keydown',kD);document.addEventListener('keyup',kU);sTC();iG();st=ST.T;rs();window.addEventListener('resize',rs);lt=performance.now();afid=requestAnimationFrame(gl);}
-function sTC(){let bb=document.getElementById('bomb-btn');if(bb){let bDn=e=>{e.preventDefault();if(st===ST.P&&pl.bm>0)dB();};bb.addEventListener('touchstart',bDn,{passive:false});bb.addEventListener('mousedown',bDn);}document.querySelectorAll('.touch-btn[data-dir]').forEach(b=>{let km={up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight'};let d=e=>{e.preventDefault();ks[km[b.dataset.dir]]=true;};let u=e=>{e.preventDefault();ks[km[b.dataset.dir]]=false;};let c=()=>{ks[km[b.dataset.dir]]=false;};b.addEventListener('touchstart',d,{passive:false});b.addEventListener('touchend',u,{passive:false});b.addEventListener('touchcancel',c,{passive:false});b.addEventListener('mousedown',d);b.addEventListener('mouseup',u);b.addEventListener('mouseleave',c);});let cd=e=>{if(st===ST.T)sG();else if(st===ST.GO||st===ST.W)rT();};cnv.addEventListener('touchstart',cd,{passive:false});cnv.addEventListener('mousedown',cd);}
+function init(cEl){cnv=cEl;cnv.width=W;cnv.height=H;try{let r=localStorage.getItem('pimeakatu_gamestate');if(r){let gs=JSON.parse(r);hc=gs.inventory&&gs.inventory.coin===true;}}catch(e){}document.addEventListener('keydown',kD);document.addEventListener('keyup',kU);if('ontouchstart' in window||navigator.maxTouchPoints>0){let tc=document.getElementById('touch-controls');if(tc)tc.classList.add('force-show');}sTC();iG();st=ST.T;rs();window.addEventListener('resize',rs);lt=performance.now();afid=requestAnimationFrame(gl);}
+function sTC(){let ta=false;
+  // Pommi-nappi (B)
+  let bb=document.getElementById('bomb-btn');
+  if(bb){let bDn=e=>{e.preventDefault();if(st===ST.P&&pl.bm>0)dB();};
+   bb.addEventListener('touchstart',e=>{ta=true;bDn(e);},{passive:false});
+   bb.addEventListener('mousedown',e=>{if(ta)return;bDn(e);});
+   bb.addEventListener('touchend',()=>{setTimeout(()=>{ta=false;},400);});
+  }
+  // Konekivääri-nappi (G) – pidä pohjassa ampuaksesi
+  let gb=document.getElementById('gun-btn');
+  if(gb){let gDn=e=>{e.preventDefault();ks['KeyG']=true;};let gUp=e=>{e.preventDefault();ks['KeyG']=false;};let gCn=()=>{ks['KeyG']=false;};
+   gb.addEventListener('touchstart',e=>{ta=true;gDn(e);},{passive:false});
+   gb.addEventListener('touchend',e=>{gUp(e);setTimeout(()=>{ta=false;},400);},{passive:false});
+   gb.addEventListener('touchcancel',e=>{gCn();setTimeout(()=>{ta=false;},400);},{passive:false});
+   gb.addEventListener('mousedown',e=>{if(ta)return;gDn(e);});
+   gb.addEventListener('mouseup',e=>{if(ta)return;gUp(e);});
+   gb.addEventListener('mouseleave',()=>{if(ta)return;gCn();});
+  }
+  // Laskeudu-nappi (L)
+  let lb=document.getElementById('land-btn');
+  if(lb){let lDn=e=>{e.preventDefault();if(st===ST.P)tL();};
+   lb.addEventListener('touchstart',e=>{ta=true;lDn(e);},{passive:false});
+   lb.addEventListener('mousedown',e=>{if(ta)return;lDn(e);});
+   lb.addEventListener('touchend',()=>{setTimeout(()=>{ta=false;},400);});
+  }
+  // Suuntanäppäimet
+  document.querySelectorAll('.touch-btn[data-dir]').forEach(b=>{let km={up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight'};let d=e=>{e.preventDefault();ks[km[b.dataset.dir]]=true;};let u=e=>{e.preventDefault();ks[km[b.dataset.dir]]=false;};let c=()=>{ks[km[b.dataset.dir]]=false;};
+   b.addEventListener('touchstart',e=>{ta=true;d(e);},{passive:false});
+   b.addEventListener('touchend',e=>{u(e);setTimeout(()=>{ta=false;},400);},{passive:false});
+   b.addEventListener('touchcancel',e=>{c();setTimeout(()=>{ta=false;},400);},{passive:false});
+   b.addEventListener('mousedown',e=>{if(ta)return;d(e);});
+   b.addEventListener('mouseup',e=>{if(ta)return;u(e);});
+   b.addEventListener('mouseleave',()=>{if(ta)return;c();});
+  });
+  // Canvas-tap
+  let cd=e=>{if(st===ST.T)sG();else if(st===ST.GO||st===ST.W)rT();};
+  cnv.addEventListener('touchstart',e=>{ta=true;cd(e);},{passive:false});
+  cnv.addEventListener('mousedown',e=>{if(ta)return;cd(e);});
+ }
 function rs(){
 if(!cnv)return;
-let ww=cnv.parentElement?Math.min(cnv.parentElement.clientWidth,W):W;
-cnv.width=W;cnv.height=H; // pidä resoluutio aina 800x480
+cnv.width=W;cnv.height=H;
 }
 function destroy(){if(afid)cancelAnimationFrame(afid);document.removeEventListener('keydown',kD);document.removeEventListener('keyup',kU);AudioFX.stopEngine();}
 return{init,rs,destroy};
