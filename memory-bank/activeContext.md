@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.14** | 12.9.2026 | Blue Mäx: Palautettu v2.9 lentologiikka — ei STALL-tarkistusta, start alt=2, laskeutumiskynnys my>0.2, tankkaus alt=2, hi() ajetaan myös ST.TO:n aikana.
+**v3.15** | 12.9.2026 | Moskiittojen näkyvyys +50% (alpha 0.06→0.09, säde 0.6→0.9), jotta näkyvät myös mobiilin pienellä näytöllä.
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 

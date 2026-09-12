@@ -1049,10 +1049,10 @@ const Street = (() => {
                 const mt = t * (1.1 + m * 0.25);
                 const mx = bx + Math.cos(mt + m * 2.3) * (10 + Math.sin(mt * 0.6) * 5);
                 const my = bulbY + 6 + Math.sin(mt * 1.2 + m * 1.7) * (8 + Math.cos(mt * 0.8) * 4);
-                const malpha = 0.06 + Math.sin(mt * 2.5 + m) * 0.03;
+                const malpha = 0.09 + Math.sin(mt * 2.5 + m) * 0.045;
                 ctx.fillStyle = 'rgba(255,220,140,' + malpha + ')';
                 ctx.beginPath();
-                ctx.arc(mx, my, 0.6, 0, Math.PI * 2);
+                ctx.arc(mx, my, 0.9, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
