@@ -54,19 +54,17 @@ bal.ph+=dt*0.018;if(bal.al&&st===ST.P){let sx=bal.wx-pl.wx+200;bal.x=sx;bal.y=80
 cC();uH();
 if(st===ST.L){pl.ldt+=dt/60;pl.y+=(pl.lty-pl.y)*0.12*dt;pl.x+=(pl.ltx-pl.x)*0.08*dt;if(pl.ldt>1.5){st=ST.R;stt=0;pl.fl=Math.min(pl.fl+20,hc?FMC:FM);pl.bm=BM;pl.dmg=0;pl.alt=1;AudioFX.playRefuel();sn('TANKATTU!');}}
 if(st===ST.R){stt+=dt/60;if(stt>1.5){st=ST.TO;stt=0;pl.sp=0;pl.alt=1;}}
-if(st===ST.TO){stt+=dt/60;pl.sp=Math.min(pl.sp+0.3*dt,8);if(stt>1.5&&pl.sp>5){st=ST.P;pl.toClimb=180;AudioFX.startEngine();}}
+if(st===ST.TO){stt+=dt/60;pl.sp=Math.min(pl.sp+0.3*dt,8);if(stt>1.5&&pl.sp>5){st=ST.P;AudioFX.startEngine();}}
 }
 function hi(dt){
-if(pl.toClimb>0)pl.toClimb-=dt;
 let mx=0,my=0,ms=2.5*dt;
 if(ks['ArrowUp']||ks['KeyW'])my=-ms;
 if(ks['ArrowDown']||ks['KeyS'])my=ms;
 if(ks['ArrowLeft']||ks['KeyA'])mx=-ms;
 if(ks['ArrowRight']||ks['KeyD'])mx=ms;
 pl.x+=mx;pl.y+=my;pl.x=Math.max(30,Math.min(W-30,pl.x));pl.y=Math.max(40,Math.min(H-80,pl.y));
-if(my<-0.5&&pl.alt<3)pl.alt=3;else if(my<-0.2&&pl.alt<2)pl.alt=2;else if(my>0.2&&pl.alt>1)pl.alt=1;else if(my>0.5&&pl.alt>0&&pl.y>GB-40&&pl.toClimb<=0)pl.alt=0;
-    // Nousupakote: ilman ylösvetoa kone vajoaa
-    if(pl.toClimb>0&&my>=-0.1)pl.y+=2*dt;
+    if(st===ST.P&&pl.alt<=1){let oa=false;for(let f of gf)if(f.t==='af'&&Math.abs(pl.wx-f.wx)<f.w/2+60)oa=true;if(!oa)kP('STALL!');}
+    if(my<-0.5&&pl.alt<3)pl.alt=3;else if(my<-0.2&&pl.alt<2)pl.alt=2;else if(my>0.2&&pl.alt>1)pl.alt=1;else if(my>0.5&&pl.alt>0&&pl.y>GB-40)pl.alt=0;
 if(st!==ST.L&&pl.alt===0&&pl.y>GB){pl.y=GB;if(st===ST.P)kP('CRASH!');}
 }
 
@@ -117,7 +115,7 @@ function uH(){
 let p=Math.max(0,pl.fl/(hc?FMC:FM)*100);
 document.getElementById('fuel-display').textContent=Math.ceil(pl.fl)+'s';
 document.getElementById('fuel-fill-inner').style.width=p+'%';
-document.getElementById('score-display').textContent=sc;
+
 document.getElementById('bomb-display').textContent=pl.bm;
 document.getElementById('damage-display').textContent=(DM-pl.dmg);
 document.getElementById('altitude-display').textContent=['MAA','MATALA','KESKI','KORKEA'][pl.alt];
@@ -149,7 +147,7 @@ ctx.fillStyle='#68a';ctx.font='8px monospace';ctx.fillText('\"Rule, Britannia!\"
 function dC(){ctx.fillStyle='rgba(255,255,255,0.18)';for(let i=0;i<5;i++){let cx=((i*310+pl.wx*0.3)%(W+200))-100;let cy=50+i*40;ctx.beginPath();ctx.ellipse(cx,cy,40,15,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(cx+20,cy-8,30,12,0,0,Math.PI*2);ctx.fill();}}
 function dGO(){
 ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#f22';ctx.font='bold 30px \"Press Start 2P\",monospace';ctx.textAlign='center';
-ctx.fillText('GAME OVER',W/2,H/2-20);ctx.fillStyle='#fd0';ctx.font='12px \"Press Start 2P\",monospace';ctx.fillText('SCORE: '+sc,W/2,H/2+25);
+
 ctx.fillText('PAINA ENTER / TAP',W/2,H/2+65);ctx.textAlign='start';
 }
 function dT(){
@@ -183,33 +181,25 @@ function dBA(){if(!bal.al)return;let bx=Math.round(bal.x),by=Math.round(bal.y);c
 function dKY(){if(ky.gr||!bal.al)return;let kx=Math.round(ky.x),kyv=Math.round(ky.y);ctx.fillStyle='#fd0';ctx.fillRect(kx-6,kyv,12,3);ctx.fillRect(kx-2,kyv-8,4,10);ctx.fillRect(kx+3,kyv-3,8,3);ctx.fillRect(kx+3,kyv+1,8,3);}
 function dHU(){
     let p=Math.max(0,pl.fl/(hc?FMC:FM)),fb=pl.fl<=10&&Math.sin(Date.now()/250)>0;
-    let pw=Math.floor(W/3); // ⅓ leveä paneeli
+    let pw=Math.floor(W/3); // 1/3 levea paneeli
     // Musta paneelitausta
     ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(0,0,pw,52);
     ctx.fillStyle='rgba(60,60,60,0.5)';ctx.fillRect(0,50,pw,2);
-    // Polttoainepalkki – hallitseva ylhäällä
+    // Polttoainepalkki
     let bx=6,by=6,bw=pw-12,bh=12,fc=p>0.5?'#4a4':p>0.2?'#ca3':'#e33';
     if(fb)fc='#f55';
     ctx.fillStyle='#222';ctx.fillRect(bx,by,bw,bh);
     ctx.fillStyle=fc;ctx.fillRect(bx,by,Math.floor(bw*p),bh);
-    // Polttoainenumero oikealle
-    ctx.font='bold 9px "Press Start 2P",monospace';ctx.textAlign='right';
+    ctx.font='bold 9px \"Press Start 2P\",monospace';ctx.textAlign='right';
     ctx.fillStyle=fb?'#f55':'#ccc';ctx.fillText(Math.ceil(pl.fl)+'s',pw-6,by+11);
-    // Alarivi: ikonit vasemmalle
-    ctx.textAlign='left';ctx.font='bold 8px "Press Start 2P",monospace';
-    let ry=36;
-    ctx.fillStyle='#ff0';ctx.fillText('⭐'+sc,8,ry);
-    ctx.fillStyle='#ccc';ctx.fillText('💣'+pl.bm,98,ry);
-    ctx.fillStyle='#f66';ctx.fillText('❤️'+(DM-pl.dmg),170,ry);
-    // Korkeus alaoikealla
+    // Alarivi: pommit ja elamat
+    ctx.textAlign='left';ctx.font='bold 8px \"Press Start 2P\",monospace';let ry=36;
+    ctx.fillStyle='#ccc';ctx.fillText('\u{1f4a3}'+pl.bm,8,ry);
+    ctx.fillStyle='#f66';ctx.fillText('\u{2764}\u{fe0f}'+(DM-pl.dmg),88,ry);
     let altT=['MAA','MATALA','KESKI','KORKEA'],altC=['#666','#8c6','#48f','#88f'];
-    ctx.textAlign='right';ctx.fillStyle=altC[pl.alt];ctx.fillText('▲'+altT[pl.alt],pw-8,ry);
-    // Nousuvaroitus
-    if(pl.toClimb>0&&Math.sin(Date.now()/300)>0){
-        ctx.textAlign='center';ctx.font='bold 7px "Press Start 2P",monospace';
-        ctx.fillStyle='#fa0';ctx.fillText('PULL UP!',pw/2,24);
-    }
+    ctx.textAlign='right';ctx.fillStyle=altC[pl.alt];ctx.fillText('\u{25b2}'+altT[pl.alt],pw-8,ry);
     ctx.textAlign='start';
+}
 }
 function dWN(){
 ctx.fillStyle='rgba(0,0,20,0.85)';ctx.fillRect(0,0,W,H);
