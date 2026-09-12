@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    street.js – "Pimeä Katu" -päävalikkopeli
    2D-sivukuvattu pimeä kaupunkikatu: 9 taloa, ovet,
    5 katulamppua talojen väleissä.
@@ -46,7 +46,7 @@ const Street = (() => {
     const lamps = [
         { x: 85,  bldgIdx: 1, lit: false, label: 'DIG\nGAME',    gameUrl: 'digGame1/dig_game.html' },
         { x: 255, bldgIdx: 3, lit: false, label: 'BOULDER\nDASH', gameUrl: 'digGame2/boulder_dash.html' },
-        { x: 445, bldgIdx: 5, lit: false, label: 'BLUE\nMAX',     gameUrl: 'bluemax_c64/game_main.html' },
+        { x: 445, bldgIdx: 5, lit: false, label: 'BLUE\nMÄX',     gameUrl: 'bluemax_c64/game_main.html' },
         { x: 625, bldgIdx: 7, lit: false, label: 'COM-\nMANDO',   gameUrl: null },
         { x: 720, bldgIdx: 8, lit: false, label: '???',           gameUrl: null }
     ];

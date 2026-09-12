@@ -140,12 +140,24 @@ canvas {
     display: none;
     gap: 10px;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
 }
 
 /* JS-pakotettu näkyvyys touch-laitteille */
 #touch-controls.force-show {
     display: flex !important;
+}
+
+/* Piilota aloitusruudussa */
+#touch-controls.hidden-tc {
+    display: none !important;
+}
+
+.touch-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
 }
 
 .touch-dpad {
@@ -327,18 +339,9 @@ canvas {
         opacity: 0.65;
     }
 
-    #bomb-btn, #gun-btn, #land-btn {
+    #touch-controls .touch-actions .touch-btn {
         opacity: 0.75;
-        flex-shrink: 0;
     }
-
-    /* Action-napit oikealle pinottuna */
-    #touch-controls .touch-dpad {
-        order: 1;
-    }
-    #bomb-btn { order: 2; }
-    #gun-btn { order: 3; }
-    #land-btn { order: 4; }
 }
 
 /* Vaakamoodi: ohjaimet keskelle pystysuunnassa */

@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v2.8** | 12.9.2026 | BlueMax mobiiliohjaus: B/G/L-napit, landscape-tuki, touchActive-suoja; banneriteksti päivitetty
+**v2.9** | 12.9.2026 | Blue Mäx: nimi vaihdettu, action-napit piiloon aloitusruudusta, pino oikealle, "PAINA ENTER / TAP"
 
 ## 🔜 Seuraavaksi
 

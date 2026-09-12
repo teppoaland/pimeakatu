@@ -101,9 +101,9 @@ for(let bi=eb.length-1;bi>=0;bi--){if(Math.hypot(eb[bi].x-pl.x,eb[bi].y-pl.y)<20
 for(let ei=ep.length-1;ei>=0;ei--){if(Math.hypot(ep[ei].x-pl.x,ep[ei].y-pl.y)<25){kP('COLLISION!');}}
 if(bal.al){for(let bi=bl.length-1;bi>=0;bi--){if(Math.hypot(bl[bi].x-bal.x,bl[bi].y-bal.y)<35){bal.al=false;ex.push({x:bal.x,y:bal.y,r:0,lf:30});bl.splice(bi,1);sn('BALLOON HIT! -1000');sc=Math.max(0,sc-1000);}}
 if(Math.hypot(pl.x-bal.x,pl.y-bal.y)<40){hP();hP();sn('DONT HIT BALLOON!');}}
-if(!ky.gr&&bal.al&&Math.hypot(pl.x-ky.x,pl.y-ky.y)<18){ky.gr=true;hasKey=true;sn('KEY GRABBED!');st=ST.W;AudioFX.stopEngine();AudioFX.playRuleBritannia();try{window.parent.postMessage('BM_KEY_COLLECTED','*');}catch(e){}}}
+if(!ky.gr&&bal.al&&Math.hypot(pl.x-ky.x,pl.y-ky.y)<18){ky.gr=true;hasKey=true;sn('KEY GRABBED!');st=ST.W;AudioFX.stopEngine();tcVis(false);AudioFX.playRuleBritannia();try{window.parent.postMessage('BM_KEY_COLLECTED','*');}catch(e){}}}
 function hP(){pl.dmg++;AudioFX.playHit();sPt(pl.x,pl.y,6);if(pl.dmg>=DM)kP('DESTROYED!');}
-function kP(m){pl.al=false;ex.push({x:pl.x,y:pl.y,r:0,lf:30});AudioFX.playExplosion();AudioFX.stopEngine();st=ST.GO;stt=0;sn(m);setTimeout(()=>AudioFX.playGameOver(),500);}
+function kP(m){pl.al=false;ex.push({x:pl.x,y:pl.y,r:0,lf:30});AudioFX.playExplosion();AudioFX.stopEngine();st=ST.GO;stt=0;sn(m);tcVis(false);setTimeout(()=>AudioFX.playGameOver(),500);}
 function sPt(x,y,c){for(let i=0;i<c;i++)pt.push({x,y,vx:(Math.random()-0.5)*6,vy:(Math.random()-0.5)*6-2,lf:10+Math.random()*15,cl:['#f40','#fa0','#ff0','#f60'][Math.floor(Math.random()*4)]});}
 function uH(){
 let p=Math.max(0,pl.fl/(hc?FMC:FM)*100);
@@ -129,19 +129,19 @@ dPT();if(pl.al)dPL();if(st===ST.GO)dGO();
 }
 function dTS(){
 ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-ctx.fillStyle='#48f';ctx.font='bold 42px \"Press Start 2P\",monospace';ctx.textAlign='center';ctx.shadowColor='#48f';ctx.shadowBlur=20;ctx.fillText('BLUE MAX',W/2,150);ctx.shadowBlur=0;
+ctx.fillStyle='#48f';ctx.font='bold 42px \"Press Start 2P\",monospace';ctx.textAlign='center';ctx.shadowColor='#48f';ctx.shadowBlur=20;ctx.fillText('BLUE MÄX',W/2,150);ctx.shadowBlur=0;
 ctx.fillStyle='#fd0';ctx.font='11px \"Press Start 2P\",monospace';ctx.fillText('SOPWITH CAMEL - I MS',W/2,190);
 ctx.fillStyle='#aaa';ctx.font='10px \"Press Start 2P\",monospace';
-ctx.fillText('NUOLET/WASD = LENNA',W/2,260);ctx.fillText('VALILYONTI = POMMI',W/2,285);
-ctx.fillText('AUTOMAATTINEN KK-TULI',W/2,310);ctx.fillText('L = LASKEUDU KENTALLE',W/2,335);
-if(Math.sin(Date.now()/500)>0){ctx.fillStyle='#fd0';ctx.font='12px \"Press Start 2P\",monospace';ctx.fillText('PAINA ENTER',W/2,390);}
+ctx.fillText('NUOLET/WASD = LENNA',W/2,250);ctx.fillText('B = POMMI   G = KK-TULI',W/2,278);
+ctx.fillText('L = LASKEUDU',W/2,306);
+if(Math.sin(Date.now()/500)>0){ctx.fillStyle='#fd0';ctx.font='12px \"Press Start 2P\",monospace';ctx.fillText('PAINA ENTER / TAP',W/2,360);}
 ctx.fillStyle='#68a';ctx.font='8px monospace';ctx.fillText('\"Rule, Britannia!\"',W/2,430);ctx.textAlign='start';
 }
 function dC(){ctx.fillStyle='rgba(255,255,255,0.18)';for(let i=0;i<5;i++){let cx=((i*310+pl.wx*0.3)%(W+200))-100;let cy=50+i*40;ctx.beginPath();ctx.ellipse(cx,cy,40,15,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(cx+20,cy-8,30,12,0,0,Math.PI*2);ctx.fill();}}
 function dGO(){
 ctx.fillStyle='rgba(0,0,0,0.65)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#f22';ctx.font='bold 30px \"Press Start 2P\",monospace';ctx.textAlign='center';
 ctx.fillText('GAME OVER',W/2,H/2-20);ctx.fillStyle='#fd0';ctx.font='12px \"Press Start 2P\",monospace';ctx.fillText('SCORE: '+sc,W/2,H/2+25);
-ctx.fillText('PAINA ENTER',W/2,H/2+65);ctx.textAlign='start';
+ctx.fillText('PAINA ENTER / TAP',W/2,H/2+65);ctx.textAlign='start';
 }
 function dT(){
 ctx.fillStyle='#3d6b2e';ctx.fillRect(0,GB,W,H-GB);ctx.fillStyle='#2d5b1e';ctx.fillRect(0,GB+20,W,H-GB-20);
@@ -193,20 +193,21 @@ ctx.fillStyle='#fff';ctx.font='10px "Press Start 2P",monospace';
 ctx.fillText('THE KEY OPENS THE NEXT HOUSE',W/2,360);
 ctx.fillStyle='#fff';ctx.font='11px "Press Start 2P",monospace';
 ctx.fillText('SCORE: '+sc,W/2,400);
-if(Math.sin(Date.now()/500)>0){ctx.fillStyle='#fd0';ctx.font='12px "Press Start 2P",monospace';ctx.fillText('PAINA ENTER',W/2,440);}
+if(Math.sin(Date.now()/500)>0){ctx.fillStyle='#fd0';ctx.font='12px "Press Start 2P",monospace';ctx.fillText('PAINA ENTER / TAP',W/2,440);}
 ctx.textAlign='start';
 }
 
 /* ═══ INPUT ═══════════════════════════════════ */
 function kD(e){ks[e.code]=true;if(e.code==='Space'){let nw=Date.now();if(nw-lst<300&&st===ST.P&&pl.bm>0)dB();lst=nw;e.preventDefault();}if(e.code==='KeyB'&&st===ST.P&&pl.bm>0){dB();e.preventDefault();}if(e.code==='Enter'){if(st===ST.T)sG();else if(st===ST.GO||st===ST.W)rT();e.preventDefault();}if(e.code==='KeyR'&&(st===ST.GO||st===ST.W))rT();if(e.code==='KeyL'&&st===ST.P)tL();}
 function kU(e){ks[e.code]=false;}
-function sG(){AudioFX.init();iG();st=ST.TO;stt=0;pl.sp=0;pl.alt=2;AudioFX.playRuleBritannia();setTimeout(()=>{if(st===ST.TO)AudioFX.startEngine();},2000);sn('TAKE OFF!');}
-function rT(){st=ST.T;AudioFX.stopEngine();iG();}
+function tcVis(v){let tc=document.getElementById('touch-controls');if(tc){if(v)tc.classList.remove('hidden-tc');else tc.classList.add('hidden-tc');}}
+function sG(){AudioFX.init();iG();st=ST.TO;stt=0;pl.sp=0;pl.alt=2;tcVis(true);AudioFX.playRuleBritannia();setTimeout(()=>{if(st===ST.TO)AudioFX.startEngine();},2000);sn('TAKE OFF!');}
+function rT(){st=ST.T;AudioFX.stopEngine();iG();tcVis(false);}
 function tL(){if(pl.alt<=1&&st===ST.P){let nr=false,afx=0;for(let f of gf){if(f.t!=='af')continue;let sx=f.wx-pl.wx+200;if(Math.abs(sx-pl.x)<f.w/2+40){nr=true;afx=sx+f.w/2;break;}}if(nr){st=ST.L;pl.ldt=0;pl.alt=0;pl.ltx=afx;pl.lty=GB-2;AudioFX.playLanding();sn('LANDING...');}else sn('EI KENTTAA ALLA!');}}
 
 /* ═══ LUUPPI ═════════════════════════════════ */
 function gl(ts){if(!lt)lt=ts;let dt=(ts-lt)/16.667;lt=ts;if(dt>5)dt=5;up(dt);uN(dt);dr();afid=requestAnimationFrame(gl);}
-function init(cEl){cnv=cEl;cnv.width=W;cnv.height=H;try{let r=localStorage.getItem('pimeakatu_gamestate');if(r){let gs=JSON.parse(r);hc=gs.inventory&&gs.inventory.coin===true;}}catch(e){}document.addEventListener('keydown',kD);document.addEventListener('keyup',kU);if('ontouchstart' in window||navigator.maxTouchPoints>0){let tc=document.getElementById('touch-controls');if(tc)tc.classList.add('force-show');}sTC();iG();st=ST.T;rs();window.addEventListener('resize',rs);lt=performance.now();afid=requestAnimationFrame(gl);}
+function init(cEl){cnv=cEl;cnv.width=W;cnv.height=H;try{let r=localStorage.getItem('pimeakatu_gamestate');if(r){let gs=JSON.parse(r);hc=gs.inventory&&gs.inventory.coin===true;}}catch(e){}document.addEventListener('keydown',kD);document.addEventListener('keyup',kU);if('ontouchstart' in window||navigator.maxTouchPoints>0){let tc=document.getElementById('touch-controls');if(tc)tc.classList.add('force-show');}sTC();iG();st=ST.T;tcVis(false);rs();window.addEventListener('resize',rs);lt=performance.now();afid=requestAnimationFrame(gl);}
 function sTC(){let ta=false;
   // Pommi-nappi (B)
   let bb=document.getElementById('bomb-btn');
