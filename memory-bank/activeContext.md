@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.0** | 12.9.2026 | Blue Mäx: talot tuhottavissa (pommi+KK), ilmapallo 8 tuhotun talon jälkeen, viholliset ~60% aggressiolla
+**v3.1** | 12.9.2026 | Blue Mäx: lentoaika 60s, turhat ilmoitustekstit pois talojen tuhosta
 
 ## 🔜 Seuraavaksi
 
