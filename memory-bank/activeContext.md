@@ -10,11 +10,11 @@
 
 **Vaihe:** Mobiilin D-pad-korjauksen v2 – JS-pohjainen touch-detection + Google Fonts -blokkauksen korjaus
 
-**Nykyinen alataski:** ✅ Valmis – v1.2: "POTKU"-teksti pois, `@import` → `<link>`, JS `force-show` touch-laitteille
+**Nykyinen alataski:** ✅ Valmis – v1.2: laskuritekstit pois + vaakamoodin tuki
 
 ## 🔜 Seuraavaksi
 
-- [ ] Testaa GitHub Pagesissa Androidilla: näkyykö D-pad nyt?
+- [ ] Testaa GitHub Pagesissa: vaakamoodi + potku-ilmoitukset
 - [ ] Blue Max: debugin purku, täydet viholliset / vaikeustasot
 - [ ] Commando-pelin kehityksen aloitus
 - [ ] Ääniefektit pääportaaliin (Web Audio API)
@@ -25,6 +25,9 @@
 
 | Pvm | Mitä tehty |
 |-----|-----------|
+| 12.9.2026 | v1.2: Potku-laskuritekstit ("X/5") pois lamppuilmoituksista |
+| 12.9.2026 | v1.2: Vaakamoodin tuki mobiilissa – ⚡ vasen, canvas keskellä, D-pad oikea |
+| 12.9.2026 | v1.2: HTML-rakenne: `#game-area` + `#touch-row` + `display: contents` |
 | 12.9.2026 | v1.2: "POTKU"-teksti → ⚡-ikoni action-nappiin |
 | 12.9.2026 | v1.2: Google Fonts `@import` (CSS) → `<link>` (HTML) – ei blokkaa CSS:ää |
 | 12.9.2026 | v1.2: JS `'ontouchstart'`-detectio → `.force-show` D-padille |
@@ -41,11 +44,13 @@
 
 ## ⚠️ Avoimet asiat / huomiot
 
-- **v1.2 D-pad-korjaus:** Nyt kolme kerrosta:
+- **v1.2 D-pad-korjaus:** Kolme kerrosta:
   1. CSS `@media (max-width: 768px)` – perustason responsiivisuus
-  2. JS `'ontouchstart' in window` – `.force-show`-luokka pakottaa D-padin näkyviin **kaikilla** kosketuslaitteilla
-  3. Google Fonts siirretty `<link>`-tagiksi – ei enää blokkaa CSS:n latautumista hitailla mobiiliverkoilla
-- **Action-nappi:** "POTKU"-teksti korvattu ⚡-salamalla, `title="Potku"` hover-tekstinä
+  2. JS `'ontouchstart' in window` – `.force-show`-luokka `#touch-row`:lle
+  3. Google Fonts `<link>`-tagina – ei blokkaa CSS:n latautumista
+- **v1.2 Vaakamoodi:** `display: contents` avaa `#touch-row`:n lapset `#game-area`:n flex-riville → ⚡ vasemmalla, canvas keskellä, D-pad oikealla
+- **v1.2 Ilmoitukset:** Potkun laskuritekstit ("1/5" jne.) poistettu – vain "💡 Lamppu syttyi!" / "🌑 Lamppu sammui."
+- **Action-nappi:** ⚡-salama, `title="Potku"` hover-tekstinä
 - **Blue Max** on pelikunnossa debug-moodissa (viholliset minimoitu) – D-pad-korjaus tehty myös tänne
 - **Commando** ei ole vielä aloitettu (tyhjä kansio)
 - **Dig Game (BD1)** = täysin valmis, käyttää jo `touchstart`-pohjaisia kontrolleja
