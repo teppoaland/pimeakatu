@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.16** | 12.9.2026 | Commando MVP-pelimoottori: game_main.html + css + js/game.js + js/audio.js – ylhäältä kuvattu vierivä sotapeli, kivääri + kranaatit, viholliset, esteet, 3 elämää
+**v3.16** | 12.9.2026 | Commando MVP-pelimoottori valmis (4 tiedostoa) + bugikorjaus: syntaksivirhe korjattu (respawn), maasto #484, canvas min-height 200px
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 
