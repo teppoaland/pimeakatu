@@ -620,7 +620,7 @@ const Street = (() => {
         el.style.opacity = '1';
         el.style.transition = 'none';
         el.style.animation = 'popIn 0.3s ease-out';
-        // 3s lukuaikaa, sitten fadeout 0.5s
+        // 1.5s lukuaikaa, sitten fadeout 0.5s
         el._timeout = setTimeout(() => {
             el.style.transition = 'opacity 0.5s';
             el.style.opacity = '0';
@@ -628,7 +628,7 @@ const Street = (() => {
                 el.textContent = '';
                 el.style.animation = 'none';
             }, 500);
-        }, 3000);
+        }, 1500);
     }
 
     function spawnParticles(x, y, color, count) {
