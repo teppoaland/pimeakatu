@@ -361,12 +361,17 @@ body::after {
     }
 }
 
-/* Vaakamoodin hienosäätö: ohjaimet keskelle, canvas vasemmalle */
+/* Vaakamoodin hienosäätö: ohjaimet keskelle pystysuunnassa, canvas vasemmalle */
 @media (orientation: landscape) and (max-height: 768px) {
     #touch-row {
-        bottom: 50%;
-        transform: translateY(50%);
-        align-items: center;  /* pienempi action-nappi samalle keskilinjalle D-padin kanssa */
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        align-items: center;
+    }
+    /* Varmistus: action-nappi ja D-pad omille keskipisteilleen */
+    #touch-left, #touch-right {
+        align-self: center;
     }
     #game-area {
         padding-right: 185px;  /* tilaa D-padille → oikea reuna näkyviin */
