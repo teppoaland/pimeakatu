@@ -36,8 +36,8 @@ const Commando = (() => {
     }
 
     function rs() {
-        const maxW = window.innerWidth - 20, maxH = window.innerHeight - 180;
-        const s = Math.min(maxW / CW, maxH / CH, 1);
+        const maxW = window.innerWidth - 24, maxH = window.innerHeight - 160;
+        const s = Math.min(maxW / CW, maxH / CH, 1.5);
         canvas.width = CW; canvas.height = CH;
         canvas.style.width = (CW * s) + 'px'; canvas.style.height = (CH * s) + 'px';
     }
