@@ -9,7 +9,7 @@ let st=ST.T,stt=0,sc=0,hc=false;
 let pl={x:150,y:240,wx:0,alt:2,fl:0,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0};
 let gf=[],gt=[],ep=[],bl=[],eb=[],bmbs=[],ex=[],fb=[],pt=[];
 const ks={};
-let gtm=0,lst=0,nt='',ntt=0,hasKey=false,bal={wx:4700,al:false,ph:0},ky={wx:4700,gr:false},bldgDestroyed=0;
+let gtm=0,lst=0,nt='',ntt=0,hasKey=false,bal={wx:4700,al:false,ph:0},ky={wx:4700,gr:false},bldgDestroyed=0,flightTime=0;
 
 /* ═══ ILMOITUKSET ═══════════════════════════════ */
 function sn(m){nt=m;ntt=90;}
@@ -20,7 +20,7 @@ AudioFX.stopEngine();
 gf=[];gt=[];ep=[];bl=[];eb=[];bmbs=[];ex=[];fb=[];pt=[];
 pl={x:150,y:240,wx:0,alt:2,fl:hc?FMC:FM,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0};
 sc=0;stt=0;gtm=0;lst=0;pl.fl=hc?FMC:FM;
-hasKey=false;bal={wx:4700,al:false,ph:0};ky={wx:4700,gr:false};bldgDestroyed=0;
+hasKey=false;bal={wx:4700,al:false,ph:0};ky={wx:4700,gr:false};bldgDestroyed=0;flightTime=0;
 cT();
 }
 function cT(){
@@ -41,14 +41,14 @@ for(let i=0;i<12;i++){let wx=500+i*350+Math.random()*150;if(afps.some(af=>Math.a
 /* ═══ PÄIVITYS ═════════════════════════════════ */
 function up(dt){
 if(st===ST.T||st===ST.GO||st===ST.W)return;
-if(st===ST.P){pl.fl-=dt/60;if(pl.fl<=0){pl.fl=0;kP('FUEL EMPTY!');return;}}
+if(st===ST.P){pl.fl-=dt/60;if(pl.fl<=0)pl.fl=0;flightTime+=dt/60;}
 if(st===ST.P||st===ST.TO)hi(dt);
 if(st===ST.P)pl.wx+=SS*dt;
 if(st===ST.P&&(ks['Space']||ks['KeyG'])&&gtm<=0)fG();
 gtm-=dt;
 uB(dt);uEB(dt);uBM(dt);uE(dt);uF(dt);uP(dt);
 if(st===ST.P&&Math.random()<0.0077*dt)sEP(); // 60% aggressio (debug 0.0012 → orig 0.012)
-uEP(dt);uGT(dt);
+uEP(dt);uGT(dt);if(!bal.al&&bldgDestroyed>=8&&flightTime>=60){bal.al=true;bal.wx=pl.wx+500+Math.random()*400;bal.ph=0;ky.wx=bal.wx;}
 bal.ph+=dt*0.018;if(bal.al&&st===ST.P){let sx=bal.wx-pl.wx+200;bal.x=sx;bal.y=80+Math.sin(bal.ph)*50;ky.x=sx;ky.y=bal.y+50;}
 cC();uH();
 if(st===ST.L){pl.ldt+=dt/60;pl.y+=(pl.lty-pl.y)*0.12*dt;pl.x+=(pl.ltx-pl.x)*0.08*dt;if(pl.ldt>1.5){st=ST.R;stt=0;pl.fl=Math.min(pl.fl+20,hc?FMC:FM);pl.bm=BM;pl.dmg=0;pl.alt=2;AudioFX.playRefuel();sn('TANKATTU!');}}
@@ -86,7 +86,7 @@ function uB(dt){for(let i=bl.length-1;i>=0;i--){let b=bl[i];b.x+=b.vx*dt;b.lf-=d
 function uEB(dt){for(let i=eb.length-1;i>=0;i--){let b=eb[i];b.x+=b.vx*dt;b.y+=b.vy*dt;b.lf-=dt;if(b.lf<=0||b.x<-50||b.y<-50||b.y>H+50)eb.splice(i,1);}}
 function uBM(dt){for(let i=bmbs.length-1;i>=0;i--){let b=bmbs[i];b.x+=SS*dt;b.y+=b.vy*dt;b.lf-=dt;if(b.y>=b.gy||b.lf<=0){ex.push({x:b.x,y:b.gy-10,r:0,lf:25});AudioFX.playExplosion();
   for(let t of gt){if(!t.al)continue;let sx=t.wx-pl.wx+200;if(Math.abs(sx-b.x)<60){t.hp--;if(t.hp<=0){t.al=false;sc+=t.pts;ex.push({x:sx,y:GB,r:0,lf:18});}}}
-  for(let f of gf){if(f.t!=='b'||!f.al)continue;let sx=f.wx-pl.wx+200;if(Math.abs(sx-b.x)<f.w/2+30){f.hp-=2;if(f.hp<=0){f.al=false;sc+=300;bldgDestroyed++;ex.push({x:sx,y:GB-6,r:0,lf:20});if(bldgDestroyed>=8&&!bal.al){bal.al=true;bal.wx=pl.wx+500+Math.random()*400;bal.ph=0;ky.wx=bal.wx;}}}}
+  for(let f of gf){if(f.t!=='b'||!f.al)continue;let sx=f.wx-pl.wx+200;if(Math.abs(sx-b.x)<f.w/2+30){f.hp-=2;if(f.hp<=0){f.al=false;sc+=300;bldgDestroyed++;ex.push({x:sx,y:GB-6,r:0,lf:20});}}}
   bmbs.splice(i,1);}}}
 function uE(dt){for(let i=ex.length-1;i>=0;i--){let e=ex[i];e.lf-=dt;e.r+=1.5*dt;if(e.lf<=0)ex.splice(i,1);}}
 function uF(dt){for(let i=fb.length-1;i>=0;i--){let f=fb[i];f.lf-=dt;f.y+=f.vy*dt;f.vy+=0.05*dt;if(f.lf<=0)fb.splice(i,1);}}
@@ -99,7 +99,7 @@ function cC(){
 if(!pl.al)return;
 for(let bi=bl.length-1;bi>=0;bi--){let b=bl[bi];for(let ei=ep.length-1;ei>=0;ei--){if(Math.hypot(b.x-ep[ei].x,b.y-ep[ei].y)<18){ep[ei].hp--;bl.splice(bi,1);if(ep[ei].hp<=0){ex.push({x:ep[ei].x,y:ep[ei].y,r:0,lf:18});sc+=ep[ei].tp==='b'?200:100;sPt(ep[ei].x,ep[ei].y,8);ep.splice(ei,1);}else sPt(ep[ei].x,ep[ei].y,3);break;}}}
 for(let bi=bl.length-1;bi>=0;bi--){let b=bl[bi];for(let t of gt){if(!t.al)continue;let sx=t.wx-pl.wx+200;if(Math.abs(b.x-sx)<20&&Math.abs(b.y-GB)<30){t.hp--;bl.splice(bi,1);if(t.hp<=0){t.al=false;sc+=t.pts;ex.push({x:sx,y:GB,r:0,lf:18});}break;}}
- for(let bi=bl.length-1;bi>=0;bi--){let b=bl[bi];for(let f of gf){if(f.t!=='b'||!f.al)continue;let sx=f.wx-pl.wx+200;if(Math.abs(b.x-sx)<f.w/2+5&&b.y>GB-f.h&&b.y<GB){f.hp--;bl.splice(bi,1);if(f.hp<=0){f.al=false;sc+=300;bldgDestroyed++;ex.push({x:sx,y:GB-6,r:0,lf:20});if(bldgDestroyed>=8&&!bal.al){bal.al=true;bal.wx=pl.wx+500+Math.random()*400;bal.ph=0;ky.wx=bal.wx;}}break;}}}
+ for(let bi=bl.length-1;bi>=0;bi--){let b=bl[bi];for(let f of gf){if(f.t!=='b'||!f.al)continue;let sx=f.wx-pl.wx+200;if(Math.abs(b.x-sx)<f.w/2+5&&b.y>GB-f.h&&b.y<GB){f.hp--;bl.splice(bi,1);if(f.hp<=0){f.al=false;sc+=300;bldgDestroyed++;ex.push({x:sx,y:GB-6,r:0,lf:20});break;}}}
 for(let fi=fb.length-1;fi>=0;fi--){if(Math.hypot(fb[fi].x-pl.x,fb[fi].y-pl.y)<35){hP();fb.splice(fi,1);}}
 for(let bi=eb.length-1;bi>=0;bi--){if(Math.hypot(eb[bi].x-pl.x,eb[bi].y-pl.y)<20){hP();eb.splice(bi,1);}}
 for(let ei=ep.length-1;ei>=0;ei--){if(Math.hypot(ep[ei].x-pl.x,ep[ei].y-pl.y)<25){kP('COLLISION!');}}

@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.1** | 12.9.2026 | Blue Mäx: lentoaika 60s, turhat ilmoitustekstit pois talojen tuhosta
+**v3.2** | 12.9.2026 | Blue Mäx: pallo vasta 60s lennon JÄLKEEN (flightTime-laskuri), polttoainekuolema pois
 
 ## 🔜 Seuraavaksi
 
