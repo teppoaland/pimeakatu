@@ -306,8 +306,34 @@ canvas {
 }
 
 @media (max-width: 768px), (max-height: 768px) {
-    #game-header h1 { font-size: 1rem; }
-    #game-info { font-size: 0.4rem; gap: 8px; padding: 4px 8px; }
+    #game-container {
+        padding: 4px;
+        gap: 4px;
+        position: relative;
+    }
+
+    #game-header {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        right: 4px;
+        z-index: 5;
+        max-width: none;
+        pointer-events: none;
+    }
+
+    #game-header h1 { display: none; }
+
+    #game-info {
+        font-size: 0.38rem;
+        gap: 6px;
+        padding: 3px 8px;
+        background: rgba(22,33,62,0.75);
+        border-radius: 4px;
+        border: 1px solid rgba(15,52,96,0.6);
+        justify-content: flex-start;
+    }
+
     #keyboard-hints { display: none; }
 
     #canvas-wrapper {
@@ -341,6 +367,15 @@ canvas {
 
     #touch-controls .touch-actions .touch-btn {
         opacity: 0.75;
+    }
+
+    #notification-area {
+        position: absolute;
+        bottom: 50px;
+        left: 0;
+        right: 0;
+        z-index: 5;
+        pointer-events: none;
     }
 }
 
