@@ -113,14 +113,32 @@ body::after {
     text-shadow: 0 0 6px rgba(255, 215, 0, 0.7);
 }
 
-/* ── Ohjaimet (mobiili) ──────────────────────────────── */
-#touch-controls {
-    display: none;
-    margin-top: 8px;
-    gap: 20px;
+/* ── Pelialue (canvas + ohjaimet) ───────────────────── */
+#game-area {
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    gap: 8px;
 }
 
+#touch-row {
+    display: none;
+    flex-direction: row;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+#touch-left, #touch-right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* JS-pakotettu näkyvyys touch-laitteille */
+#touch-row.force-show {
+    display: flex !important;
+}
 .touch-dpad {
     display: grid;
     grid-template-areas:
@@ -175,12 +193,7 @@ body::after {
     box-shadow: 0 0 20px rgba(255, 50, 50, 0.6);
 }
 
-/* JS-pakotettu näkyvyys touch-laitteille */
-#touch-controls.force-show {
-    display: flex !important;
-}
-
-/* ── Peli-iframe (alapelit) ──────────────────────────── */
+/* ── Ohjaimet (mobiili) ──────────────────────────────── */
 #game-iframe-overlay {
     position: fixed;
     top: 0;
@@ -299,8 +312,9 @@ body::after {
 }
 
 /* ── Responsiivisuus ─────────────────────────────────── */
+/* Mobiili pysty: ohjaimet canvaksen alla */
 @media (max-width: 768px) {
-    #touch-controls {
+    #touch-row {
         display: flex;
     }
     #hud-bar {
@@ -312,8 +326,37 @@ body::after {
     }
 }
 
+/* Mobiili vaaka: action vasen, d-pad oikea, canvas keskellä */
+@media (orientation: landscape) and (max-height: 768px) {
+    #game-wrapper {
+        justify-content: center;
+    }
+    #game-area {
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 100%;
+    }
+    #game-canvas {
+        flex: 1 1 auto;
+        max-width: calc(100vw - 150px);
+        order: 1;
+    }
+    #touch-row {
+        display: contents;
+    }
+    #touch-left {
+        order: 0;
+    }
+    #touch-right {
+        order: 2;
+    }
+}
+
+/* Työpöytä: piilota kosketusohjaimet */
 @media (min-width: 769px) {
-    #touch-controls {
+    #touch-row {
         display: none !important;
     }
 }

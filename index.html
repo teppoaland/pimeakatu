@@ -25,17 +25,21 @@
         </div>
 
         <!-- Pää-canvas (street.js) -->
-        <canvas id="game-canvas" tabindex="0"></canvas>
-
-        <!-- Mobiiliohjaimet -->
-        <div id="touch-controls">
-            <div class="touch-dpad">
-                <button class="touch-btn up"    id="btn-up">▲</button>
-                <button class="touch-btn left"  id="btn-left">◄</button>
-                <button class="touch-btn right" id="btn-right">►</button>
-                <button class="touch-btn down"  id="btn-down">▼</button>
+        <div id="game-area">
+            <canvas id="game-canvas" tabindex="0"></canvas>
+            <div id="touch-row">
+                <div id="touch-left">
+                    <button class="touch-btn action" id="action-btn" title="Potku">⚡</button>
+                </div>
+                <div id="touch-right">
+                    <div class="touch-dpad">
+                        <button class="touch-btn up"    id="btn-up">▲</button>
+                        <button class="touch-btn left"  id="btn-left">◄</button>
+                        <button class="touch-btn right" id="btn-right">►</button>
+                        <button class="touch-btn down"  id="btn-down">▼</button>
+                    </div>
+                </div>
             </div>
-            <button class="touch-btn action" id="action-btn" title="Potku">⚡</button>
         </div>
 
         <!-- Ilmoitus -->

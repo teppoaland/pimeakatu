@@ -128,8 +128,8 @@ const Street = (() => {
         // ⚡ Pakota D-pad näkyviin kaikilla kosketuslaitteilla
         //    (varmempi kuin pelkkä CSS @media, toimii myös HTTPS/Pagesissa)
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-            const tc = document.getElementById('touch-controls');
-            if (tc) tc.classList.add('force-show');
+            const tr = document.getElementById('touch-row');
+            if (tr) tr.classList.add('force-show');
         }
 
         window.addEventListener('keydown', e => {
@@ -491,10 +491,10 @@ const Street = (() => {
 
                 GameState.save(state);
                 if (lamps[i].lit) {
-                    showNotification('💡 Lamppu syttyi! (' + lamps[i].kickCount + '/5)');
+                    showNotification('💡 Lamppu syttyi!');
                     spawnParticles(lamp.x, GROUND_Y - LAMP_POST_H - 10, '#ffff88', 8);
                 } else {
-                    showNotification('🌑 Lamppu sammui. (' + lamps[i].kickCount + '/5)');
+                    showNotification('🌑 Lamppu sammui.');
                 }
                 return;
             }
@@ -1013,7 +1013,12 @@ const Street = (() => {
         const wrapper = document.getElementById('game-wrapper');
         if (!wrapper) return;
         const maxW = wrapper.clientWidth - 16;
-        const maxH = wrapper.clientHeight - 80;
+        // HUD (~50px) + pelialueen gap (8px) + ohjainrivi mobiilissa (~70px)
+        const tl = document.getElementById('touch-left');
+        const touchVisible = tl && tl.offsetParent !== null;
+        const hudH = 50;
+        const touchH = touchVisible ? 78 : 0;
+        const maxH = wrapper.clientHeight - hudH - touchH;
         const scale = Math.min(maxW / WORLD_W, maxH / WORLD_H);
         canvas.width = WORLD_W;
         canvas.height = WORLD_H;
