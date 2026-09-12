@@ -144,20 +144,53 @@ const Street = (() => {
         const setupBtn = (id, key) => {
             const btn = document.getElementById(id);
             if (!btn) return;
-            btn.addEventListener('pointerdown', e => {
+
+            // Estetään synteettisten mouse-tapahtumien kaksoiskäsittely mobiililla
+            let touchActive = false;
+
+            const onDown = (e) => {
                 e.preventDefault();
                 if (id === 'action-btn' && !actionPressed) actionJustPressed = true;
                 if (id === 'action-btn') actionPressed = true;
                 keys[key] = true;
-            });
-            btn.addEventListener('pointerup', e => {
+            };
+            const onUp = (e) => {
                 e.preventDefault();
                 keys[key] = false;
                 if (id === 'action-btn') actionPressed = false;
-            });
-            btn.addEventListener('pointerleave', () => {
+            };
+            const onCancel = () => {
                 keys[key] = false;
                 if (id === 'action-btn') actionPressed = false;
+            };
+
+            // Mobiili: kosketustapahtumat
+            btn.addEventListener('touchstart', (e) => {
+                touchActive = true;
+                onDown(e);
+            }, { passive: false });
+            btn.addEventListener('touchend', (e) => {
+                onUp(e);
+                // Viiveellä nollataan, jotta myöhästynyt synteettinen mousedown ei mene läpi
+                setTimeout(() => { touchActive = false; }, 400);
+            }, { passive: false });
+            btn.addEventListener('touchcancel', (e) => {
+                onCancel();
+                setTimeout(() => { touchActive = false; }, 400);
+            }, { passive: false });
+
+            // Työpöytä: hiiritapahtumat (ohitetaan jos touch-aktiivinen)
+            btn.addEventListener('mousedown', (e) => {
+                if (touchActive) return;
+                onDown(e);
+            });
+            btn.addEventListener('mouseup', (e) => {
+                if (touchActive) return;
+                onUp(e);
+            });
+            btn.addEventListener('mouseleave', () => {
+                if (touchActive) return;
+                onCancel();
             });
         };
 
