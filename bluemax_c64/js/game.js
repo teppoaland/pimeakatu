@@ -48,7 +48,7 @@ if(st===ST.P){pl.wx+=SS*dt;if(pl.wx>=WL){pl.wx-=WL;bldgDestroyed=0;allB=0;bal.al
 if(st===ST.P&&(ks['Space']||ks['KeyG'])&&gtm<=0)fG();
 gtm-=dt;
 uB(dt);uEB(dt);uBM(dt);uE(dt);uF(dt);uP(dt);
-if(st===ST.P&&Math.random()<0.0003*dt)sEP(); // TESTIMODE minimi spawn (oli 0.0077, orig 0.012)
+if(st===ST.P&&Math.random()<0.004*dt)sEP(); // 50% teho (norm 0.0077)
 uEP(dt);uGT(dt);if(!bal.al&&bldgDestroyed>=8&&flightTime>=60){bal.al=true;bal.wx=pl.wx+500+Math.random()*400;bal.ph=0;ky.wx=bal.wx;}
 bal.ph+=dt*0.018;if(bal.al&&st===ST.P){let sx=bal.wx-pl.wx+200;bal.x=sx;bal.y=80+Math.sin(bal.ph)*50;ky.x=sx;ky.y=bal.y+50;}
 cC();uH();
@@ -92,8 +92,8 @@ function uBM(dt){for(let i=bmbs.length-1;i>=0;i--){let b=bmbs[i];b.x+=SS*dt;b.y+
 function uE(dt){for(let i=ex.length-1;i>=0;i--){let e=ex[i];e.lf-=dt;e.r+=1.5*dt;if(e.lf<=0)ex.splice(i,1);}}
 function uF(dt){for(let i=fb.length-1;i>=0;i--){let f=fb[i];f.lf-=dt;f.y+=f.vy*dt;f.vy+=0.05*dt;if(f.lf<=0)fb.splice(i,1);}}
 function uP(dt){for(let i=pt.length-1;i>=0;i--){let p=pt[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.lf-=dt;if(p.lf<=0)pt.splice(i,1);}}
-function sEP(){ep.push({x:W+50,y:60+Math.random()*300,alt:Math.floor(Math.random()*3)+1,vx:-1.5-Math.random()*2,vy:(Math.random()-0.5)*1.5,hp:1,sht:99999,tp:Math.random()<0.7?'f':'b'});} // TESTIMODE ei ammu (oli 92-276, orig 20-60)
-function uEP(dt){for(let i=ep.length-1;i>=0;i--){let e=ep[i];e.x+=e.vx*dt;e.y+=e.vy*dt;if(e.y<40){e.y=40;e.vy*=-1;}if(e.y>H-60){e.y=H-60;e.vy*=-1;}e.sht-=dt;if(e.sht<=0&&e.x>50&&e.x<W){e.sht=99999; // TESTIMODE ei ammu uudelleen (oli 69-244, orig 15-40)
+function sEP(){ep.push({x:W+50,y:60+Math.random()*300,alt:Math.floor(Math.random()*3)+1,vx:-1.5-Math.random()*2,vy:(Math.random()-0.5)*1.5,hp:1,sht:Math.floor(Math.random()*369)+184,tp:Math.random()<0.7?'f':'b'});} // 50%: 184-552 (norm 92-276)
+function uEP(dt){for(let i=ep.length-1;i>=0;i--){let e=ep[i];e.x+=e.vx*dt;e.y+=e.vy*dt;if(e.y<40){e.y=40;e.vy*=-1;}if(e.y>H-60){e.y=H-60;e.vy*=-1;}e.sht-=dt;if(e.sht<=0&&e.x>50&&e.x<W){e.sht=Math.floor(Math.random()*351)+138; // 50%: 138-488 (norm 69-244)
         eb.push({x:e.x-10,y:e.y,vx:-4,vy:0,lf:60});}if(e.x<-80)ep.splice(i,1);}}
 function uGT(dt){for(let t of gt){if(!t.al)continue;let sx=t.wx-pl.wx+200;if(sx<0||sx>W+100)continue;if(t.t==='tk'&&Math.random()<0.003*dt)fb.push({x:sx,y:GB,vy:-(2+Math.random()*3),lf:40});if(t.t==='aa'&&Math.random()<0.003*dt){let vy=-(1+Math.random()*6);eb.push({x:sx,y:GB-5,vx:1,vy,lf:55});}}}
 function cC(){
