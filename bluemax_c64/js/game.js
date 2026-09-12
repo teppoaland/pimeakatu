@@ -4,7 +4,7 @@
 const BlueMax = (() => {
 let cnv, ctx, afid, lt=0;
 const W=800,H=480,GB=380,SS=1.2,FM=60,FMC=70,DM=5,BM=30,WL=12000;
-const ST={T:0,TO:1,P:2,L:3,R:4,GO:5,W:6};
+const ST={T:0,TO:1,P:2,L:3,R:4,GO:5,W:6,FO:7};
 let st=ST.T,stt=0,sc=0,hc=false;
 let pl={x:150,y:240,wx:0,alt:2,fl:0,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0};
 let gf=[],gt=[],ep=[],bl=[],eb=[],bmbs=[],ex=[],fb=[],pt=[];
@@ -41,10 +41,10 @@ for(let i=0;i<30;i++){let wx=500+i*350+Math.random()*150;if(afps.some(af=>Math.a
 /* ═══ PÄIVITYS ═════════════════════════════════ */
 function up(dt){
 if(st===ST.T||st===ST.GO||st===ST.W)return;
-if(st===ST.P){pl.fl-=dt/60;if(pl.fl<=0)pl.fl=0;flightTime+=dt/60;}
+if(st===ST.P){pl.fl-=dt/60;if(pl.fl<=0){pl.fl=0;st=ST.FO;AudioFX.stopEngine();sn('OUT OF FUEL!');}flightTime+=dt/60;}
 if(st===ST.P||st===ST.TO)hi(dt);
-if(st===ST.P)pl.wx+=SS*dt;
-    if(st===ST.P&&pl.wx>=WL){pl.wx-=WL;for(let g of gf)g.wx-=WL;for(let g of gt)g.wx-=WL;if(bal.al){bal.wx-=WL;ky.wx-=WL;}}
+if(st===ST.FO){pl.y+=4*dt;pl.x-=0.6*dt;if(pl.y>GB-40)pl.alt=0;else if(pl.y>GB-200)pl.alt=1;if(pl.y>=GB){kP('OUT OF FUEL!');}}
+if(st===ST.P){pl.wx+=SS*dt;if(pl.wx>=WL){pl.wx-=WL;bldgDestroyed=0;allB=0;bal.al=false;cT();}}
 if(st===ST.P&&(ks['Space']||ks['KeyG'])&&gtm<=0)fG();
 gtm-=dt;
 uB(dt);uEB(dt);uBM(dt);uE(dt);uF(dt);uP(dt);
@@ -160,7 +160,7 @@ if(f.t==='af'){ctx.fillStyle='#8a8a7a';ctx.fillRect(sx,GB-1,f.w,25);ctx.fillStyl
 }}
 function dGT(){for(let t of gt){if(!t.al)continue;let sx=t.wx-pl.wx+200;if(sx<-30||sx>W+30)continue;if(t.t==='tk'){ctx.fillStyle='#4a5a3a';ctx.fillRect(sx-10,GB-10,22,10);ctx.fillRect(sx-8,GB-13,18,5);ctx.fillStyle='#3a4a2a';ctx.fillRect(sx-4,GB-15,8,4);ctx.fillStyle='#222';ctx.fillRect(sx+3,GB-16,12,2);}if(t.t==='aa'){ctx.fillStyle='#555';ctx.fillRect(sx-6,GB-3,12,3);ctx.fillStyle='#333';ctx.fillRect(sx-1,GB-14,2,13);ctx.fillRect(sx-4,GB-14,8,2);}}}
 function dPL(){
-let px=Math.round(pl.x),py=Math.round(pl.y);ctx.save();ctx.translate(px,py);
+let px=Math.round(pl.x),py=Math.round(pl.y);ctx.save();ctx.translate(px,py);if(st===ST.FO)ctx.rotate(0.35);
 ctx.fillStyle='rgba(0,0,0,0.25)';ctx.beginPath();ctx.ellipse(0,GB-py+5,14,4,0,0,Math.PI*2);ctx.fill();
 ctx.fillStyle='#8B7355';ctx.fillRect(-18,-2,36,5);ctx.fillStyle='#a08060';ctx.fillRect(-20,-11,40,3);ctx.fillRect(-16,5,32,3);
 ctx.strokeStyle='#6b5335';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-14,-8);ctx.lineTo(-11,5);ctx.moveTo(14,-8);ctx.lineTo(11,5);ctx.stroke();
