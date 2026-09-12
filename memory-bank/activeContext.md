@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.2** | 12.9.2026 | Blue Mäx: pallo vasta 60s lennon JÄLKEEN (flightTime-laskuri), polttoainekuolema pois
+**v3.3** | 12.9.2026 | Blue Mäx: kriittinen syntaksikorjaus (puuttuva } riviltä 101)
 
 ## 🔜 Seuraavaksi
 

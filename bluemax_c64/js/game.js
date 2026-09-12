@@ -98,8 +98,8 @@ function uGT(dt){for(let t of gt){if(!t.al)continue;let sx=t.wx-pl.wx+200;if(sx<
 function cC(){
 if(!pl.al)return;
 for(let bi=bl.length-1;bi>=0;bi--){let b=bl[bi];for(let ei=ep.length-1;ei>=0;ei--){if(Math.hypot(b.x-ep[ei].x,b.y-ep[ei].y)<18){ep[ei].hp--;bl.splice(bi,1);if(ep[ei].hp<=0){ex.push({x:ep[ei].x,y:ep[ei].y,r:0,lf:18});sc+=ep[ei].tp==='b'?200:100;sPt(ep[ei].x,ep[ei].y,8);ep.splice(ei,1);}else sPt(ep[ei].x,ep[ei].y,3);break;}}}
-for(let bi=bl.length-1;bi>=0;bi--){let b=bl[bi];for(let t of gt){if(!t.al)continue;let sx=t.wx-pl.wx+200;if(Math.abs(b.x-sx)<20&&Math.abs(b.y-GB)<30){t.hp--;bl.splice(bi,1);if(t.hp<=0){t.al=false;sc+=t.pts;ex.push({x:sx,y:GB,r:0,lf:18});}break;}}
- for(let bi=bl.length-1;bi>=0;bi--){let b=bl[bi];for(let f of gf){if(f.t!=='b'||!f.al)continue;let sx=f.wx-pl.wx+200;if(Math.abs(b.x-sx)<f.w/2+5&&b.y>GB-f.h&&b.y<GB){f.hp--;bl.splice(bi,1);if(f.hp<=0){f.al=false;sc+=300;bldgDestroyed++;ex.push({x:sx,y:GB-6,r:0,lf:20});break;}}}
+for(let bi=bl.length-1;bi>=0;bi--){let b=bl[bi];for(let t of gt){if(!t.al)continue;let sx=t.wx-pl.wx+200;if(Math.abs(b.x-sx)<20&&Math.abs(b.y-GB)<30){t.hp--;bl.splice(bi,1);if(t.hp<=0){t.al=false;sc+=t.pts;ex.push({x:sx,y:GB,r:0,lf:18});}break;}}}
+ for(let bi=bl.length-1;bi>=0;bi--){let b=bl[bi];for(let f of gf){if(f.t!=='b'||!f.al)continue;let sx=f.wx-pl.wx+200;if(Math.abs(b.x-sx)<f.w/2+5&&b.y>GB-f.h&&b.y<GB){f.hp--;bl.splice(bi,1);if(f.hp<=0){f.al=false;sc+=300;bldgDestroyed++;ex.push({x:sx,y:GB-6,r:0,lf:20});break;}}}}
 for(let fi=fb.length-1;fi>=0;fi--){if(Math.hypot(fb[fi].x-pl.x,fb[fi].y-pl.y)<35){hP();fb.splice(fi,1);}}
 for(let bi=eb.length-1;bi>=0;bi--){if(Math.hypot(eb[bi].x-pl.x,eb[bi].y-pl.y)<20){hP();eb.splice(bi,1);}}
 for(let ei=ep.length-1;ei>=0;ei--){if(Math.hypot(ep[ei].x-pl.x,ep[ei].y-pl.y)<25){kP('COLLISION!');}}
