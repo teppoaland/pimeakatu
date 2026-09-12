@@ -66,8 +66,12 @@
 | Pelin runko | ✅ Valmis | Lentely, ammunta, pommitus, laskeutuminen, tankkaus |
 | Rakennusten tuho | ✅ Valmis | Pommi + KK-tuli, raunio-grafiikka |
 | Ilmapallo + avain | ✅ Valmis | Ilmestyy 8 tuhotun talon JA 60s lennon jälkeen |
-| Viholliset | ✅ Valmis | ~60% aggressio: spawn 0.0077, sht 92-276, AA random-korkeus |
-| Mobiiliohjaimet | ✅ Valmis | D-pad + B/G/L-napit, landscape overlay, touchActive-suoja |
+| Viholliset | ✅ Valmis | 100% teho: spawn 0.0077, sht 92-276/69-244 |
+| Mobiiliohjaimet | ✅ Valmis | D-pad + B/G/L-napit, landscape overlay |
+| Polttoaineen loppuminen | ✅ Valmis | Syöksymaahan + 3-kerroksinen räjähdys |
+| Maailman wrap-around | ✅ Valmis | 12000px, kierroksen vaihto |
+| Canvas-HUD | ✅ Valmis | Musta ⅓ mittaripaneeli: polttoainepalkki, 💣, ❤️, ▲korkeus |
+| Kenttänousu | ✅ Valmis | Kentän ulkopuolella alt≤1 → STALL-kuolema, ei ohjausta rullauksessa |
 | Nimi | ✅ Valmis | "Blue Mäx" tekijänoikeussyistä |
 
 ---
