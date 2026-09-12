@@ -146,34 +146,48 @@ const Commando = (() => {
         const inp = getInput();
         pl.dirX = inp.x; pl.dirY = inp.y;
         if (inp.y !== 0) pl.dirY = inp.y;
-        pl.x += inp.x * PS * dt;
-        pl.y += inp.y * PS * dt;
-        pl.x = Math.max(PW / 2, Math.min(CW - PW / 2, pl.x));
-        pl.y = Math.max(PH / 2 + 40, Math.min(CH - PH / 2 - 10, pl.y));
+        
+        // Try X movement (prevent-entry collision)
+        const nx = pl.x + inp.x * PS * dt;
+        const saveX = pl.x;
+        pl.x = Math.max(PW / 2, Math.min(CW - PW / 2, nx));
+        if (collidesWithObstacles()) pl.x = saveX;
+        
+        // Try Y movement
+        const ny = pl.y + inp.y * PS * dt;
+        const saveY = pl.y;
+        pl.y = Math.max(PH / 2 + 40, Math.min(CH - PH / 2 - 10, ny));
+        if (collidesWithObstacles()) pl.y = saveY;
+    }
+    
+    function collidesWithObstacles() {
         for (const o of obstacles) {
             const oy = o.wy - scrollY;
             if (oy < -50 || oy > CH + 50) continue;
-            if (rc(pl.x - PW/2, pl.y - PH/2, PW, PH, o.x, oy, o.w, o.h)) {
-                const pCx = pl.x, pCy = pl.y, oCx = o.x + o.w/2, oCy = oy + o.h/2;
-                const dx = pCx - oCx, dy = pCy - oCy;
-                const ox = (PW + o.w)/2 - Math.abs(dx), oy2 = (PH + o.h)/2 - Math.abs(dy);
-                if (ox < oy2) pl.x += Math.sign(dx) * ox;
-                else pl.y += Math.sign(dy) * oy2;
-            }
+            if (rc(pl.x - PW/2, pl.y - PH/2, PW, PH, o.x, oy, o.w, o.h)) return true;
         }
+        return false;
     }
 
     function updateAutoFire(dt) {
-        const inp = getInput();
-        const moving = inp.x !== 0 || inp.y !== 0;
         gunCD -= dt;
-        if (moving && gunCD <= 0) {
-            gunCD = 0.15;
-            pBullets.push({ x: pl.x, y: pl.y - PH/2, vx: 0, vy: -BS, life: 1.5 });
-            AudioFX.playGun();
-        }
     }
 
+    /* ── MANUAL FIRE ──────────────────────────────────── */
+    function fireGun() {
+        if (gunCD > 0) return;
+        gunCD = 0.15;
+        const inp = getInput();
+        let vx = 0, vy = -BS;
+        if (inp.x !== 0) {
+            // 45° angle shots when strafing
+            const angle = inp.x > 0 ? -Math.PI/4 : -Math.PI*3/4;
+            vx = Math.cos(angle) * BS;
+            vy = Math.sin(angle) * BS;
+        }
+        pBullets.push({ x: pl.x, y: pl.y - PH/2, vx, vy, life: 1.5 });
+        AudioFX.playGun();
+    }
     /* ── GRENADES ─────────────────────────────────────── */
     function throwGrenade() {
         if (pl.grenades <= 0) return;
@@ -378,13 +392,13 @@ const Commando = (() => {
 
     /* ── SCROLL ───────────────────────────────────────── */
     function updateScroll(dt) {
-        // Camera follows player upward: when player is in upper third, scroll up
-        const upperZone = CH * 0.35;
-        const lowerZone = CH * 0.75;
+        // Camera follows player: scroll when player passes midline
+        const upperZone = CH * 0.5;
+        const lowerZone = CH * 0.65;
         if (pl.y < upperZone) {
-            scrollY += (upperZone - pl.y) * 3 * dt;
+            scrollY += (upperZone - pl.y) * 4 * dt;
         } else if (pl.y > lowerZone && scrollY > 0) {
-            scrollY = Math.max(0, scrollY - (pl.y - lowerZone) * 3 * dt);
+            scrollY = Math.max(0, scrollY - (pl.y - lowerZone) * 4 * dt);
         }
         genObs(scrollY + CH);
         for (let i = obstacles.length - 1; i >= 0; i--) { if (obstacles[i].wy < scrollY - 100) obstacles.splice(i, 1); }
@@ -409,8 +423,9 @@ const Commando = (() => {
     function ptR(px, py, rx, ry, rw, rh) { return px >= rx && px <= rx + rw && py >= ry && py <= ry + rh; }
     function dist(x1, y1, x2, y2) { const dx = x1 - x2, dy = y1 - y2; return Math.sqrt(dx*dx + dy*dy); }
 
-    /* ── GRENADE KEY EVENTS ──────────────────────────── */
+    /* ── ACTION KEY EVENTS ──────────────────────────── */
     window.addEventListener('keydown', e => {
+        if ((e.code === 'Space' || e.code === 'KeyF') && state === ST.PLAY) { e.preventDefault(); fireGun(); }
         if (e.code === 'KeyB' && !gkDown && state === ST.PLAY) { gkDown = true; throwGrenade(); }
         if (e.code === 'Enter' && (state === ST.INTRO || state === ST.OVER || state === ST.WIN)) startGame();
     });
