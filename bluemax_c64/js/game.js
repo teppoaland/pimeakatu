@@ -48,7 +48,7 @@ if(st===ST.P){pl.wx+=SS*dt;if(pl.wx>=WL){pl.wx-=WL;bldgDestroyed=0;allB=0;bal.al
 if(st===ST.P&&(ks['Space']||ks['KeyG'])&&gtm<=0)fG();
 gtm-=dt;
 uB(dt);uEB(dt);uBM(dt);uE(dt);uF(dt);uP(dt);
-if(st===ST.P&&Math.random()<0.004*dt)sEP(); // 50% teho (norm 0.0077)
+if(st===ST.P&&Math.random()<0.0077*dt)sEP(); // normaali spawn
 uEP(dt);uGT(dt);if(!bal.al&&bldgDestroyed>=8&&flightTime>=60){bal.al=true;bal.wx=pl.wx+500+Math.random()*400;bal.ph=0;ky.wx=bal.wx;}
 bal.ph+=dt*0.018;if(bal.al&&st===ST.P){let sx=bal.wx-pl.wx+200;bal.x=sx;bal.y=80+Math.sin(bal.ph)*50;ky.x=sx;ky.y=bal.y+50;}
 cC();uH();
@@ -92,8 +92,8 @@ function uBM(dt){for(let i=bmbs.length-1;i>=0;i--){let b=bmbs[i];b.x+=SS*dt;b.y+
 function uE(dt){for(let i=ex.length-1;i>=0;i--){let e=ex[i];e.lf-=dt;e.r+=1.5*dt;if(e.lf<=0)ex.splice(i,1);}}
 function uF(dt){for(let i=fb.length-1;i>=0;i--){let f=fb[i];f.lf-=dt;f.y+=f.vy*dt;f.vy+=0.05*dt;if(f.lf<=0)fb.splice(i,1);}}
 function uP(dt){for(let i=pt.length-1;i>=0;i--){let p=pt[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.lf-=dt;if(p.lf<=0)pt.splice(i,1);}}
-function sEP(){ep.push({x:W+50,y:60+Math.random()*300,alt:Math.floor(Math.random()*3)+1,vx:-1.5-Math.random()*2,vy:(Math.random()-0.5)*1.5,hp:1,sht:Math.floor(Math.random()*369)+184,tp:Math.random()<0.7?'f':'b'});} // 50%: 184-552 (norm 92-276)
-function uEP(dt){for(let i=ep.length-1;i>=0;i--){let e=ep[i];e.x+=e.vx*dt;e.y+=e.vy*dt;if(e.y<40){e.y=40;e.vy*=-1;}if(e.y>H-60){e.y=H-60;e.vy*=-1;}e.sht-=dt;if(e.sht<=0&&e.x>50&&e.x<W){e.sht=Math.floor(Math.random()*351)+138; // 50%: 138-488 (norm 69-244)
+function sEP(){ep.push({x:W+50,y:60+Math.random()*300,alt:Math.floor(Math.random()*3)+1,vx:-1.5-Math.random()*2,vy:(Math.random()-0.5)*1.5,hp:1,sht:Math.floor(Math.random()*185)+92,tp:Math.random()<0.7?'f':'b'});} // ensilaukaus 92-276
+function uEP(dt){for(let i=ep.length-1;i>=0;i--){let e=ep[i];e.x+=e.vx*dt;e.y+=e.vy*dt;if(e.y<40){e.y=40;e.vy*=-1;}if(e.y>H-60){e.y=H-60;e.vy*=-1;}e.sht-=dt;if(e.sht<=0&&e.x>50&&e.x<W){e.sht=Math.floor(Math.random()*176)+69; // uudelleen 69-244
         eb.push({x:e.x-10,y:e.y,vx:-4,vy:0,lf:60});}if(e.x<-80)ep.splice(i,1);}}
 function uGT(dt){for(let t of gt){if(!t.al)continue;let sx=t.wx-pl.wx+200;if(sx<0||sx>W+100)continue;if(t.t==='tk'&&Math.random()<0.003*dt)fb.push({x:sx,y:GB,vy:-(2+Math.random()*3),lf:40});if(t.t==='aa'&&Math.random()<0.003*dt){let vy=-(1+Math.random()*6);eb.push({x:sx,y:GB-5,vx:1,vy,lf:55});}}}
 function cC(){
@@ -178,7 +178,19 @@ function dF(){for(let f of fb){let a=Math.min(1,f.lf/10);ctx.fillStyle='rgba(50,
 function dPT(){for(let p of pt){ctx.globalAlpha=p.lf/25;ctx.fillStyle=p.cl;ctx.fillRect(Math.round(p.x),Math.round(p.y),2,2);}ctx.globalAlpha=1;}
 function dBA(){if(!bal.al)return;let bx=Math.round(bal.x),by=Math.round(bal.y);ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(bx,by,20,25,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.ellipse(bx-5,by-4,8,10,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#888';ctx.fillRect(bx-8,by+30,6,5);ctx.fillStyle='#a64';ctx.fillRect(bx-12,by+32,14,10);ctx.fillStyle='#630';ctx.fillRect(bx-4,by+30,2,20);}
 function dKY(){if(ky.gr||!bal.al)return;let kx=Math.round(ky.x),kyv=Math.round(ky.y);ctx.fillStyle='#fd0';ctx.fillRect(kx-6,kyv,12,3);ctx.fillRect(kx-2,kyv-8,4,10);ctx.fillRect(kx+3,kyv-3,8,3);ctx.fillRect(kx+3,kyv+1,8,3);}
-function dHU(){ctx.textAlign='left';let fb=pl.fl<=10&&Math.sin(Date.now()/250)>0;ctx.fillStyle=fb?'#f00':'#000';ctx.font='bold 14px "Press Start 2P",monospace';ctx.fillText('F:'+Math.ceil(pl.fl),8,22);ctx.fillStyle='#000';ctx.fillText('B:'+pl.bm,8,44);}
+function dHU(){
+    ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,32);
+    ctx.textAlign='left';ctx.font='bold 12px "Press Start 2P",monospace';
+    let fb=pl.fl<=10&&Math.sin(Date.now()/250)>0,p=Math.max(0,pl.fl/(hc?FMC:FM));
+    ctx.fillStyle=fb?'#f44':'#fff';ctx.fillText('⛽'+Math.ceil(pl.fl),6,22);
+    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fillRect(80,10,60,10);
+    ctx.fillStyle=fb?'#f44':'#4f4';ctx.fillRect(80,10,60*p,10);
+    ctx.fillStyle='#ff0';ctx.fillText('⭐'+sc,150,22);
+    ctx.fillStyle='#fff';ctx.fillText('💣'+pl.bm,280,22);
+    ctx.fillStyle='#f66';ctx.fillText('❤️'+(DM-pl.dmg),370,22);
+    ctx.fillStyle='#8cf';ctx.fillText('📏'+['MAA','MATALA','KESKI','KORKEA'][pl.alt],450,22);
+    ctx.textAlign='start';
+}
 function dWN(){
 ctx.fillStyle='rgba(0,0,20,0.85)';ctx.fillRect(0,0,W,H);
 ctx.fillStyle='#fd0';ctx.font='bold 18px "Press Start 2P",monospace';ctx.textAlign='center';
