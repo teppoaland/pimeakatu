@@ -293,7 +293,7 @@ const Commando = (() => {
     function respawn() {
 /* ── RENDER ────────────────────────────────────────── */
     function render() {
-        ctx.fillStyle = '#363'; ctx.fillRect(0, 0, CW, CH);
+        ctx.fillStyle = '#484'; ctx.fillRect(0, 0, CW, CH);
         // Ruudukko
         ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1;
         const gs = 40, oy = scrollY % gs;
@@ -370,6 +370,7 @@ const Commando = (() => {
         ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(CW - 8, 0, 8, CH);
         ctx.fillStyle = '#0f0'; ctx.fillRect(CW - 8, CH * (1 - pct), 8, CH * pct);
     }
+    function respawn() {
         pl.x = CW/2; pl.y = CH-80; pl.invTimer = INV;
         pl.grenades = Math.min(pl.grenades + 2, GM); state = ST.PLAY; eBullets = []; updateHUD();
     }
