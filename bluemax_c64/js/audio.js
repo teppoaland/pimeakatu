@@ -101,36 +101,65 @@ const AudioFX = (() => {
         } catch(e) {}
     }
 
-    /* ── Räjähdys ─────────────────────────────────────── */
+    /* ── Räjähdys (3-kerroksinen jysäys, kuten Boulder Dash) ─ */
     function playExplosion() {
         try {
             init();
             const now = ctx.currentTime;
-            const dur = 1.2;
+            const dur = 6.0;
+            const peak = 2.5;
+
+            // Kerros 1: Jyrisevä kohina — lähtee hiljaa, nousee ja vaimenee
             const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
             const data = buf.getChannelData(0);
             for (let i = 0; i < data.length; i++) {
-                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.15));
+                data[i] = (Math.random() * 2 - 1);
             }
-            const src = ctx.createBufferSource(); src.buffer = buf;
-            const lp = ctx.createBiquadFilter();
-            lp.type = 'lowpass';
-            lp.frequency.setValueAtTime(600, now);
-            lp.frequency.exponentialRampToValueAtTime(80, now + dur);
-            const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.25, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-            src.connect(lp).connect(gain).connect(ctx.destination);
-            src.start(now); src.stop(now + dur);
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            const lpFilter = ctx.createBiquadFilter();
+            lpFilter.type = 'lowpass';
+            lpFilter.frequency.setValueAtTime(300, now);
+            lpFilter.frequency.exponentialRampToValueAtTime(40, now + dur);
+            const lpGain = ctx.createGain();
+            lpGain.gain.setValueAtTime(0.08, now);
+            lpGain.gain.linearRampToValueAtTime(0.30, now + peak);
+            lpGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+            src.connect(lpFilter).connect(lpGain).connect(ctx.destination);
+            src.start(now);
+            src.stop(now + dur);
+
+            // Kerros 2: Matala bassojyrinä — nousee ja vaimenee
             const osc = ctx.createOscillator();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(50, now);
-            osc.frequency.exponentialRampToValueAtTime(15, now + dur);
-            const gain2 = ctx.createGain();
-            gain2.gain.setValueAtTime(0.20, now);
-            gain2.gain.exponentialRampToValueAtTime(0.001, now + dur);
-            osc.connect(gain2).connect(ctx.destination);
-            osc.start(now); osc.stop(now + dur);
+            osc.frequency.setValueAtTime(60, now);
+            osc.frequency.exponentialRampToValueAtTime(20, now + dur);
+            const oscGain = ctx.createGain();
+            oscGain.gain.setValueAtTime(0.10, now);
+            oscGain.gain.linearRampToValueAtTime(0.35, now + peak);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+            osc.connect(oscGain).connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + dur);
+
+            // Kerros 3: Terävä aloitusräsähdys
+            const crackDur = 0.08;
+            const crackBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * crackDur), ctx.sampleRate);
+            const crackData = crackBuf.getChannelData(0);
+            for (let i = 0; i < crackData.length; i++) {
+                crackData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.006));
+            }
+            const crackSrc = ctx.createBufferSource();
+            crackSrc.buffer = crackBuf;
+            const hpFilter = ctx.createBiquadFilter();
+            hpFilter.type = 'highpass';
+            hpFilter.frequency.value = 1500;
+            const crackGain = ctx.createGain();
+            crackGain.gain.setValueAtTime(0.15, now);
+            crackGain.gain.exponentialRampToValueAtTime(0.001, now + crackDur);
+            crackSrc.connect(hpFilter).connect(crackGain).connect(ctx.destination);
+            crackSrc.start(now);
+            crackSrc.stop(now + crackDur);
         } catch(e) {}
     }
 
