@@ -80,6 +80,38 @@ const Street = (() => {
     let shootingStar = null;   // Tähdenlento
     let satellite = null;      // Satelliitti
 
+    /* ── Potkuääni (Web Audio API) ────────────────── */
+    let audioCtx = null;
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    function playKick() {
+        try {
+            initAudio();
+            const now = audioCtx.currentTime;
+            // Lyhyt napsaus – kohina + terävä alku
+            const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.06), audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.008));
+            }
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 800;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+            src.connect(filter).connect(gain).connect(audioCtx.destination);
+            src.start(now);
+            src.stop(now + 0.06);
+        } catch(e) {}
+    }
+
     // Apufunktio: oven keskipiste
     function doorCenter(bldg) {
         return {
@@ -418,6 +450,7 @@ const Street = (() => {
         const dc0 = doorCenter(buildings[0]);
         const dx0 = px - dc0.x, dy0 = py - dc0.y;
         if (Math.sqrt(dx0*dx0 + dy0*dy0) < DOOR_RADIUS) {
+            playKick();
             player.kicking = true;
             player.kickFrame = 0;
             if (firstHouseKickTarget === 0) {
@@ -442,6 +475,7 @@ const Street = (() => {
         }
 
         // 2. Ei oven lähellä → POTKU!
+        playKick();
         player.kicking = true;
         player.kickFrame = 0;
 
@@ -483,7 +517,6 @@ const Street = (() => {
                     lamps[i].overheatTimer = 1200; // 20s @ ~60fps
                     state.litLamps[i] = false;
                     GameState.save(state);
-                    showNotification('⚡ Lamppu ylikuumeni!\n20s jäähtymisaika...');
                     spawnParticles(lamp.x, GROUND_Y - LAMP_POST_H - 10, '#ff4400', 20);
                     }
                     return;
@@ -491,10 +524,9 @@ const Street = (() => {
 
                 GameState.save(state);
                 if (lamps[i].lit) {
-                    showNotification('💡 Lamppu syttyi!');
                     spawnParticles(lamp.x, GROUND_Y - LAMP_POST_H - 10, '#ffff88', 8);
                 } else {
-                    showNotification('🌑 Lamppu sammui.');
+                    // Lamppu sammui – ei tekstiä, näkyy visuaalisesti
                 }
                 return;
             }
