@@ -75,7 +75,6 @@ const Street = (() => {
     let animFrameId;
     let lastTime = 0;
     let particles = [];
-    let notifTimer = 0;
     let stars = [];
     let shootingStar = null;   // Tähdenlento
     let satellite = null;      // Satelliitti
@@ -347,13 +346,7 @@ const Street = (() => {
         }
 
         // ── Notifikaatio ─────────────────────────────
-        if (notifTimer > 0) {
-            notifTimer -= dt;
-            if (notifTimer <= 0) {
-                const el = document.getElementById('notification');
-                if (el) el.textContent = '';
-            }
-        }
+        // (hoidetaan nyt setTimeoutilla showNotification-funktiossa)
         coin.sparkle += 0.05 * dt;
 
         // ── Talon 0 ikkunoiden ajastin (20s ilman potkua → sammuu) ──
@@ -618,12 +611,24 @@ const Street = (() => {
     }
 
     function showNotification(text) {
-        notifTimer = 240;  // ~4s @ 60fps
         const el = document.getElementById('notification');
+        // Peruuta edellinen aikakatkaisu jos uusi teksti tulee
+        if (el._timeout) clearTimeout(el._timeout);
+        if (el._fadeTimeout) clearTimeout(el._fadeTimeout);
+        // Näytä teksti heti
         el.textContent = text;
-        el.style.animation = 'none';
-        void el.offsetWidth;
-        el.style.animation = 'popIn 0.3s ease-out, fadeOut 0.5s 3.5s forwards';
+        el.style.opacity = '1';
+        el.style.transition = 'none';
+        el.style.animation = 'popIn 0.3s ease-out';
+        // 3s lukuaikaa, sitten fadeout 0.5s
+        el._timeout = setTimeout(() => {
+            el.style.transition = 'opacity 0.5s';
+            el.style.opacity = '0';
+            el._fadeTimeout = setTimeout(() => {
+                el.textContent = '';
+                el.style.animation = 'none';
+            }, 500);
+        }, 3000);
     }
 
     function spawnParticles(x, y, color, count) {
