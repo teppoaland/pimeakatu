@@ -486,7 +486,6 @@ const Street = (() => {
             if (Math.sqrt(dx*dx + dy*dy) < LAMP_RADIUS + 10) {
                 // Jos lamppu on ylikuumentunut, älä tee mitään
                 if (lamp.overheat) {
-                    showNotification('🔥 Lamppu on\nylikuumentunut! Odota...');
                     return;
                 }
                 // Toggle ON/OFF
