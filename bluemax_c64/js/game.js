@@ -6,7 +6,7 @@ let cnv, ctx, afid, lt=0;
 const W=800,H=480,GB=380,SS=1.2,FM=60,FMC=70,DM=5,BM=30,WL=12000;
 const ST={T:0,TO:1,P:2,L:3,R:4,GO:5,W:6,FO:7};
 let st=ST.T,stt=0,sc=0,hc=false;
-let pl={x:150,y:240,wx:0,alt:2,fl:0,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0};
+let pl={x:150,y:240,wx:0,alt:2,fl:0,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0,toClimb:0};
 let gf=[],gt=[],ep=[],bl=[],eb=[],bmbs=[],ex=[],fb=[],pt=[];
 const ks={};
 let gtm=0,lst=0,nt='',ntt=0,hasKey=false,bal={wx:4700,al:false,ph:0},ky={wx:4700,gr:false},bldgDestroyed=0,flightTime=0,tB=0,allB=0;
@@ -18,7 +18,7 @@ function sn(m){nt=m;ntt=90;}
 function iG(){
 AudioFX.stopEngine();
 gf=[];gt=[];ep=[];bl=[];eb=[];bmbs=[];ex=[];fb=[];pt=[];
-pl={x:150,y:240,wx:0,alt:2,fl:hc?FMC:FM,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0};
+pl={x:150,y:240,wx:0,alt:2,fl:hc?FMC:FM,bm:BM,dmg:0,sp:0,al:true,ld:false,ldt:0,toClimb:0};
 sc=0;stt=0;gtm=0;lst=0;pl.fl=hc?FMC:FM;
 hasKey=false;bal={wx:4700,al:false,ph:0};ky={wx:4700,gr:false};bldgDestroyed=0;flightTime=0;tB=0;allB=0;
 cT();
@@ -54,16 +54,17 @@ bal.ph+=dt*0.018;if(bal.al&&st===ST.P){let sx=bal.wx-pl.wx+200;bal.x=sx;bal.y=80
 cC();uH();
 if(st===ST.L){pl.ldt+=dt/60;pl.y+=(pl.lty-pl.y)*0.12*dt;pl.x+=(pl.ltx-pl.x)*0.08*dt;if(pl.ldt>1.5){st=ST.R;stt=0;pl.fl=Math.min(pl.fl+20,hc?FMC:FM);pl.bm=BM;pl.dmg=0;pl.alt=2;AudioFX.playRefuel();sn('TANKATTU!');}}
 if(st===ST.R){stt+=dt/60;if(stt>1.5){st=ST.TO;stt=0;pl.sp=0;pl.alt=2;}}
-if(st===ST.TO){stt+=dt/60;pl.sp=Math.min(pl.sp+0.3*dt,8);if(stt>1.5&&pl.sp>5){st=ST.P;AudioFX.startEngine();}}
+if(st===ST.TO){stt+=dt/60;pl.sp=Math.min(pl.sp+0.3*dt,8);if(stt>1.5&&pl.sp>5){st=ST.P;pl.toClimb=180;AudioFX.startEngine();}}
 }
 function hi(dt){
+if(pl.toClimb>0)pl.toClimb-=dt;
 let mx=0,my=0,ms=2.5*dt;
 if(ks['ArrowUp']||ks['KeyW'])my=-ms;
 if(ks['ArrowDown']||ks['KeyS'])my=ms;
 if(ks['ArrowLeft']||ks['KeyA'])mx=-ms;
 if(ks['ArrowRight']||ks['KeyD'])mx=ms;
 pl.x+=mx;pl.y+=my;pl.x=Math.max(30,Math.min(W-30,pl.x));pl.y=Math.max(40,Math.min(H-80,pl.y));
-if(my<-0.5&&pl.alt<3)pl.alt=3;else if(my<-0.2&&pl.alt<2)pl.alt=2;else if(my>0.2&&pl.alt>1)pl.alt=1;else if(my>0.5&&pl.alt>0&&pl.y>GB-40)pl.alt=0;
+if(my<-0.5&&pl.alt<3)pl.alt=3;else if(my<-0.2&&pl.alt<2)pl.alt=2;else if(my>0.2&&pl.alt>1)pl.alt=1;else if(my>0.5&&pl.alt>0&&pl.y>GB-40&&pl.toClimb<=0)pl.alt=0;
 if(st!==ST.L&&pl.alt===0&&pl.y>GB){pl.y=GB;if(st===ST.P)kP('CRASH!');}
 }
 
@@ -179,16 +180,29 @@ function dPT(){for(let p of pt){ctx.globalAlpha=p.lf/25;ctx.fillStyle=p.cl;ctx.f
 function dBA(){if(!bal.al)return;let bx=Math.round(bal.x),by=Math.round(bal.y);ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(bx,by,20,25,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.ellipse(bx-5,by-4,8,10,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#888';ctx.fillRect(bx-8,by+30,6,5);ctx.fillStyle='#a64';ctx.fillRect(bx-12,by+32,14,10);ctx.fillStyle='#630';ctx.fillRect(bx-4,by+30,2,20);}
 function dKY(){if(ky.gr||!bal.al)return;let kx=Math.round(ky.x),kyv=Math.round(ky.y);ctx.fillStyle='#fd0';ctx.fillRect(kx-6,kyv,12,3);ctx.fillRect(kx-2,kyv-8,4,10);ctx.fillRect(kx+3,kyv-3,8,3);ctx.fillRect(kx+3,kyv+1,8,3);}
 function dHU(){
-    ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,32);
-    ctx.textAlign='left';ctx.font='bold 12px "Press Start 2P",monospace';
-    let fb=pl.fl<=10&&Math.sin(Date.now()/250)>0,p=Math.max(0,pl.fl/(hc?FMC:FM));
-    ctx.fillStyle=fb?'#f44':'#fff';ctx.fillText('⛽'+Math.ceil(pl.fl),6,22);
-    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fillRect(80,10,60,10);
-    ctx.fillStyle=fb?'#f44':'#4f4';ctx.fillRect(80,10,60*p,10);
-    ctx.fillStyle='#ff0';ctx.fillText('⭐'+sc,150,22);
-    ctx.fillStyle='#fff';ctx.fillText('💣'+pl.bm,280,22);
-    ctx.fillStyle='#f66';ctx.fillText('❤️'+(DM-pl.dmg),370,22);
-    ctx.fillStyle='#8cf';ctx.fillText('📏'+['MAA','MATALA','KESKI','KORKEA'][pl.alt],450,22);
+    let p=Math.max(0,pl.fl/(hc?FMC:FM)),fb=pl.fl<=10&&Math.sin(Date.now()/250)>0;
+    // Taustapalkki – sotilasvihreä, kojelautamainen
+    ctx.fillStyle='rgba(10,40,10,0.7)';ctx.fillRect(0,0,W,28);
+    ctx.fillStyle='rgba(0,30,0,0.9)';ctx.fillRect(0,26,W,2);
+    // Polttoainepalkki – suuri, hallitseva
+    let bx=4,by=4,bw=Math.floor((W-170)*p),bh=14;
+    let fc=p>0.5?'#3a3':p>0.2?'#ca3':'#e33';
+    if(fb)fc='#f55';
+    ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillRect(bx,by,W-170,bh);
+    ctx.fillStyle=fc;ctx.fillRect(bx,by,bw,bh);
+    // Polttoainenumero – päällä
+    ctx.font='bold 10px "Press Start 2P",monospace';ctx.textAlign='center';
+    ctx.fillStyle=fb?'#f55':'#fff';ctx.fillText(Math.ceil(pl.fl)+'s',bx+(W-170)/2,by+12);
+    // Oikea puoli: ikonit + luvut
+    ctx.textAlign='right';ctx.font='bold 9px "Press Start 2P",monospace';
+    let rx=W-6;
+    ctx.fillStyle='#ff0';ctx.fillText('⭐'+sc,rx,20);rx-=60;
+    ctx.fillStyle='#fff';ctx.fillText('💣'+pl.bm,rx,20);rx-=50;
+    ctx.fillStyle='#f66';ctx.fillText('❤️'+(DM-pl.dmg),rx,20);
+    // Korkeus – vasen alakulma
+    let altT=['MAA','MATALA','KESKI','KORKEA'],altC=['#666','#8c6','#48f','#88f'];
+    ctx.textAlign='left';ctx.font='bold 8px "Press Start 2P",monospace';
+    ctx.fillStyle=altC[pl.alt];ctx.fillText('▲'+altT[pl.alt],6,42);
     ctx.textAlign='start';
 }
 function dWN(){
