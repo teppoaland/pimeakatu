@@ -80,7 +80,19 @@
 
 | Ominaisuus | Tila | Huomiot |
 |-----------|------|---------|
-| Pelin runko | ❌ Ei aloitettu | Tyhjä kansio |
+| Pelin runko | ✅ Valmis | MVP: ylhäältä kuvattu, vierivä, 4 tiedostoa |
+| Pelaajan ohjaus | ✅ Valmis | 8-suuntainen, WASD/nuolet + D-pad |
+| Auto-fire kivääri | ✅ Valmis | 0.15s välein ylös |
+| Kranaatit | ✅ Valmis | B-nappi, 6 kpl, räjähdyssäde 50px |
+| Viholliset | ✅ Valmis | Sotilaat spawnaavat ylhäältä, ampuvat alas |
+| Esteet | ✅ Valmis | Hiekkasäkit + bunkkerit, generoituva maasto |
+| Elämät (3) | ✅ Valmis | Kuolemattomuus 2s osuman jälkeen |
+| Voittoehto | ✅ Valmis | 2000px scrollattu → avain portaaliin |
+| Ääniefektit | ✅ Valmis | Kivääri, kranaatti, räjähdys, kuolema, voitto |
+| Kosketusohjaus | ✅ Valmis | D-pad + 💣-nappi |
+| Porttaali-integraatio | ❌ Ei vielä | `gameUrl: null`, odottaa testausta |
+| Useampia kenttiä | ❌ Ei vielä | Vain 1 kenttä MVP:ssä |
+| Boss-vihollisia | ❌ Ei vielä | Jatkokehitys |
 
 ---
 
