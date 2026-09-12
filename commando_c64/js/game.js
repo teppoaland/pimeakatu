@@ -16,7 +16,7 @@ const Commando = (() => {
     let enemies = [], pBullets = [], eBullets = [], grenades = [], explosions = [], obstacles = [], particles = [];
     let eSpawnT = 0, gunCD = 0, genUpTo = 0;
     const keys = {};
-    let tDir = { x: 0, y: 0 }, tGren = false, tActive = false;
+    let tDir = { x: 0, y: 0 }, tGren = false, tFire = false, tActive = false;
     let lastT = 0, gkDown = false, gtWas = false;
 
     /* ── INIT ─────────────────────────────────────────── */
@@ -58,6 +58,13 @@ const Commando = (() => {
             gb.addEventListener('touchend', e => { e.preventDefault(); tGren = false; });
             gb.addEventListener('mousedown', e => { if (!tActive) { e.preventDefault(); tGren = true; } });
             gb.addEventListener('mouseup', e => { if (!tActive) { e.preventDefault(); tGren = false; } });
+        }
+        const fb = document.getElementById('fire-btn');
+        if (fb) {
+            fb.addEventListener('touchstart', e => { e.preventDefault(); tActive = true; tFire = true; });
+            fb.addEventListener('touchend', e => { e.preventDefault(); tFire = false; });
+            fb.addEventListener('mousedown', e => { if (!tActive) { e.preventDefault(); tFire = true; } });
+            fb.addEventListener('mouseup', e => { if (!tActive) { e.preventDefault(); tFire = false; } });
         }
     }
 
@@ -434,6 +441,9 @@ const Commando = (() => {
 
     // Touch grenade: kerran per 300ms
     setInterval(() => { if (tGren && !gtWas && state === ST.PLAY) throwGrenade(); gtWas = tGren; }, 300);
+    
+    // Touch fire: jatkuva ammunta kun nappi pohjassa (cooldown fireGun:ssa)
+    setInterval(() => { if (tFire && state === ST.PLAY) fireGun(); }, 100);
 
     return { init, rs };
 })();

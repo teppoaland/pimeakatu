@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🔫 Commando</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div id="game-container">
         <header id="game-header">
-            <h1>🔫 Commando <span class="version-tag">C64 dev</span></h1>
+            <h1>🔫 COMMANDO</h1>
             <div id="game-info">
                 <span id="lives-display">❤️ 3</span>
                 <span id="grenade-display">💣 6</span>
@@ -18,33 +21,35 @@
             </div>
         </header>
 
-        <div id="canvas-wrapper">
-            <canvas id="game-canvas"></canvas>
-        </div>
+        <div id="game-area">
+            <canvas id="game-canvas" tabindex="0"></canvas>
 
-        <div id="controls">
-            <div id="keyboard-hints">
-                <span>⬆️⬇️⬅️➡️ / WASD = Liiku</span>
-                <span>Space = Ammu</span>
-                <span>B = Kranaatti</span>
-                <span>Enter = Aloita</span>
-            </div>
             <div id="touch-controls">
-                <div class="touch-dpad">
-                    <button class="touch-btn up" data-dir="up">▲</button>
-                    <button class="touch-btn left" data-dir="left">◄</button>
-                    <button class="touch-btn right" data-dir="right">►</button>
-                    <button class="touch-btn down" data-dir="down">▼</button>
-                </div>
-                <div class="touch-actions">
+                <div id="touch-left">
+                    <button class="touch-btn" id="fire-btn" title="Ammu (Space)">🔫</button>
                     <button class="touch-btn" id="grenade-btn" title="Kranaatti (B)">💣</button>
                 </div>
+                <div id="touch-right">
+                    <div class="touch-dpad">
+                        <button class="touch-btn up" data-dir="up">▲</button>
+                        <button class="touch-btn left" data-dir="left">◄</button>
+                        <button class="touch-btn right" data-dir="right">►</button>
+                        <button class="touch-btn down" data-dir="down">▼</button>
+                    </div>
+                </div>
             </div>
+        </div>
+
+        <div id="keyboard-hints">
+            <span>⬆️⬇️⬅️➡️ / WASD = Liiku</span>
+            <span>Space = Ammu</span>
+            <span>B = Kranaatti</span>
+            <span>Enter = Aloita</span>
         </div>
 
         <div id="notification-area"></div>
-        
-        <div id="commando-version">v1.1</div>
+
+        <div id="commando-version">v1.2</div>
     </div>
 
     <div id="overlay">

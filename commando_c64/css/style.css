@@ -1,8 +1,9 @@
 /* ═══════════════════════════════════════════════════════════
    style.css – Commando C64 -sotapeli
-   CRT-retro-tyyli, pystyasettelu mobiilille
+   Yhtenäinen PimeäKatu-portaalin tyyliin
    ═══════════════════════════════════════════════════════════ */
 
+/* ── Perustyylit ──────────────────────────────────────── */
 *, *::before, *::after {
     margin: 0;
     padding: 0;
@@ -22,141 +23,170 @@ html, body {
     overscroll-behavior: none;
 }
 
+/* ── CRT Scanline ─────────────────────────────────────── */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.03) 0px,
+        rgba(0, 0, 0, 0.03) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+}
+
+/* ── Päänäkymä ───────────────────────────────────────── */
 #game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
     gap: 6px;
     padding: 6px;
 }
 
+/* ── Yläpalkki ────────────────────────────────────────── */
 #game-header {
     text-align: center;
     width: 100%;
-    max-width: 400px;
+    max-width: 800px;
+    padding: 4px 16px;
+    background: rgba(10, 10, 30, 0.85);
+    border: 1px solid #1a1a3e;
+    border-radius: 4px;
 }
 
 #game-header h1 {
-    font-size: 1.2rem;
+    font-size: 0.9rem;
     color: #ffd700;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    margin-bottom: 2px;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
     letter-spacing: 2px;
-}
-
-#game-header h1 .version-tag {
-    font-size: 0.4rem;
-    font-weight: normal;
-    color: #9a9a9a;
-    vertical-align: super;
-    letter-spacing: 1px;
+    margin-bottom: 4px;
 }
 
 #game-info {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 12px;
-    font-size: 0.45rem;
-    color: #0f0;
-    text-shadow: 0 0 4px #0f0;
+    gap: 16px;
+    font-size: 0.55rem;
+    color: #5a5a7a;
     flex-wrap: wrap;
 }
 
-#canvas-wrapper {
+/* ── Pelialue (canvas + ohjaimet) ─────────────────────── */
+#game-area {
     position: relative;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     flex: 1;
-    min-height: 200px;
-    min-width: 200px;
+    min-height: 0;
+    min-width: 0;
 }
 
 #game-canvas {
     display: block;
-    border: 2px solid #333;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    border: 3px solid #1a1a3e;
+    box-shadow:
+        0 0 30px rgba(100, 50, 200, 0.3),
+        inset 0 0 60px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
     flex-shrink: 0;
+    outline: none;
     background: #484;
 }
 
-/* ── Ohjaimet ──────────────────────────────── */
-#controls {
-    width: 100%;
-    max-width: 400px;
-}
-
-#keyboard-hints {
-    text-align: center;
-    font-size: 0.35rem;
-    color: #666;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding: 2px 0;
-}
-
+/* ── Kosketusohjaimet ─────────────────────────────────── */
 #touch-controls {
     display: none;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 4px 0;
+    align-items: flex-end;
+    padding: 10px 12px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+#touch-controls > * {
+    pointer-events: auto;
+}
+
+#touch-left, #touch-right {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
 }
 
 .touch-dpad {
     display: grid;
-    grid-template-columns: 50px 50px 50px;
-    grid-template-rows: 50px 50px 50px;
-    gap: 2px;
-}
-
-.touch-dpad .up    { grid-column: 2; grid-row: 1; }
-.touch-dpad .left  { grid-column: 1; grid-row: 2; }
-.touch-dpad .right { grid-column: 3; grid-row: 2; }
-.touch-dpad .down  { grid-column: 2; grid-row: 3; }
-
-.touch-actions {
-    display: flex;
-    gap: 8px;
+    grid-template-areas:
+        '. up .'
+        'left . right'
+        '. down .';
+    gap: 4px;
 }
 
 .touch-btn {
+    width: 55px;
+    height: 55px;
+    font-size: 1.4rem;
+    background: rgba(22, 33, 62, 0.85);
+    border: 2px solid #0f3460;
+    color: #ddd;
+    border-radius: 8px;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
-    color: #fff;
-    font-size: 1rem;
-    cursor: pointer;
+    transition: all 0.1s;
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
+    touch-action: none;
 }
 
 .touch-btn:active {
-    background: rgba(255,255,255,0.2);
+    background: #0f3460;
+    transform: scale(0.9);
+    border-color: #ffd700;
 }
 
-.touch-actions .touch-btn {
-    width: 44px;
-    height: 44px;
-    font-size: 0.8rem;
+.touch-btn.up    { grid-area: up; }
+.touch-btn.down  { grid-area: down; }
+.touch-btn.left  { grid-area: left; }
+.touch-btn.right { grid-area: right; }
+
+/* ── Näppäimistöohjeet ────────────────────────────────── */
+#keyboard-hints {
+    text-align: center;
+    font-size: 0.45rem;
+    color: #5a5a7a;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 2px 0;
 }
 
-/* ── Overlay (intro/game over/win) ─────────── */
+/* ── Overlay (intro/game over/win) ────────────────────── */
 #overlay {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0, 0, 0, 0.88);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -168,29 +198,33 @@ html, body {
 #overlay-content {
     text-align: center;
     color: #0f0;
-    max-width: 350px;
-    padding: 20px;
+    max-width: 400px;
+    padding: 30px;
+    background: rgba(10, 10, 30, 0.9);
+    border: 2px solid #1a1a3e;
+    border-radius: 8px;
+    box-shadow: 0 0 40px rgba(100, 50, 200, 0.3);
 }
 
 #overlay-title {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     color: #ffd700;
-    text-shadow: 0 0 10px #ffd700;
-    margin-bottom: 10px;
-    letter-spacing: 2px;
+    text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+    margin-bottom: 16px;
+    letter-spacing: 3px;
 }
 
 #overlay-message {
     font-size: 0.5rem;
     color: #0f0;
-    margin-bottom: 16px;
-    line-height: 1.6;
+    margin-bottom: 20px;
+    line-height: 1.8;
 }
 
 #overlay-button {
     font-family: 'Press Start 2P', 'Courier New', monospace;
-    font-size: 0.55rem;
-    padding: 10px 24px;
+    font-size: 0.6rem;
+    padding: 12px 30px;
     background: #0a0;
     color: #000;
     border: none;
@@ -198,38 +232,71 @@ html, body {
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: 2px;
+    transition: all 0.2s;
 }
 
 #overlay-button:hover {
     background: #0f0;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
 }
 
-/* ── Ilmoitukset ───────────────────────────── */
+/* ── Ilmoitukset ──────────────────────────────────────── */
 #notification-area {
     text-align: center;
     color: #ffd700;
-    font-size: 0.4rem;
+    font-size: 0.45rem;
     height: 1.2em;
     padding: 2px;
 }
 
-/* ── Commando oma versionumero ─────────────── */
+/* ── Commando oma versionumero ────────────────────────── */
 #commando-version {
     position: fixed;
-    bottom: 6px;
-    right: 10px;
-    color: #555;
-    font-size: 0.4rem;
-    font-family: 'Courier New', monospace;
-    z-index: 50;
-    opacity: 0.7;
+    bottom: 8px;
+    right: 12px;
+    z-index: 500;
+    font-size: 0.5rem;
+    font-family: 'Press Start 2P', monospace;
+    color: rgba(255, 255, 255, 0.15);
     pointer-events: none;
+    letter-spacing: 1px;
 }
 
-/* ── Mobiili: näytä kosketusohjaimet ──────── */
-@media (pointer: coarse), (max-width: 600px) {
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIIVISUUS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Mobiili: kosketusohjaimet esiin */
+@media (pointer: coarse), (max-width: 768px), (max-height: 768px) {
     #keyboard-hints { display: none; }
-    #touch-controls { display: flex; }
-    #game-header h1 { font-size: 1rem; }
-    #game-info { font-size: 0.4rem; gap: 8px; }
+    #touch-controls { display: flex; opacity: 0.65; }
+    #game-header h1 { font-size: 0.75rem; }
+    #game-info { font-size: 0.45rem; gap: 8px; }
+    #overlay-title { font-size: 1rem; }
+    #overlay-message { font-size: 0.4rem; }
+    #overlay-button { font-size: 0.5rem; padding: 10px 24px; }
+    #game-canvas { border-width: 2px; }
+}
+
+/* Vaakamoodi puhelimella: ohjaimet sivuille, canvas keskelle */
+@media (orientation: landscape) and (max-height: 768px) {
+    #touch-controls {
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        align-items: center;
+    }
+    #touch-left, #touch-right {
+        align-self: center;
+        flex-direction: column;
+    }
+    #game-area {
+        padding-right: 130px;
+        padding-left: 70px;
+    }
+}
+
+/* Työpöytä: piilota kosketusohjaimet */
+@media (min-width: 769px) and (min-height: 769px) {
+    #touch-controls { display: none !important; }
 }
