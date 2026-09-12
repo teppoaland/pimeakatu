@@ -290,8 +290,7 @@ const Commando = (() => {
         state = ST.DEATH; deathTimer = pl.lives <= 0 ? 1.5 : 1.0; updateHUD();
     }
 
-    function respawn() {
-/* ── RENDER ────────────────────────────────────────── */
+    /* ── RENDER ────────────────────────────────────────── */
     function render() {
         ctx.fillStyle = '#484'; ctx.fillRect(0, 0, CW, CH);
         // Ruudukko
