@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.23** | 13.9.2026 | Katu: Notifikaatioiden näyttö 1.5s→2.5s, ikkunoihin yksittäiset random-valot (ei koske potkittuja taloja)
+**v3.24** | 13.9.2026 | Katu: Rauhalliset ikkunavalot (2-5 kpl, 1-10min), ei discoa. Notifikaatio 2.5s.
 
 ## 🔒 Lukitut osa-alueet
 
@@ -23,7 +23,7 @@
 ## ⚠️ Huomiot
 
 - **Pääportaali:** `position: absolute`, `opacity: 0.65`, landscape overlay, D-pad + ⚡
-- **Notifikaatiot:** Vain ovi/kolikko, `setTimeout` 1.5s + fade 0.5s
+- **Notifikaatiot:** Vain ovi/kolikko, `setTimeout` 2.5s + fade 0.5s
 - **Blue Mäx:** ✅ v3.10 – Musta ⅓-leveä mittari-HUD (polttoainepalkki + pommit + elämät + korkeus), ei pisteitä. Kentän ulkopuolella alt≤1 → STALL-kuolema. Ohjaus pois ST.TO:n ajalta. Viholliset 100% teholla. Polttoaineen loputtua syöksy + wrap-around, 3-kerroksinen räjähdys, mobiili-HUD overlayna. B=pommi, G=KK, L=laskeudu. Ilmapallo 8 taloa + 60s. Tankkaus. Kaikki talot bonus +5000.
 - **Boulder Dash:** Debugissa avain heti | **Dig Game:** Buildaus poistettu, `game_main.html` käytössä suoraan
 - **Versio:** v3.3 GitHub Pagesissa `https://teppoaland.github.io/pimeakatu/`

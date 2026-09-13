@@ -282,6 +282,7 @@ const Street = (() => {
         animFrameId = requestAnimationFrame(loop);
         const dt = Math.min((timestamp - lastTime) / 16.667, 3);
         lastTime = timestamp;
+        updateLitWindows();
         update(dt);
         render();
         actionJustPressed = false;
@@ -843,35 +844,68 @@ const Street = (() => {
         ctx.globalAlpha = 1;
     }
 
-    /* ── Yksittäisen ikkunan random-valo ──────────── */
-    function getWindowLight(wx, wy, bldgIdx) {
-        // Pseudo-satunnainen seed ikkunan sijainnista
-        const seed = wx * 374761393 + wy * 668265263 + bldgIdx * 1274126177;
-        const hash = ((seed >> 16) ^ seed) * 0x45d9f3b;
-        const r = ((hash >> 16) ^ hash) % 1000 / 1000; // 0..1
+    /* ── Rauhalliset ikkunavalot (2-5 kpl, 1-10min paloaika) ── */
+    const litWindows = []; // { wx, wy, bldgIdx, offTime }
 
-        // ~15% aina pimeänä, ~20% aina himmeänä, ~65% syklissä
-        if (r < 0.15) return { brightness: 0 };             // aina pimeä
-        if (r < 0.35) return { brightness: 0.7 };            // aina himmeä
-
-        // Syklivä ikkuna: 4-14s jakso, 40% ajasta päällä
-        const period = 4000 + (r - 0.35) / 0.65 * 10000;
-        const now = Date.now();
-        const phase = r * period;
-        const cycleT = (now + phase) % period;
-        const onTime = period * 0.4;
-        const trans = 500; // pehmeä siirtymä 0.5s
-
-        let brightness = 0;
-        if (cycleT < onTime) {
-            // Syttymisvaihe
-            brightness = Math.min(1, cycleT / trans);
-        } else {
-            // Sammumisvaihe
-            brightness = 1 - Math.min(1, (cycleT - onTime) / trans);
+    function collectAllWindows() {
+        const all = [];
+        for (let bi = 0; bi < buildings.length; bi++) {
+            const b = buildings[bi];
+            for (let wy = GROUND_Y - b.h + 25; wy < GROUND_Y - 35; wy += 32) {
+                for (let wx = b.x + 10; wx < b.x + b.w - 15; wx += 24) {
+                    if (wx + 10 > b.x + b.w - 6) continue;
+                    all.push({ wx, wy, bldgIdx: bi });
+                }
+            }
         }
-        return { brightness };
+        return all;
     }
+
+    let _allWindows = null;
+    function getAvailableWindows() {
+        if (!_allWindows) _allWindows = collectAllWindows();
+        // Suodata pois talot joiden valot on potkittu päälle
+        return _allWindows.filter(w => {
+            const idx = w.bldgIdx;
+            if (idx === 0 && firstHouseWindowsLit) return false;
+            if (smallHouseLights[idx] && smallHouseLights[idx].lit) return false;
+            return true;
+        });
+    }
+
+    function pickRandomWindow() {
+        const avail = getAvailableWindows();
+        if (avail.length === 0) return null;
+        return avail[Math.floor(Math.random() * avail.length)];
+    }
+
+    function addRandomLitWindow() {
+        const w = pickRandomWindow();
+        if (!w) return;
+        // 1-10 min = 60 000–600 000 ms
+        const duration = 60000 + Math.random() * 540000;
+        litWindows.push({ wx: w.wx, wy: w.wy, bldgIdx: w.bldgIdx, offTime: Date.now() + duration });
+    }
+
+    function updateLitWindows() {
+        const now = Date.now();
+        // Poista sammuneet
+        for (let i = litWindows.length - 1; i >= 0; i--) {
+            if (now >= litWindows[i].offTime) litWindows.splice(i, 1);
+        }
+        // Täytä 2-5 ikkunaan
+        const target = 2 + Math.floor(Math.random() * 4); // 2..5
+        while (litWindows.length < target) addRandomLitWindow();
+        // Jos yli 5, tiputa vanhin
+        while (litWindows.length > 5) litWindows.shift();
+    }
+
+    function isWindowLit(wx, wy, bldgIdx) {
+        return litWindows.some(w => w.wx === wx && w.wy === wy && w.bldgIdx === bldgIdx);
+    }
+
+    // Alusta: 2-3 ikkunaa heti palamaan
+    for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) addRandomLitWindow();
 
     function drawBuildings() {
         for (const b of buildings) {
@@ -900,19 +934,28 @@ const Street = (() => {
                         ctx.fillStyle = glow;
                         ctx.fillRect(wx-6, wy-5, 22, 24);
                     } else {
-                        const wl = getWindowLight(wx, wy, idx);
-                        if (wl.brightness > 0) {
-                            const a = 0.12 * wl.brightness;
-                            ctx.fillStyle = 'rgba(255,200,80,' + a.toFixed(2) + ')';
+                        const lit = isWindowLit(wx, wy, idx);
+                        if (lit) {
+                            const dt = Date.now() * 0.001;
+                            const f1 = 0.92 + Math.sin(dt*2.3 + wx*0.07 + wy*0.13)*0.08;
+                            const r = Math.floor(240 + Math.sin(dt*1.9+wy*0.1)*10);
+                            const g = Math.floor(210 + Math.sin(dt*2.1+wx*0.08)*10);
+                            const b = Math.floor(100 + Math.sin(dt*1.5+wy*0.06)*15);
+                            ctx.fillStyle = 'rgba('+r+','+g+','+b+','+(0.72*f1)+')';
                             ctx.fillRect(wx, wy, 10, 14);
-                            ctx.strokeStyle = 'rgba(255,200,80,' + (0.4 * wl.brightness).toFixed(2) + ')';
+                            ctx.strokeStyle = 'rgba(255,200,100,0.55)'; ctx.lineWidth = 1;
+                            ctx.strokeRect(wx, wy, 10, 14);
+                            const glow = ctx.createRadialGradient(wx+5, wy+7, 1, wx+5, wy+7, 12);
+                            glow.addColorStop(0, 'rgba(255,200,80,0.22)');
+                            glow.addColorStop(1, 'rgba(255,200,80,0)');
+                            ctx.fillStyle = glow;
+                            ctx.fillRect(wx-6, wy-5, 22, 24);
                         } else {
                             ctx.fillStyle = '#0a0a15';
                             ctx.fillRect(wx, wy, 10, 14);
-                            ctx.strokeStyle = '#2a2a3e';
+                            ctx.strokeStyle = '#2a2a3e'; ctx.lineWidth = 1;
+                            ctx.strokeRect(wx, wy, 10, 14);
                         }
-                        ctx.lineWidth = 1;
-                        ctx.strokeRect(wx, wy, 10, 14);
                     }
                 }
             }
