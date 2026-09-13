@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.22** | 13.9.2026 | DG2: Bugikorjaus - exit toimii nyt ilman avainta kentissä joissa ei avainta (1-2)
+**v3.23** | 13.9.2026 | Katu: Notifikaatioiden näyttö 1.5s→2.5s, ikkunoihin yksittäiset random-valot (ei koske potkittuja taloja)
 
 ## 🔒 Lukitut osa-alueet
 
