@@ -7,7 +7,7 @@ const LEVEL_DATA = [];
 // === Taso 1: Aloittelijan luola ===
 LEVEL_DATA.push({
     name: 'Aloittelijan luola',
-    diamondsNeeded: 5,
+    diamondsNeeded: 7,    // kaikki kentän timantit (7 kpl)
     width: 20,
     height: 15,
     map: [

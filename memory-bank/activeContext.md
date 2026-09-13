@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.45** | 13.9.2026 | Kolikko arvotaan satunnaiseen X-sijaintiin (50–730) aina pelin käynnistyessä (F5 / avaus). Jos kerätty → pysyy piilossa.
+**v3.49** | 13.9.2026 | Pelaaja-animaatio elävöitetty: kävelyssä jalat heiluvat, kädet heiluvat, vartalo pomppii. Kaatumisessa pää kiinni kehossa + kädet sivuille. Lipan lippa 7→12px.
 
 ## 🔒 Lukitut osa-alueet
 

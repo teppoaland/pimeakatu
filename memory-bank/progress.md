@@ -17,6 +17,7 @@
 | Ääniefektit | ✅ Valmis | Potku (0.24) + kävely (0.12 lowpass-kahina) |
 | Kukkaruukku-taloista | ✅ Valmis | Talot 0,2,4,6: valo varoituksena, potku → ruukku → tainnutus 10s |
 | Katueläimet | ✅ Valmis | Hiiri/rotta (lineaarinen), jänis (loikkii, pysähtyy), 15s välein |
+| Ajoneuvot kadulla | ✅ v3.46 | 🚗 Auto (80×30) + 🏍️ MP (40×22), Y=340, 20–40s, törmäys alempi 50% → tainnutus |
 | Valojen elävöitys | ✅ Valmis | RGB-tuikinta ikkunoissa, moskiitot lampuissa |
 | Poutayö-taivas | ✅ v3.40 | Sirppikuu + cirrus/hazy-pilvikaistale, tuuli 1–4 px/s |
 | Etualan maisemointi | ✅ v3.41 | Kiveys, ruohot, viemärikannet + höyry, sanomalehti, kuoriainen |
@@ -47,7 +48,7 @@
 | Timanttien keräysseuranta | ✅ Valmis | UI-laskuri |
 | Poutayö-taivas | ✅ v3.30 | Tähdet, sirppikuu, cirrus+hazy (>100px), tuulianimaatio 7–16 px/s |
 | Avain oikeaan alakulmaan | ✅ v3.30 | Siirretty SURFACE_ROW → BEDROCK_ROW-1 |
-| Avain maalina + paluu kadulle | ✅ v3.20 | KEY-tiili, collectKey dialogista OK → RETURN_TO_STREET |
+| Avain maalina + paluu kadulle | ✅ v3.47 | KEY-tiili vain oikeassa alakulmassa, segmenttien vanhat X→KEY poistettu |
 
 ---
 
@@ -59,7 +60,7 @@
 | Painovoima | ✅ Valmis | Keikahdusviive 1 kehys |
 | Viholliset | ✅ Valmis | Tulikärpänen, perhonen |
 | Elämät (3) | ✅ Valmis | INITIAL_LIVES = 3 |
-| Uloskäynti | ✅ Valmis | Avain + timanttikiintiö |
+| Uloskäynti | ✅ v3.48 | Taso 1: kaikki 7 timanttia pakko kerätä (oli 5) |
 | Aikaraja per taso | ✅ Valmis | Laskuri HUD:ssa |
 | Ääniefektit | ✅ Valmis | Web Audio API |
 | Kosketusohjaus | ✅ Valmis | Mobiili-D-pad |
