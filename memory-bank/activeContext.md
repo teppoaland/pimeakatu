@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.26** | 13.9.2026 | Katu: Varoitusdialogi talon 0 oveen 3. potkulla. Ikkunavalot 0-5, debug 10-30s.
+**v3.28** | 13.9.2026 | Pääkatu: Taustamusiikki uusittu – täysi bändisoundi (rummut, basso, särökitara, laulumelodia). "Running Free" nyt tunnistettavissa.
 
 ## 🔒 Lukitut osa-alueet
 
@@ -17,8 +17,8 @@
 
 - **Commando:** Jäissä – tarvitaan valmis 3D HTML-moottori pohjaksi ennen jatkoa
 - Blue Mäx: TESTIMODE pois → palauta vihollisten ammunta normaalille 60% aggressiolle
-- Ääniefektit pääportaaliin
-- Pääsiäismunat Boulder Dashiin
+- **Ääniefektit pääportaaliin:** ✅ Valmis v3.28 – "Running Free" täysi bändisoundi (rummut + basso + kitara + melodia, audio.js)
+- **Pääsiäismunat Boulder Dashiin**
 
 ## ⚠️ Huomiot
 

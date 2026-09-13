@@ -18,7 +18,7 @@
 | Kukkaruukku-taloista | ✅ Valmis | Talot 0,2,4,6: valo varoituksena, potku → ruukku → tainnutus 10s |
 | Katueläimet | ✅ Valmis | Hiiri/rotta (lineaarinen), jänis (loikkii, pysähtyy), 15s välein |
 | Valojen elävöitys | ✅ Valmis | RGB-tuikinta ikkunoissa, moskiitot lampuissa |
-| Päivä-/yökierto | ❌ Ei vielä | Mahdollinen jatkokehitys |
+| Taustamusiikki | ✅ Valmis | v3.28: "Running Free" täysi bändisoundi (rummut+basso+kitara+melodia, audio.js) |
 
 ---
 
@@ -114,7 +114,7 @@
 ## 📝 Seuraavat kehitysaskeleet
 
 1. **Commando jäissä** – etsi valmis 3D HTML-pelimoottori pohjaksi
-2. Lisää ääniefektit pääportaaliin
+2. ~~Lisää ääniefektit pääportaaliin~~ ✅ v3.27
 3. Toteuta pääsiäismunia Boulder Dashiin
 4. Lisää ennätyspisteet (localStorage)
 5. Blue Max: poista debug-rajoitukset / lisää vaikeustasot

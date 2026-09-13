@@ -40,7 +40,7 @@ Versionumeroa **ei** nosteta kun:
 1. Tee muutokset normaalisti
 2. Ennen committia: jos muutos täyttä versionnostokriteerit, päivitä `#version-tag` `index.html`:ssa
 3. Committaa normaalisti
-4. **AJAINA** muutosten jälkeen GitHub-päivitys (`git add -A && git commit -m "..." && git push`), ellei käyttäjä erikseen kiellä
+4. GitHub-päivitys (`git add -A && git commit -m "..." && git push`) **VAIN** käyttäjän erillisestä komennosta. Julkaisun jälkeen pushausta EI tehdä automaattisesti.
 
 **Esimerkki:**
 ```html

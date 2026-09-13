@@ -1,0 +1,351 @@
+/* ═══════════════════════════════════════════════════════════
+   audio.js – Pimeä Katu -taustamusiikki
+   Iron Maiden "Running Free" – täysi bändisoundi
+   Web Audio API: rummut + basso + särökitara + melodia
+   ═══════════════════════════════════════════════════════════ */
+
+const StreetAudio = (() => {
+    let ctx = null;
+    let masterGain = null;
+    let drumGain = null;
+    let bassGain = null;
+    let guitarGain = null;
+    let leadGain = null;
+    let loopId = null;
+    let started = false;
+
+    const BPM = 138;
+    const BEAT = 60 / BPM;        // ~0.435 s per isku
+    const S16 = BEAT / 4;         // ~0.109 s – 16-osa
+    const S8 = BEAT / 2;          // ~0.217 s – 8-osa
+    const BAR = BEAT * 4;         // ~1.739 s per tahti
+
+    // 6 tahdin kiertävä sointukulku: E - E - G - A - B - A (→G lopussa)
+    const CHORD_ROOTS = [
+        { freq: 82.41,  name: 'E2' },
+        { freq: 82.41,  name: 'E2' },
+        { freq: 98.00,  name: 'G2' },
+        { freq: 110.00, name: 'A2' },
+        { freq: 123.47, name: 'B2' },
+        { freq: 110.00, name: 'A2' },
+    ];
+    const LOOP_BARS = CHORD_ROOTS.length;
+    const LOOP = BAR * LOOP_BARS;
+
+    // "Running Free" -laulumelodia (E-molli, E3–B4)
+    // Tahdit 1-2, 3, 4, 5, 6 – jokaisessa 8 nuottia
+    const MELODY_NOTES = [
+        164.81,185.00,196.00,220.00, 196.00,185.00,164.81,146.83,
+        164.81,185.00,196.00,220.00, 246.94,220.00,196.00,185.00,
+        164.81,185.00,196.00,220.00, 196.00,185.00,164.81,146.83,
+        164.81,185.00,196.00,220.00, 246.94,220.00,196.00,185.00,
+        164.81,164.81,196.00,220.00, 246.94,246.94,220.00,185.00,
+    ];
+    // Rytmioffsetit 16-osissa per tahti
+    const MEL_OFF = [
+        0,2,4,6, 8,10,12,14,
+        0,2,4,6, 8,10,12,14,
+        0,2,4,6, 8,10,12,14,
+        0,2,4,6, 8,10,12,14,
+        0,2,4,6, 8,10,12,14,
+    ];
+
+    /* ── AudioContext + alikanavat ──────────────────── */
+    function init() {
+        if (ctx) return;
+        try {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = ctx.createGain();
+            masterGain.gain.value = 0.002;
+            masterGain.connect(ctx.destination);
+
+            drumGain = ctx.createGain();
+            drumGain.gain.value = 0.55;
+            drumGain.connect(masterGain);
+
+            bassGain = ctx.createGain();
+            bassGain.gain.value = 0.50;
+            bassGain.connect(masterGain);
+
+            guitarGain = ctx.createGain();
+            guitarGain.gain.value = 0.38;
+            guitarGain.connect(masterGain);
+
+            leadGain = ctx.createGain();
+            leadGain.gain.value = 0.33;
+            leadGain.connect(masterGain);
+        } catch (e) {}
+    }
+
+    function ok() { init(); return ctx && masterGain; }
+
+    /* ═══════════════════════════════════════════════════
+       RUMMUT: Kick, Snare, Hi-hat
+       ═══════════════════════════════════════════════════ */
+
+    function kick(time) {
+        if (!ok()) return;
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(130, time);
+        o.frequency.exponentialRampToValueAtTime(28, time + 0.09);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(1.0, time);
+        g.gain.exponentialRampToValueAtTime(0.001, time + 0.13);
+        // Click
+        const c = ctx.createOscillator();
+        c.type = 'triangle';
+        c.frequency.setValueAtTime(900, time);
+        c.frequency.exponentialRampToValueAtTime(60, time + 0.007);
+        const cg = ctx.createGain();
+        cg.gain.setValueAtTime(0.35, time);
+        cg.gain.exponentialRampToValueAtTime(0.001, time + 0.01);
+        o.connect(g).connect(drumGain);
+        c.connect(cg).connect(drumGain);
+        o.start(time); o.stop(time + 0.16);
+        c.start(time); c.stop(time + 0.015);
+    }
+
+    function snare(time) {
+        if (!ok()) return;
+        const len = ctx.sampleRate * 0.14;
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1) * Math.exp(-i/(ctx.sampleRate*0.055));
+        const n = ctx.createBufferSource(); n.buffer = buf;
+        const t = ctx.createOscillator();
+        t.type = 'triangle';
+        t.frequency.setValueAtTime(185, time);
+        t.frequency.exponentialRampToValueAtTime(75, time + 0.07);
+        const ng = ctx.createGain();
+        ng.gain.setValueAtTime(0.7, time);
+        ng.gain.exponentialRampToValueAtTime(0.001, time + 0.13);
+        const tg = ctx.createGain();
+        tg.gain.setValueAtTime(0.45, time);
+        tg.gain.exponentialRampToValueAtTime(0.001, time + 0.09);
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 900;
+        n.connect(hp).connect(ng).connect(drumGain);
+        t.connect(tg).connect(drumGain);
+        n.start(time); n.stop(time + 0.16);
+        t.start(time); t.stop(time + 0.11);
+    }
+
+    function hihat(time, loud) {
+        if (!ok()) return;
+        const len = ctx.sampleRate * 0.04;
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1) * Math.exp(-i/(ctx.sampleRate*0.012));
+        const n = ctx.createBufferSource(); n.buffer = buf;
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 6000;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(loud ? 0.32 : 0.20, time);
+        g.gain.exponentialRampToValueAtTime(0.001, time + 0.035);
+        n.connect(hp).connect(g).connect(drumGain);
+        n.start(time); n.stop(time + 0.05);
+    }
+
+    function scheduleDrums(startTime, nBars) {
+        if (!ok()) return;
+        for (let bar = 0; bar < nBars; bar++) {
+            const bs = startTime + bar * BAR;
+            for (let p = 0; p < 16; p++) {
+                const t = bs + p * S16;
+                if (p === 0 || p === 8) kick(t);
+                if (p === 4 || p === 12) snare(t);
+                if (p % 2 === 0) hihat(t, p === 0 || p === 8);
+            }
+            if (bar === nBars - 1) {
+                const fs = bs + 14 * S16;
+                snare(fs); snare(fs + S16*0.5);
+                kick(fs + S16); snare(fs + S16*1.5);
+            }
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════
+       BASSO: Säröytynyt saha + subi
+       ═══════════════════════════════════════════════════ */
+
+    function bassNote(freq, time, dur) {
+        if (!ok()) return;
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth'; o.frequency.value = freq;
+        const sub = ctx.createOscillator();
+        sub.type = 'sine'; sub.frequency.value = freq * 0.5;
+        const grit = ctx.createOscillator();
+        grit.type = 'sawtooth'; grit.frequency.value = freq * 1.006;
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 290; lp.Q.value = 1.1;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, time);
+        g.gain.linearRampToValueAtTime(1.0, time + 0.005);
+        g.gain.setValueAtTime(1.0, time + dur * 0.55);
+        g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+        const sg = ctx.createGain();
+        sg.gain.setValueAtTime(0, time);
+        sg.gain.linearRampToValueAtTime(0.5, time + 0.005);
+        sg.gain.exponentialRampToValueAtTime(0.001, time + dur * 0.65);
+        const grg = ctx.createGain();
+        grg.gain.setValueAtTime(0, time);
+        grg.gain.linearRampToValueAtTime(0.28, time + 0.004);
+        grg.gain.exponentialRampToValueAtTime(0.001, time + dur * 0.45);
+        o.connect(lp).connect(g).connect(bassGain);
+        sub.connect(sg).connect(bassGain);
+        grit.connect(lp).connect(grg).connect(bassGain);
+        o.start(time); o.stop(time + dur + 0.03);
+        sub.start(time); sub.stop(time + dur + 0.03);
+        grit.start(time); grit.stop(time + dur + 0.03);
+    }
+
+    function scheduleBass(startTime, nBars) {
+        if (!ok()) return;
+        for (let bar = 0; bar < nBars; bar++) {
+            const f = CHORD_ROOTS[bar].freq;
+            const bs = startTime + bar * BAR;
+            for (let beat = 0; beat < 4; beat++) {
+                const t = bs + beat * BEAT;
+                bassNote(f, t, S16 * 0.75);
+                bassNote(f, t + S16, S16 * 0.75);
+            }
+        }
+        const lb = startTime + (nBars - 1) * BAR;
+        bassNote(123.47, lb + 3.5 * BEAT, BEAT * 0.52);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       KITARA: Triple-track säröpowerchordit
+       ═══════════════════════════════════════════════════ */
+
+    function gtrChord(rootFreq, time, dur) {
+        if (!ok()) return;
+        const gf = rootFreq * 2;
+        const fifth = gf * 1.5;
+        [1.0, 1.003, 0.997].forEach(dt => {
+            const r = ctx.createOscillator();
+            r.type = 'sawtooth'; r.frequency.value = gf * dt;
+            const f = ctx.createOscillator();
+            f.type = 'sawtooth'; f.frequency.value = fifth * dt;
+            const lp = ctx.createBiquadFilter();
+            lp.type = 'lowpass'; lp.frequency.value = 2400; lp.Q.value = 0.6;
+            const pk = ctx.createBiquadFilter();
+            pk.type = 'peaking'; pk.frequency.value = 950;
+            pk.Q.value = 1.3; pk.gain.value = 4.5;
+            const g = ctx.createGain();
+            g.gain.setValueAtTime(0, time);
+            g.gain.linearRampToValueAtTime(1.0, time + 0.004);
+            g.gain.setValueAtTime(1.0, time + dur * 0.5);
+            g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+            r.connect(lp); f.connect(lp);
+            lp.connect(pk).connect(g).connect(guitarGain);
+            r.start(time); r.stop(time + dur + 0.02);
+            f.start(time); f.stop(time + dur + 0.02);
+        });
+    }
+
+    function scheduleGuitar(startTime, nBars) {
+        if (!ok()) return;
+        for (let bar = 0; bar < nBars; bar++) {
+            const f = CHORD_ROOTS[bar].freq;
+            const bs = startTime + bar * BAR;
+            for (let beat = 0; beat < 4; beat++) {
+                const t = bs + beat * BEAT;
+                gtrChord(f, t, S16 * 0.70);
+                gtrChord(f, t + S16, S16 * 0.70);
+            }
+        }
+    }
+/* ═══════════════════════════════════════════════════
+       MELODIA: "Running Free" -laulumelodia
+       ═══════════════════════════════════════════════════ */
+
+    function leadNote(freq, time, dur) {
+        if (!ok()) return;
+        const o1 = ctx.createOscillator();
+        o1.type = 'sine'; o1.frequency.value = freq;
+        const o2 = ctx.createOscillator();
+        o2.type = 'triangle'; o2.frequency.value = freq * 2;
+        const o3 = ctx.createOscillator();
+        o3.type = 'sawtooth'; o3.frequency.value = freq;
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 2000;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, time);
+        g.gain.linearRampToValueAtTime(1.0, time + 0.018);
+        g.gain.setValueAtTime(0.82, time + dur * 0.35);
+        g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+        const g2 = ctx.createGain();
+        g2.gain.setValueAtTime(0, time);
+        g2.gain.linearRampToValueAtTime(0.22, time + 0.012);
+        g2.gain.exponentialRampToValueAtTime(0.001, time + dur);
+        const g3 = ctx.createGain();
+        g3.gain.setValueAtTime(0, time);
+        g3.gain.linearRampToValueAtTime(0.16, time + 0.004);
+        g3.gain.exponentialRampToValueAtTime(0.001, time + dur * 0.55);
+        o1.connect(lp).connect(g).connect(leadGain);
+        o2.connect(lp).connect(g2).connect(leadGain);
+        o3.connect(lp).connect(g3).connect(leadGain);
+        o1.start(time); o1.stop(time + dur + 0.02);
+        o2.start(time); o2.stop(time + dur + 0.02);
+        o3.start(time); o3.stop(time + dur + 0.02);
+    }
+
+    function scheduleMelody(startTime, nBars) {
+        if (!ok()) return;
+        const perBar = Math.floor(MELODY_NOTES.length / nBars);
+        for (let bar = 0; bar < nBars; bar++) {
+            const bs = startTime + bar * BAR;
+            for (let i = 0; i < perBar; i++) {
+                const idx = bar * perBar + i;
+                if (idx >= MELODY_NOTES.length) continue;
+                const t = bs + (MEL_OFF[idx] || i * 2) * S16;
+                leadNote(MELODY_NOTES[idx], t, S16 * 1.7);
+            }
+        }
+    }
+
+    /* ═══════════════════════════════════════════════════
+       PÄÄLOOPPI
+       ═══════════════════════════════════════════════════ */
+
+    function scheduleAll(startTime) {
+        if (!ok()) return;
+        scheduleDrums(startTime, LOOP_BARS);
+        scheduleBass(startTime, LOOP_BARS);
+        scheduleGuitar(startTime, LOOP_BARS);
+        scheduleMelody(startTime, LOOP_BARS);
+    }
+
+    function tryStart() {
+        init();
+        if (!ctx || started) return;
+        if (ctx.state === 'suspended') return;
+        started = true;
+        scheduleAll(ctx.currentTime + 0.05);
+        loopId = setInterval(() => {
+            scheduleAll(ctx.currentTime + 0.05);
+        }, LOOP * 1000);
+    }
+
+    function onGesture() {
+        init();
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+        tryStart();
+    }
+
+    document.addEventListener('touchstart', onGesture, { once: true, passive: true });
+    document.addEventListener('mousedown', onGesture, { once: true });
+    document.addEventListener('keydown', onGesture, { once: true });
+
+    /* ── Julkinen API ────────────────────────────────── */
+    function start() { tryStart(); }
+
+    function stop() {
+        if (loopId) { clearInterval(loopId); loopId = null; }
+        started = false;
+    }
+
+    return { init, start, stop };
+})();

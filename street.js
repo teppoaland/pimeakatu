@@ -186,6 +186,7 @@ const Street = (() => {
         resize();
         lastTime = performance.now();
         loop(lastTime);
+        StreetAudio.init();
     }
 
     /* ═══════════════════════════════════════════════════
@@ -647,6 +648,7 @@ const Street = (() => {
         // Näytä overlay ENSIN, sitten vasta lataa iframe
         // (estää 0×0 canvas -bugin pelien käynnistyessä)
         overlay.classList.add('active');
+        StreetAudio.stop();
         iframe.onload = () => {
             try { iframe.contentWindow.focus(); } catch(e) {}
         };
@@ -696,6 +698,7 @@ const Street = (() => {
         setTimeout(() => {
             try { canvas.focus(); } catch(e) {}
         }, 50);
+        StreetAudio.start();
         state = GameState.load();
         for (let i = 0; i < lamps.length; i++) {
             lamps[i].lit = state.litLamps[i];
