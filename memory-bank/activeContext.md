@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.21** | 13.9.2026 | DG2: Avain siirretty kenttään 3 (ei enää 1-2), kentän 4 läpäisy → Ok → RETURN_TO_STREET
+**v3.22** | 13.9.2026 | DG2: Bugikorjaus - exit toimii nyt ilman avainta kentissä joissa ei avainta (1-2)
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 

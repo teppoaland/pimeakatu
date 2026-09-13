@@ -73,7 +73,7 @@ class Game {
         if (!skipIntro && !isDebug) {
             const lvl = LEVEL_DATA[0];
             this.showOverlay('💎 ' + lvl.name,
-                'Taso 1 — Kerää ' + lvl.diamondsNeeded + ' timanttia\nja etene uloskäynnille!\n\n🔑 Avain on vasta kolmannessa tasossa\n\n⏱ Aikaa on vain 45 sekuntia, että pidä kiirettä!',
+                'Taso 1 — Kerää ' + lvl.diamondsNeeded + ' timanttia\nja etene uloskäynnille!\n\nEtsi avaimia 🔑\n\n⏱ Aikaa on vain 45 sekuntia, että pidä kiirettä!',
                 'Aloita');
         }
         this.renderer.render();
@@ -98,16 +98,20 @@ class Game {
         this.player.facing = DIR.RIGHT;
         this.diamondsCollected = 0;
         this.keyCollected = false;
+        this.levelHasKey = false;
         this.levelComplete = false;
 
         // Turvatoimi: tarvittavat timantit eivät voi ylittää kentän timantteja
         let totalDiamonds = 0;
+        let hasKey = false;
         for (let y = 0; y < this.rows; y++) {
             for (let x = 0; x < this.cols; x++) {
                 if (this.grid[y][x] === TILE.DIAMOND) totalDiamonds++;
+                if (this.grid[y][x] === TILE.KEY) hasKey = true;
             }
         }
         this.diamondsNeeded = Math.min(data.diamondsNeeded, totalDiamonds);
+        this.levelHasKey = hasKey;
 
         this.physics.reset();
         this.enemyAI.scanEnemies();
@@ -170,7 +174,8 @@ class Game {
                 break;
             }
             case TILE.EXIT:
-                if (this.diamondsCollected >= this.diamondsNeeded && this.keyCollected) {
+                if (this.diamondsCollected >= this.diamondsNeeded && 
+                    (!this.levelHasKey || this.keyCollected)) {
                     this.completeLevel(); return;
                 }
                 break;
