@@ -97,6 +97,10 @@ const Street = (() => {
     let stars = [];
     let shootingStar = null;   // Tähdenlento
     let satellite = null;      // Satelliitti
+    let clouds = [];            // Pilvet (cirrus + hazy)
+    let lastCloudTime = 0;     // Pilvien dt-laskenta
+    let windDir = Math.random() < 0.5 ? 1 : -1;
+    let windSpeed = 1 + Math.random() * 3; // px/s (1–4)
 
     /* ── Potkuääni (Web Audio API) ────────────────── */
     let audioCtx = null;
@@ -182,6 +186,7 @@ const Street = (() => {
                 blink: Math.random() * Math.PI * 2
             });
         }
+        initClouds();
         setupInput();
         resize();
         lastTime = performance.now();
@@ -298,6 +303,8 @@ const Street = (() => {
             if (actionJustPressed) { darkRoom = false; actionJustPressed = false; }
             return;
         }
+
+        updateClouds(dt);
 
         // Tainnutus - kukkaruukku osui
         if (player.knockedDown) {
@@ -759,6 +766,88 @@ const Street = (() => {
         const coinEl = document.querySelector('#hud-inventory .inv-coin');
         if (coinEl) coinEl.classList.toggle('has', state.inventory.coin);
     }
+
+    /* ── Pilvijärjestelmä (cirrus + hazy, kapea kaistale) ── */
+    function initClouds() {
+        clouds = [];
+        windDir = Math.random() < 0.5 ? 1 : -1;
+        windSpeed = 1 + Math.random() * 3; // px/s (1–4)
+
+        // Pilvikaistale: y=40..80, noin 40px korkea
+        const bandTop = 40, bandH = 40;
+        for (let i = 0; i < 18; i++) {
+            const typeRoll = Math.random();
+            let w, opacity, type;
+            if (typeRoll < 0.35) {
+                type = 'cirrus';
+                w = 60 + Math.random() * 180;
+                opacity = 0.005 + Math.random() * 0.015;
+            } else {
+                type = 'hazy';
+                w = 80 + Math.random() * 220;
+                opacity = 0.015 + Math.random() * 0.035;
+            }
+            clouds.push({
+                x: Math.random() * WORLD_W,
+                y: bandTop + Math.random() * bandH,
+                w: w, opacity: opacity, type: type,
+            });
+        }
+    }
+
+    function updateClouds(dt) {
+        if (!lastCloudTime) { lastCloudTime = performance.now(); return; }
+        // dt tulee jo parametrina, käytä suoraan
+        for (const c of clouds) {
+            c.x += windDir * windSpeed * dt / 16.667; // normalisoi ~60fps frameen
+            // Wrap-around
+            if (c.x > WORLD_W + c.w) c.x = -c.w;
+            else if (c.x < -c.w) c.x = WORLD_W + c.w;
+        }
+    }
+
+    function drawClouds() {
+        for (const c of clouds) {
+            const x = c.x, y = c.y;
+            if (x < -c.w || x > WORLD_W + c.w) continue;
+
+            const a = c.opacity;
+            ctx.save();
+
+            if (c.type === 'cirrus') {
+                // Ohuet haituvaiset cirrus-juovat (korkeus ~1-2px)
+                const streaks = 3 + Math.floor(c.w * 0.015);
+                for (let i = 0; i < streaks; i++) {
+                    const ox = (i - (streaks - 1) / 2) * (c.w * 0.11);
+                    const oy = (i % 3 - 1) * 1.0;
+                    const sw = c.w * 0.5 * (0.6 + 0.4 * (1 - Math.abs(i - (streaks - 1) / 2) / (streaks / 2)));
+                    const fa = a * (0.35 + 0.65 * (1 - Math.abs(i - (streaks - 1) / 2) / (streaks / 2)));
+                    ctx.fillStyle = 'rgba(190,200,225,' + fa + ')';
+                    ctx.beginPath();
+                    ctx.ellipse(x + ox, y + oy, sw, 1.0, 0.015 * (i - 1), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else {
+                // Hazy: vaakasuoria päällekkäisiä hattaraellipsejä
+                const baseClr = '180,195,215';
+                const parts = 4 + Math.floor(c.w * 0.012);
+                for (let i = 0; i < parts; i++) {
+                    const ox = (i - (parts - 1) / 2) * (c.w * 0.14);
+                    const oy = Math.sin(i * 2.3) * 2.5;
+                    const dist = Math.abs(i - (parts - 1) / 2) / ((parts - 1) / 2);
+                    const lw = c.w * (0.15 + 0.10 * (1 - dist));
+                    const la = a * (0.5 + 0.5 * (1 - dist));
+                    ctx.fillStyle = 'rgba(' + baseClr + ',' + la + ')';
+                    ctx.beginPath();
+                    ctx.ellipse(x + ox, y + oy, lw, 3 + dist * 2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            ctx.restore();
+        }
+    }
+
 /* ═══════════════════════════════════════════════════
        PIIRTO – tausta, talot, maa
        ═══════════════════════════════════════════════════ */
@@ -775,11 +864,23 @@ const Street = (() => {
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, WORLD_W, GROUND_Y);
 
-        // Kuu
-        ctx.fillStyle = '#ddd';
-        ctx.beginPath(); ctx.arc(680, 70, 30, 0, Math.PI*2); ctx.fill();
+        // Sirppikuu
+        const moonX = 680, moonY = 60, moonR = 28;
+        const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 2.8);
+        moonGlow.addColorStop(0, 'rgba(255,255,240,0.16)');
+        moonGlow.addColorStop(0.4, 'rgba(255,255,240,0.05)');
+        moonGlow.addColorStop(1, 'rgba(255,255,240,0)');
+        ctx.fillStyle = moonGlow;
+        ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.8, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fefae0';
+        ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
+        const crescentRight = false; // sirppi vasemmalle
+        const shadowOff = crescentRight ? moonR * 0.4 : -moonR * 0.4;
         ctx.fillStyle = '#0a0a1e';
-        ctx.beginPath(); ctx.arc(692, 64, 26, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(moonX + shadowOff, moonY - moonR * 0.08, moonR * 0.78, 0, Math.PI*2); ctx.fill();
+
+        // Pilvet (kapea cirrus/hazy-kaistale)
+        drawClouds();
 
         // Tähdet (jokaisella oma random twinkle)
         for (const s of stars) {
@@ -1224,7 +1325,7 @@ const Street = (() => {
     /* ── Katueläin ───────────────────────────────── */
     function drawAnimal() {
         const a = groundAnimal; if (!a) return;
-        const ax = Math.round(a.x), ay = Math.round(a.y + a.hopY), dir = a.direction;
+        const ax = Math.round(a.x), ay = Math.round(a.y + a.hopY + (a.type === 'rabbit' ? 25 : 0)), dir = a.direction;
         const t = a.animTimer;
         ctx.save();
         if (a.type === 'mouse') {

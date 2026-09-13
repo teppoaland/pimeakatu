@@ -213,7 +213,9 @@ function buildWorld() {
     grid[playerStartY][playerStartX] = TILE.GRASS;
 
     const exitX = width - 2;
-    grid[SURFACE_ROW][exitX] = TILE.KEY;
+    // Avain oikeassa alakulmassa, juuri kallioperän yläpuolella
+    const keyY = BEDROCK_ROW - 1;
+    grid[keyY][exitX] = TILE.KEY;
 
     return {
         grid: grid,
