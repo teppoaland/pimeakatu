@@ -72,6 +72,8 @@ const Street = (() => {
     const smallHouseLights = {};     // { '2': { lit: false, timer: 0 }, ... }
     let groundAnimal = null;         // { type, x, y, vx, direction, hopY, hopVel, animTimer, pauseTimer }
     let animalSpawnTimer = 900;      // 15s välein
+    let streetVehicle = null;        // TESTI: ajoneuvo kadulla – { x, y, w, h, vx, direction }
+    let vehicleSpawnTimer = 300;     // TESTI: 5s ekaan spawniin
 
     /* ── Kukkaruukun pudotus ──────────────────────── */
     function spawnFlowerPot(bldg) {
@@ -494,6 +496,52 @@ const Street = (() => {
                 }
             }
             if ((a.direction>0 && a.x>WORLD_W+a.w+10) || (a.direction<0 && a.x<-a.w-10)) groundAnimal = null;
+        }
+
+        // ── Ajoneuvo ────────────────────────────────────
+        if (!streetVehicle) {
+            vehicleSpawnTimer -= dt;
+            if (vehicleSpawnTimer <= 0) {
+                const dir = Math.random() < 0.5 ? 1 : -1;
+                const isCar = Math.random() < 0.5;
+                let w, h, speed;
+                if (isCar) {
+                    w = 80; h = 30; speed = 1.0 + Math.random() * 0.5;  // auto: 4x pelaaja
+                } else {
+                    w = 40; h = 22; speed = 1.5 + Math.random() * 1.0;  // MP: 2x pelaaja
+                }
+                streetVehicle = {
+                    type: isCar ? 'car' : 'motorcycle',
+                    x: dir > 0 ? -w : WORLD_W + w,
+                    y: 340,        // yläreuna, alaosa osuu pelaajan jalkoihin
+                    w, h,
+                    vx: dir * speed,
+                    direction: dir
+                };
+                vehicleSpawnTimer = 1200 + Math.random() * 1200; // 20–40s
+            }
+        } else {
+            const v = streetVehicle;
+            v.x += v.vx * dt;
+            if ((v.direction > 0 && v.x > WORLD_W + v.w + 10) || (v.direction < 0 && v.x < -v.w - 10)) {
+                streetVehicle = null;
+            }
+        }
+
+        // ── Ajoneuvon törmäys ─────────────────────────
+        if (streetVehicle && !player.knockedDown) {
+            const v = streetVehicle;
+            // Törmäys vain ajoneuvon alemmalla puoliskolla (3D-illuusio)
+            const vCollisionTop = v.y + v.h * 0.5;  // alin 50% korkeudesta
+            if (v.x < player.x + player.w && v.x + v.w > player.x &&
+                player.y + player.h > vCollisionTop && player.y < v.y + v.h) {
+                // Törmäys!
+                player.knockedDown = true;
+                player.knockdownTimer = 600;
+                player.kicking = false;
+                player.kickFrame = 0;
+                spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ffaa44', 15);
+            }
         }
 
         // ── Tähdenlento ─────────────────────────────
@@ -1045,14 +1093,14 @@ const Street = (() => {
         // Sirppikuu
         const moonX = 680, moonY = 60, moonR = 28;
         const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 2.8);
-        moonGlow.addColorStop(0, 'rgba(255,255,240,0.16)');
-        moonGlow.addColorStop(0.4, 'rgba(255,255,240,0.05)');
-        moonGlow.addColorStop(1, 'rgba(255,255,240,0)');
+        moonGlow.addColorStop(0, 'rgba(255,250,210,0.18)');
+        moonGlow.addColorStop(0.4, 'rgba(255,250,210,0.06)');
+        moonGlow.addColorStop(1, 'rgba(255,250,210,0)');
         ctx.fillStyle = moonGlow;
         ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.8, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#fefae0';
+        ctx.fillStyle = '#fff8cc';   // keltaisempi kuu
         ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
-        const crescentRight = false; // sirppi vasemmalle
+        const crescentRight = true;  // sirppi aukeaa oikealle
         const shadowOff = crescentRight ? moonR * 0.4 : -moonR * 0.4;
         ctx.fillStyle = '#0a0a1e';
         ctx.beginPath(); ctx.arc(moonX + shadowOff, moonY - moonR * 0.08, moonR * 0.78, 0, Math.PI*2); ctx.fill();
@@ -1119,6 +1167,9 @@ const Street = (() => {
 
         // Pelaaja
         drawPlayer();
+
+        // Ajoneuvo
+        if (streetVehicle) drawVehicle();
 
         // Rauta-aita (etualalla, pelaajan takana → piirretään pelaajan päälle)
         if (foreground && foreground.ironFence) { drawIronFence(); }
@@ -1419,23 +1470,23 @@ const Street = (() => {
 
             // ── Vaakaraudat ──
             // Alajuoksu (paksumpi)
-            ctx.fillStyle = '#0d0d0d';
+            ctx.fillStyle = '#222222';
             ctx.fillRect(startX, f.bottomRailY - 1, endX - startX, 7);
-            ctx.fillStyle = '#1a1a1a';
+            ctx.fillStyle = '#2e2e2e';
             ctx.fillRect(startX + 1, f.bottomRailY, endX - startX - 2, 4);
             // Yläjuoksu
-            ctx.fillStyle = '#0d0d0d';
+            ctx.fillStyle = '#222222';
             ctx.fillRect(startX, f.topY + 12, endX - startX, 4);
-            ctx.fillStyle = '#1a1a1a';
+            ctx.fillStyle = '#2e2e2e';
             ctx.fillRect(startX + 1, f.topY + 13, endX - startX - 2, 2);
 
             // ── Pystypiikit ──
             for (const bx of bars) {
                 // Piikin varsi
-                ctx.fillStyle = '#0a0a0a';
+                ctx.fillStyle = '#1a1a1a';
                 ctx.fillRect(bx, f.topY + 15, 2, f.bottomRailY - f.topY - 15);
                 // Piikin kärki (terävä yläosa)
-                ctx.fillStyle = '#111';
+                ctx.fillStyle = '#252525';
                 ctx.beginPath();
                 ctx.moveTo(bx - 1, f.topY + 15);
                 ctx.lineTo(bx + 1, f.topY + 15);
@@ -1447,7 +1498,7 @@ const Street = (() => {
                 ctx.closePath();
                 ctx.fill();
                 // Kevyt kiilto piikin kärkeen
-                ctx.fillStyle = '#2a2a2a';
+                ctx.fillStyle = '#3a3a3a';
                 ctx.beginPath();
                 ctx.moveTo(bx - 0.3, f.topY + 5);
                 ctx.lineTo(bx + 0.3, f.topY + 5);
@@ -1787,6 +1838,54 @@ const Street = (() => {
         ctx.restore();
     }
 
+    /* ── Ajoneuvo ──────────────────────────────────── */
+    function drawVehicle() {
+        const v = streetVehicle; if (!v) return;
+        const vx = Math.round(v.x), vy = Math.round(v.y), dir = v.direction;
+        ctx.save();
+        if (dir === -1) { ctx.translate(vx + v.w / 2, 0); ctx.scale(-1, 1); ctx.translate(-(vx + v.w / 2), 0); }
+
+        if (v.type === 'car') {
+            const cx = vx, cy = vy;
+            ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(cx + 3, cy + v.h - 4, v.w - 6, 6);
+            ctx.fillStyle = '#9a9a9a'; ctx.fillRect(cx + 2, cy + 2, v.w - 4, v.h - 10);
+            ctx.fillStyle = '#7a7a7a'; ctx.fillRect(cx + 10, cy, v.w - 20, v.h - 14);
+            ctx.fillStyle = '#6ab8c8'; ctx.fillRect(cx + v.w - 20, cy + 3, 8, v.h - 18);
+            ctx.fillStyle = '#558899'; ctx.fillRect(cx + 8, cy + 3, 7, v.h - 18);
+            ctx.fillStyle = '#558899'; ctx.fillRect(cx + 26, cy + 3, 12, v.h - 18);
+            ctx.fillStyle = '#cccccc'; ctx.fillRect(cx + v.w - 6, cy + v.h - 18, 6, 8);
+            ctx.fillStyle = '#aaaaaa'; ctx.fillRect(cx, cy + v.h - 18, 5, 8);
+            ctx.fillStyle = '#ffee88'; ctx.fillRect(cx + v.w - 4, cy + 6, 5, 4);
+            ctx.fillStyle = 'rgba(255,240,150,0.4)'; ctx.fillRect(cx + v.w + 1, cy + 5, 3, 6);
+            ctx.fillStyle = '#cc3333'; ctx.fillRect(cx - 1, cy + 6, 4, 3);
+            const wr = 5;
+            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(cx + 14, cy + v.h - 4, wr, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx + v.w - 14, cy + v.h - 4, wr, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#555'; ctx.beginPath(); ctx.arc(cx + 14, cy + v.h - 4, 2.5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx + v.w - 14, cy + v.h - 4, 2.5, 0, Math.PI * 2); ctx.fill();
+        } else {
+            const cx = vx, cy = vy;
+            ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(cx + 2, cy + v.h - 2, v.w - 4, 4);
+            const wr = 5;
+            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(cx + 7, cy + v.h - 5, wr, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx + v.w - 7, cy + v.h - 5, wr, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#444'; ctx.beginPath(); ctx.arc(cx + 7, cy + v.h - 5, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx + v.w - 7, cy + v.h - 5, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#666'; ctx.fillRect(cx + 4, cy + 4, v.w - 8, 5);
+            ctx.fillStyle = '#888'; ctx.fillRect(cx + 6, cy + 1, v.w - 14, 8);
+            ctx.fillStyle = '#333'; ctx.fillRect(cx + 10, cy + 10, 12, 7);
+            ctx.fillStyle = '#777'; ctx.fillRect(cx + 12, cy + 3, 10, 6);
+            ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(cx + v.w - 10, cy + 4); ctx.lineTo(cx + v.w - 4, cy - 1); ctx.stroke();
+            ctx.fillStyle = '#444'; ctx.fillRect(cx + v.w - 16, cy - 8, 6, 10);
+            ctx.fillStyle = '#cca'; ctx.beginPath(); ctx.arc(cx + v.w - 13, cy - 10, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffee88'; ctx.fillRect(cx + v.w - 1, cy + 6, 3, 3);
+            ctx.fillStyle = 'rgba(255,240,150,0.4)'; ctx.fillRect(cx + v.w + 2, cy + 5, 2, 5);
+            ctx.fillStyle = '#cc3333'; ctx.fillRect(cx - 2, cy + 6, 3, 2);
+        }
+        ctx.restore();
+    }
+
     /* ── Pelaaja ────────────────────────────────── */
     function drawPlayer() {
         const px = Math.round(player.x), py = Math.round(player.y);
@@ -1797,12 +1896,17 @@ const Street = (() => {
             const cx = px + pw/2, gy = py + ph;
             ctx.translate(cx, gy);
             if (player.facing === -1) ctx.scale(-1, 1);
-            ctx.fillStyle = '#3366cc'; ctx.fillRect(-ph+5, -6, ph-10, 10);
-            ctx.fillStyle = '#ffcc99'; ctx.beginPath(); ctx.arc(ph/2-1, -1, 5, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#553300'; ctx.beginPath(); ctx.arc(ph/2-1, -3, 5, Math.PI, 0); ctx.fill();
+            // Keho (lähellä päätä, ei 20px irti)
+            ctx.fillStyle = '#3366cc'; ctx.fillRect(-8, -16, 16, 14);
+            // Kädet sivuille (maassa)
+            ctx.fillStyle = '#3355aa'; ctx.fillRect(-16, -12, 8, 4); ctx.fillRect(8, -12, 8, 4);
+            // Pää
+            ctx.fillStyle = '#ffcc99'; ctx.beginPath(); ctx.arc(0, -5, 6, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#553300'; ctx.beginPath(); ctx.arc(0, -8, 6, Math.PI, 0); ctx.fill();
+            // Tähdet pään ympärillä
             const t = Date.now()*0.005;
             ctx.strokeStyle = '#ffdd44'; ctx.lineWidth = 1;
-            for (let s=0;s<3;s++) { const ang=t+s*2.1; ctx.beginPath(); ctx.moveTo(ph/2+Math.cos(ang)*10-2, -8+Math.sin(ang)*8-2); ctx.lineTo(ph/2+Math.cos(ang)*10+2, -8+Math.sin(ang)*8+2); ctx.moveTo(ph/2+Math.cos(ang)*10+2, -8+Math.sin(ang)*8-2); ctx.lineTo(ph/2+Math.cos(ang)*10-2, -8+Math.sin(ang)*8+2); ctx.stroke(); }
+            for (let s=0;s<3;s++) { const ang=t+s*2.1; ctx.beginPath(); ctx.moveTo(Math.cos(ang)*14-2, -12+Math.sin(ang)*10-2); ctx.lineTo(Math.cos(ang)*14+2, -12+Math.sin(ang)*10+2); ctx.moveTo(Math.cos(ang)*14+2, -12+Math.sin(ang)*10-2); ctx.lineTo(Math.cos(ang)*14-2, -12+Math.sin(ang)*10+2); ctx.stroke(); }
             ctx.restore();
             return;
         }
@@ -1813,19 +1917,28 @@ const Street = (() => {
             ctx.scale(-1, 1);
             ctx.translate(-(px+pw/2), 0);
         }
+        // Kävelyn kevennys – vartalo pomppii hieman
+        const bobY = player.walking ? (player.walkFrame % 2) * 1 : 0;
+        // Vartalo
         ctx.fillStyle = '#3366cc';
-        ctx.fillRect(px+4, py+10, pw-8, ph-18);
+        ctx.fillRect(px+4, py+10 + bobY, pw-8, ph-18);
+        // Kädet – heiluvat kävelyn tahdissa
+        const armSwing = player.walking ? ((player.walkFrame === 1) ? -3 : (player.walkFrame === 3) ? 3 : 0) : 0;
+        ctx.fillStyle = '#3355aa';
+        ctx.fillRect(px+3, py+12 + bobY + armSwing, 3, 8);
+        ctx.fillRect(px+pw-6, py+12 + bobY - armSwing, 3, 8);
+        // Pää
         ctx.fillStyle = '#ffcc99';
-        ctx.beginPath(); ctx.arc(px+pw/2, py+6, 7, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(px+pw/2, py+6 + bobY, 7, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = '#553300';
-        ctx.beginPath(); ctx.arc(px+pw/2, py+3, 7, Math.PI, 0); ctx.fill();
+        ctx.beginPath(); ctx.arc(px+pw/2, py+3 + bobY, 7, Math.PI, 0); ctx.fill();
         // Lippis – lippa kulkusuuntaan
         ctx.fillStyle = '#3366cc';
         ctx.fillRect(px+pw/2 - 6, py, 14, 5);
         ctx.fillStyle = '#224488';
-        ctx.fillRect(px+pw/2 + 2, py + 1, 7, 3);
-        ctx.fillRect(px+pw/2 + 3, py + 4, 4, 1);
-        // Jalat + potku-animaatio
+        ctx.fillRect(px+pw/2 + 2, py + 1, 7, 3);   // lippa sirompi (12→7)
+        ctx.fillRect(px+pw/2 + 4, py + 4, 6, 1);
+        // Jalat – kävelyanimaatio
         ctx.fillStyle = '#224488';
         if (player.kicking) {
             const kp = player.kickFrame / KICK_DURATION; // 0..1
@@ -1844,11 +1957,19 @@ const Street = (() => {
             ctx.fillStyle = '#331100';
             ctx.fillRect(shoeX - 3, shoeY + 2, 8, 3);
         } else {
-            ctx.fillRect(px + 5, py + ph - 8, 4, 8);
-            ctx.fillRect(px + pw - 9, py + ph - 8, 4, 8);
+            // Kävelyanimaatio: jalat heiluvat walkFramen mukaan (0-3)
+            const wf = player.walking ? player.walkFrame : 0;
+            const legSwing = player.walking ? ((wf === 1 || wf === 3) ? 4 : 0) : 0;
+            const leftOffset  = (wf === 1) ? -legSwing : (wf === 3) ? legSwing : 0;
+            const rightOffset = (wf === 1) ? legSwing : (wf === 3) ? -legSwing : 0;
+            // Vasen jalka
+            ctx.fillRect(px + 5 + leftOffset, py + ph - 8, 4, 8 + Math.abs(leftOffset) * 0.5);
+            // Oikea jalka
+            ctx.fillRect(px + pw - 9 + rightOffset, py + ph - 8, 4, 8 + Math.abs(rightOffset) * 0.5);
+            // Kengät
             ctx.fillStyle = '#331100';
-            ctx.fillRect(px + 4, py + ph - 2, 6, 2);
-            ctx.fillRect(px + pw - 10, py + ph - 2, 6, 2);
+            ctx.fillRect(px + 4 + leftOffset, py + ph - 2 + Math.abs(leftOffset) * 0.5, 6, 2);
+            ctx.fillRect(px + pw - 10 + rightOffset, py + ph - 2 + Math.abs(rightOffset) * 0.5, 6, 2);
         }
         ctx.restore();
     }

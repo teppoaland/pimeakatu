@@ -95,7 +95,7 @@ function charToTile(ch) {
         case 'F': return TILE.FIREFLY;
         case 'B': return TILE.BUTTERFLY;
         case 'P': return TILE.EMPTY;   // vanha aloituspiste -> ilmatasku
-        case 'X': return TILE.KEY;     // vanha uloskäynti -> avain
+        case 'X': return TILE.EMPTY;   // vanha uloskäynti -> ei enää avainta (vain yksi kentän lopussa)
         default:  return TILE.EMPTY;   // ' ' -> tyhjä luolatila
     }
 }
