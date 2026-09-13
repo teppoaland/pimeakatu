@@ -13,7 +13,7 @@ const Street = (() => {
 
     /* ── Pelaaja ─────────────────────────────────────── */
     const player = {
-        x: 40, y: GROUND_Y - 30, w: 20, h: 30,
+        x: 40, y: GROUND_Y - 20, w: 20, h: 30,
         vx: 0, vy: 0, facing: 1, walking: false,
         walkFrame: 0, walkTimer: 0,
         kicking: false, kickFrame: 0,
@@ -87,7 +87,7 @@ const Street = (() => {
         }
     }
     let savedPlayerX = 40;
-    let savedPlayerY = GROUND_Y - 30;
+    let savedPlayerY = GROUND_Y - 20;
 
     /* ── Tila ────────────────────────────────────────── */
     let state;
@@ -101,6 +101,7 @@ const Street = (() => {
     let lastCloudTime = 0;     // Pilvien dt-laskenta
     let windDir = Math.random() < 0.5 ? 1 : -1;
     let windSpeed = 1 + Math.random() * 3; // px/s (1–4)
+    let foreground = null;       // Etualan elementit
 
     /* ── Potkuääni (Web Audio API) ────────────────── */
     let audioCtx = null;
@@ -187,6 +188,7 @@ const Street = (() => {
             });
         }
         initClouds();
+        initForeground();
         setupInput();
         resize();
         lastTime = performance.now();
@@ -305,12 +307,13 @@ const Street = (() => {
         }
 
         updateClouds(dt);
+        updateForeground(dt);
 
         // Tainnutus - kukkaruukku osui
         if (player.knockedDown) {
             player.knockdownTimer -= dt;
             player.vx = 0; player.vy += GRAVITY * dt; player.y += player.vy * dt;
-            if (player.y + player.h >= GROUND_Y) { player.y = GROUND_Y - player.h; player.vy = 0; }
+            if (player.y + player.h >= GROUND_Y + 10) { player.y = GROUND_Y + 10 - player.h; player.vy = 0; }
             if (player.knockdownTimer <= 0) { player.knockedDown = false; player.knockdownTimer = 0; }
             if (player.kicking) { player.kickFrame += dt; if (player.kickFrame >= KICK_DURATION) { player.kicking = false; player.kickFrame = 0; } }
             for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.x += p.vx; p.y += p.vy; p.life--; if (p.life <= 0) particles.splice(i, 1); }
@@ -330,7 +333,7 @@ const Street = (() => {
         if (keys['ArrowRight'] || keys['d'] || keys['D']) moveX = 1;
         player.vx = moveX * PLAYER_SPEED;
 
-        const onGround = player.y + player.h >= GROUND_Y;
+        const onGround = player.y + player.h >= GROUND_Y + 10;
         if ((keys['ArrowUp'] || keys['w'] || keys['W']) && onGround) {
             player.vy = JUMP_VEL;
         }
@@ -338,8 +341,8 @@ const Street = (() => {
         player.y += player.vy * dt;
         player.x += player.vx * dt;
 
-        if (player.y + player.h >= GROUND_Y) {
-            player.y = GROUND_Y - player.h;
+        if (player.y + player.h >= GROUND_Y + 10) {
+            player.y = GROUND_Y + 10 - player.h;
             player.vy = 0;
         }
         player.x = Math.max(0, Math.min(WORLD_W - player.w, player.x));
@@ -848,6 +851,128 @@ const Street = (() => {
         }
     }
 
+    /* ── Etualan elementit (kiveys, ruohot, viemärit, kuoriainen) ── */
+    function initForeground() {
+        foreground = {
+            copingStones: [],     // Reunakivet
+            pavingStones: [],     // Kiveysrivit
+            grassTufts: [],
+            manholes: [],
+            beetle: null,
+            newspaper: null
+        };
+
+        // Reunakivet (yläreuna)
+        let sx = 0;
+        while (sx < WORLD_W) {
+            const gap = 22 + Math.floor(Math.random() * 10);
+            foreground.copingStones.push({ x: sx, w: gap - 2, shade: 1 + Math.floor(Math.random() * 3) });
+            sx += gap;
+        }
+
+        // Kiveyspinta (4 riviä)
+        for (let row = 0; row < 4; row++) {
+            const ry = GROUND_Y + 5 + row * 20;
+            const colOff = row % 2 === 0 ? 0 : 11;
+            let sx = colOff;
+            while (sx < WORLD_W) {
+                const sw = 16 + Math.floor(Math.random() * 12);
+                const sh = 16 + Math.floor(Math.random() * 5);
+                const shade = 10 + Math.floor(Math.random() * 8);
+                foreground.pavingStones.push({ x: sx, y: ry, w: sw, h: sh, shade: shade });
+                sx += sw + Math.floor(Math.random() * 4);
+            }
+        }
+
+        // Ruohotupsut (4 kpl, harvakseltaan)
+        for (let i = 0; i < 4; i++) {
+            foreground.grassTufts.push({
+                x: 60 + Math.random() * 680,
+                y: GROUND_Y + 8 + Math.random() * 22,
+                blades: 3 + Math.floor(Math.random() * 3),  // 3-5 kortta
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+        // Lajittele vasemmalta oikealle
+        foreground.grassTufts.sort((a, b) => a.x - b.x);
+
+        // Viemärinkannet (2 kpl)
+        foreground.manholes.push({
+            x: 200 + Math.random() * 30,
+            y: GROUND_Y + 24 + Math.random() * 6,
+            steamTimer: 180 + Math.random() * 300,
+            steamParticles: []
+        });
+        foreground.manholes.push({
+            x: 570 + Math.random() * 30,
+            y: GROUND_Y + 22 + Math.random() * 8,
+            steamTimer: 180 + Math.random() * 300,
+            steamParticles: []
+        });
+
+        // Kuoriainen
+        foreground.beetle = {
+            x: 100 + Math.random() * 600,
+            y: GROUND_Y + 62 + Math.random() * 20,
+            dir: Math.random() < 0.5 ? 1 : -1,
+            animTimer: Math.random() * Math.PI * 2,
+            speed: 0.3 + Math.random() * 0.3
+        };
+
+        // Sanomalehti
+        foreground.newspaper = {
+            x: 460 + Math.random() * 60,
+            y: GROUND_Y + 40 + Math.random() * 10,
+            angle: -0.05 + Math.random() * 0.1
+        };
+    }
+
+    function updateForeground(dt) {
+        if (!foreground) return;
+        const fg = foreground;
+
+        // Viemärien höyry
+        for (const mh of fg.manholes) {
+            mh.steamTimer -= dt;
+            if (mh.steamTimer <= 0) {
+                // Tuota uusi höyrypartikkeli
+                const count = 1 + Math.floor(Math.random() * 3);
+                for (let i = 0; i < count; i++) {
+                    mh.steamParticles.push({
+                        x: mh.x + (Math.random() - 0.5) * 14,
+                        y: mh.y - 2,
+                        vy: -0.15 - Math.random() * 0.25,
+                        vx: (Math.random() - 0.5) * 0.15,
+                        alpha: 0.15 + Math.random() * 0.1,
+                        life: 60 + Math.random() * 90,
+                        r: 2 + Math.random() * 4
+                    });
+                }
+                mh.steamTimer = 180 + Math.random() * 420;
+            }
+            // Päivitä olemassaolevat höyryt
+            for (let i = mh.steamParticles.length - 1; i >= 0; i--) {
+                const p = mh.steamParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.r += 0.012 * dt;
+                p.life -= dt;
+                p.alpha *= 0.997;
+                if (p.life <= 0 || p.alpha < 0.005) mh.steamParticles.splice(i, 1);
+            }
+        }
+
+        // Kuoriainen
+        if (fg.beetle) {
+            const b = fg.beetle;
+            b.x += b.dir * b.speed * dt;
+            b.animTimer += 0.08 * dt;
+            // Käännös reunoilla
+            if (b.x < 20 && b.dir < 0) b.dir = 1;
+            if (b.x > WORLD_W - 20 && b.dir > 0) b.dir = -1;
+        }
+    }
+
 /* ═══════════════════════════════════════════════════
        PIIRTO – tausta, talot, maa
        ═══════════════════════════════════════════════════ */
@@ -1075,12 +1200,153 @@ const Street = (() => {
     }
 
     function drawGround() {
+        // Taustapohja
         ctx.fillStyle = '#1a1a1a';
         ctx.fillRect(0, GROUND_Y, WORLD_W, WORLD_H - GROUND_Y);
+
+        // Yläreunan katukiveys (reunakivet) – esigeneroiduista
+        const copingY = GROUND_Y - 4, copingH = 8;
+        for (const cs of foreground.copingStones) {
+            ctx.fillStyle = '#2' + cs.shade + '2' + cs.shade + '2' + cs.shade;
+            ctx.fillRect(cs.x, copingY, cs.w, copingH);
+            ctx.fillStyle = '#161616';
+            ctx.fillRect(cs.x, copingY, cs.w, 1);
+        }
+
+        // Kiveyspinta – esigeneroiduista
+        for (const ps of foreground.pavingStones) {
+            const hex = ps.shade.toString(16).padStart(2, '0');
+            ctx.fillStyle = '#' + hex + hex + hex;
+            ctx.fillRect(ps.x, ps.y, ps.w, ps.h);
+            ctx.fillStyle = '#151515';
+            ctx.fillRect(ps.x, ps.y, 1, ps.h);
+            ctx.fillRect(ps.x, ps.y + ps.h - 1, ps.w, 1);
+        }
+
+        // Viemärinkannet
+        if (foreground) { drawManholes(); }
+
+        // Sanomalehti
+        if (foreground && foreground.newspaper) { drawNewspaper(); }
+
+        // Ruohotupsut
+        if (foreground) { drawGrassTufts(); }
+
+        // Kuoriainen
+        if (foreground && foreground.beetle) { drawBeetle(); }
+
+        // Ala- ja yläreunaviivat
         ctx.fillStyle = '#2a2a2a';
         ctx.fillRect(0, GROUND_Y, WORLD_W, 3);
         ctx.fillStyle = '#3a3a3a';
         ctx.fillRect(0, GROUND_Y - 2, WORLD_W, 2);
+    }
+
+    /* Etualan apufunktiot ─────────────────────────── */
+    function drawManholes() {
+        for (const mh of foreground.manholes) {
+            const mx = mh.x, my = mh.y;
+            ctx.fillStyle = '#0d0d0d';
+            ctx.beginPath();
+            ctx.ellipse(mx + 1, my + 2, 15, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#2a2a2e';
+            ctx.beginPath();
+            ctx.ellipse(mx, my, 14, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#1a1a1e'; ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.strokeStyle = '#3a3a3e';
+            ctx.beginPath();
+            ctx.ellipse(mx, my - 2, 12, 5, 0, Math.PI, 0);
+            ctx.stroke();
+            ctx.fillStyle = '#444';
+            for (let n = 0; n < 6; n++) {
+                const angle = n * Math.PI / 3 + 0.2;
+                ctx.beginPath();
+                ctx.arc(mx + Math.cos(angle) * 10, my + Math.sin(angle) * 4.5, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            for (const p of mh.steamParticles) {
+                ctx.fillStyle = 'rgba(200,205,215,' + p.alpha + ')';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    function drawNewspaper() {
+        const n = foreground.newspaper;
+        const t = Date.now() * 0.0008;
+        const flipAngle = n.angle + Math.sin(t + n.x * 0.01) * 0.04;
+        ctx.save();
+        ctx.translate(n.x, n.y);
+        ctx.rotate(flipAngle);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(1, 2, 22, 12);
+        ctx.fillStyle = '#999';
+        ctx.fillRect(0, 0, 22, 12);
+        ctx.fillStyle = '#aaa';
+        ctx.fillRect(0, 0, 22, 1);
+        ctx.fillStyle = '#666';
+        ctx.fillRect(2, 3, 12, 1);
+        ctx.fillRect(2, 5, 16, 1);
+        ctx.fillRect(2, 7, 10, 1);
+        ctx.fillRect(12, 7, 4, 1);
+        ctx.fillStyle = '#777';
+        ctx.fillRect(2, 9, 14, 1);
+        ctx.restore();
+    }
+
+    function drawGrassTufts() {
+        const t = Date.now() * 0.003;
+        for (const tuft of foreground.grassTufts) {
+            const tx = tuft.x, ty = tuft.y;
+            const sway = Math.sin(t + tuft.phase) * 2;
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.beginPath();
+            ctx.ellipse(tx, ty + 3, 5, 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            for (let b = 0; b < tuft.blades; b++) {
+                const bx = tx - 3 + b * 2.5;
+                const bh = 7 + (b % 3) * 4;
+                const bend = sway * (0.6 + b * 0.15);
+                ctx.strokeStyle = b % 2 === 0 ? '#3a4a2a' : '#4a5a30';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(bx, ty);
+                ctx.quadraticCurveTo(bx + bend * 0.5, ty - bh * 0.5, bx + bend, ty - bh);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+    }
+
+    function drawBeetle() {
+        const b = foreground.beetle;
+        const bx = b.x, by = b.y;
+        const legPhase = Math.sin(b.animTimer) * 1.5;
+        ctx.save();
+        if (b.dir < 0) { ctx.translate(bx, 0); ctx.scale(-1, 1); ctx.translate(-bx, 0); }
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(bx - 3, by + 1 + legPhase, 1, 2);
+        ctx.fillRect(bx - 1, by + 1 - legPhase, 1, 2);
+        ctx.fillRect(bx + 2, by + 1 + legPhase, 1, 2);
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.ellipse(bx, by, 4, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(bx + 3, by - 1);
+        ctx.lineTo(bx + 7, by - 4);
+        ctx.moveTo(bx + 3, by - 0.5);
+        ctx.lineTo(bx + 6, by + 1);
+        ctx.stroke();
+        ctx.restore();
     }
 
     /* ── Pimeä huone (COMMANDO + BM-avain) ──────── */

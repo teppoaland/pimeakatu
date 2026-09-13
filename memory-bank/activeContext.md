@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.40** | 13.9.2026 | Pääkatu: Poutayö-taivas valmis (sirppikuu + cirrus/hazy-pilvikaistale, tuulianimaatio 1–4 px/s).
+**v3.41** | 13.9.2026 | Pääkatu: Etualan maisemointi (kiveys, ruohotupsut, viemärinkannet + höyry, sanomalehti, kuoriainen). Pupun piirtokorkeus -25px.
 
 ## 🔒 Lukitut osa-alueet
 
