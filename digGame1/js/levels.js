@@ -95,7 +95,7 @@ function charToTile(ch) {
         case 'F': return TILE.FIREFLY;
         case 'B': return TILE.BUTTERFLY;
         case 'P': return TILE.EMPTY;   // vanha aloituspiste -> ilmatasku
-        case 'X': return TILE.DIRT;    // vanha uloskäynti -> maata
+        case 'X': return TILE.KEY;     // vanha uloskäynti -> avain
         default:  return TILE.EMPTY;   // ' ' -> tyhjä luolatila
     }
 }
@@ -213,7 +213,7 @@ function buildWorld() {
     grid[playerStartY][playerStartX] = TILE.GRASS;
 
     const exitX = width - 2;
-    grid[SURFACE_ROW][exitX] = TILE.EXIT;
+    grid[SURFACE_ROW][exitX] = TILE.KEY;
 
     return {
         grid: grid,

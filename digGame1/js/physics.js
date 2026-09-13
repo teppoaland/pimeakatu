@@ -21,7 +21,7 @@ class Physics {
         if (x < 0 || x >= this.game.cols || y < 0 || y >= this.game.rows) return false;
         const tile = this.game.grid[y][x];
         return tile === TILE.EMPTY || tile === TILE.DIRT ||
-               tile === TILE.DIAMOND || tile === TILE.EXIT || tile === TILE.GRASS;
+               tile === TILE.DIAMOND || tile === TILE.EXIT || tile === TILE.KEY || tile === TILE.GRASS;
     }
 
     // Voiko putoava objekti pudota tähän (tyhjä tila, ei pelaajaa)
@@ -176,7 +176,7 @@ class Physics {
                 const ny = y + dy;
                 if (nx >= 0 && nx < this.game.cols && ny >= 0 && ny < this.game.rows) {
                     const t = this.game.grid[ny][nx];
-                    if (t !== TILE.WALL && t !== TILE.EXIT) {
+                    if (t !== TILE.WALL && t !== TILE.EXIT && t !== TILE.KEY) {
                         this.game.grid[ny][nx] = TILE.EMPTY;
                         this.game.spawnExplosion(nx, ny);
                         if (this.game.player.x === nx && this.game.player.y === ny) {

@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.18** | 13.9.2026 | Dig Game: buildaus poistettu – `game_main.html` toimii suoraan portaalissa, `dig_game.html` poistettu. `js/game.js`:ään lisätty puuttuva `collectKey()` + `KEY_COLLECTED` postMessage.
+**v3.20** | 13.9.2026 | DG1: Aloita-teksti korjattu, maalina avain oven sijaan, OK palauttaa kadulle
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 

@@ -10,7 +10,7 @@ ei ulkoisia riippuvuuksia eikä kirjastoja. Toimii pelkällä tiedoston avaamise
 ## Tiedostorakenne
 
 ### Kehitysversio (erilliset tiedostot — TÄÄLLÄ kehitetään)
-- `game_main.html`  — kehitysversion pääsivu (lataa css/ ja js/ tiedostot)
+- `game_main.html`  — kehitysversion pääsivu (lataa css/ ja js/ tiedostot) – **ainoa versio, käytetään suoraan portaalissa**
 - `css/style.css`   — tyylit
 - `js/constants.js` — ruututyypit (TILE), suunnat (DIR), nopeudet ja pisteet
 - `js/levels.js`    — 4 kenttää tekstimuodossa + parseri
@@ -20,16 +20,9 @@ ei ulkoisia riippuvuuksia eikä kirjastoja. Toimii pelkällä tiedoston avaamise
 - `js/input.js`     — näppäimistö + kosketusohjaus
 - `js/game.js`      — pelin pääohjain (pääsilmukka, HUD, tilat)
 
-### "Buildattu" versio (yksi tiedosto — jaettava)
-- `boulder_dash.html` — YKSI tiedosto, kaikki (CSS + JS) sisään upotettuna.
-  Tämä on jaettava "online"-versio, jonka voi lähettää sellaisenaan.
-- `build_single.js`   — Node-skripti, joka kokoaa erilliset tiedostot yhdeksi.
-  Ajo: `node build_single.js`
-
 ## Kehityskäytäntö
 1. Kehitys tehdään AINA erillisissä tiedostoissa (`css/` + `js/`) — selkeämpää.
-2. Kun halutaan jaettava versio: aja `node build_single.js`
-   → syntyy päivitetty `boulder_dash.html`.
+2. Buildausta yhteen tiedostoon ei enää tehdä – `game_main.html` toimii suoraan portaalissa.
 3. **Versionumero**: jokaisesta tehdystä muutoksesta versionumero nousee +0.1
    (1.0 → 1.1 → 1.2 → ...). Uusi versio merkitään MEMO.md:n yläreunaan
    (`Versio:`) ja samalla myös git-tagiksi (`v1.1`, `v1.2`, ...).

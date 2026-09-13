@@ -38,6 +38,7 @@
 | Buildaus poistettu | ✅ v3.18 | `dig_game.html` poistettu, ei enää pakkausta |
 | Overlay skaalautuvuus | ✅ Korjattu | v3.17: fontit pienennetty, scrollaus, pystytilakehote |
 | Timanttien keräysseuranta | ✅ Valmis | UI-laskuri |
+| Avain maalina + paluu kadulle | ✅ v3.20 | KEY-tiili, collectKey dialogista OK → RETURN_TO_STREET |
 
 ---
 
@@ -53,7 +54,7 @@
 | Aikaraja per taso | ✅ Valmis | Laskuri HUD:ssa |
 | Ääniefektit | ✅ Valmis | Web Audio API |
 | Kosketusohjaus | ✅ Valmis | Mobiili-D-pad |
-| Iframe-integraatio | ✅ Valmis | Portaaliyhteensopiva |
+| Iframe-integraatio | ✅ Valmis | Portaaliyhteensopiva, `game_main.html` suoraan |
 | Debug-tila | ✅ Valmis | Debugissa avain heti kentästä 1 |
 | Uusia kenttiä | ❌ Ei vielä | `levels.js` laajennettavissa |
 | Pääsiäismunat | ❌ Ei vielä | `docs/boulder-dash-memo.md` ideoita |

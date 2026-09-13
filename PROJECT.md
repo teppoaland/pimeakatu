@@ -55,8 +55,7 @@ D:\AI\Main\
 ├── digGame2/             💎 Boulder Däsh
 │   ├── css/style.css
 │   ├── js/ (8 tiedostoa)
-│   ├── boulder_dash.html Buildattu standalone
-│   └── game_main.html    Kehitysversio
+│   └── game_main.html    Kehitysversio (ainoa versio)
 │
 ├── bluemax_c64/          ✈️ Blue Max (tulossa)
 ├── commando_c64/         🔫 Commando (tulossa)

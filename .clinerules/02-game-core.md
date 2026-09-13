@@ -38,7 +38,6 @@ Kun saat uuden alataskin (subtask) joka koskee jotain alipeliä:
 
 ### Työn aikana:
 - Tee muutokset **kehitysversioon** (`game_main.html` + `js/` + `css/`)
-- Älä koske buildattuun versioon (`boulder_dash.html`)
 - Testaa kehitysversion kautta
 
 ### Työn jälkeen:
