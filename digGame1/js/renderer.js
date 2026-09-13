@@ -157,6 +157,7 @@ class Renderer {
             case TILE.BOULDER: this.drawBoulder(ctx, px, py); break;
             case TILE.DIAMOND: this.drawDiamond(ctx, px, py); break;
             case TILE.EXIT: this.drawExit(ctx, px, py); break;
+            case TILE.KEY: this.drawKey(ctx, px, py); break;
             case TILE.FIREFLY: this.drawEnemy(ctx, px, py, cs, '#F22', '#F80', '#FC0'); break;
             case TILE.BUTTERFLY: this.drawEnemy(ctx, px, py, cs, '#F60', '#FA0', '#FD4'); break;
             case TILE.SKY: this.drawSky(ctx, px, py, wx, wy); break;
@@ -291,6 +292,40 @@ class Renderer {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('🚪', px + cs / 2, py + cs / 2 + 1);
+    }
+
+    drawKey(ctx, px, py) {
+        const cs = CELL_SIZE;
+        const cx = px + cs / 2, cy = py + cs / 2;
+        // Hehkuva tausta
+        const glow = Math.sin(Date.now() / 400 + px + py) * 0.25 + 0.75;
+        ctx.fillStyle = `rgba(255, 215, 0, ${glow * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, cs / 2 - 1, 0, Math.PI * 2);
+        ctx.fill();
+        // Avaimen varsi
+        ctx.fillStyle = '#DAA520';
+        ctx.fillRect(cx - 2, cy - 2, 4, cs * 0.5);
+        // Hampaat
+        ctx.fillRect(cx - 2, cy + cs * 0.32, 7, 3);
+        ctx.fillRect(cx - 2, cy + cs * 0.2, 5, 3);
+        // Pää (rengas)
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy - cs * 0.2, cs * 0.2, 0, Math.PI * 2);
+        ctx.stroke();
+        // Rei'itys
+        ctx.strokeStyle = '#0a0a1a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy - cs * 0.2, cs * 0.1, 0, Math.PI * 2);
+        ctx.stroke();
+        // Kimallus
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(cx + cs * 0.12, cy - cs * 0.33, 2, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     drawEnemy(ctx, px, py, cs, c1, c2, c3) {

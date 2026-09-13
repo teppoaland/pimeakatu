@@ -45,7 +45,7 @@ const Street = (() => {
     /* ── Lamput (talojen väleissä) ──────────────────── */
     const lamps = [
         { x: 85,  bldgIdx: 1, lit: false, label: 'DIG\nGAME',    gameUrl: 'digGame1/game_main.html' },
-        { x: 255, bldgIdx: 3, lit: false, label: 'BOULDER\nDASH', gameUrl: 'digGame2/boulder_dash.html' },
+        { x: 255, bldgIdx: 3, lit: false, label: 'BOULDER\nDASH', gameUrl: 'digGame2/game_main.html' },
         { x: 445, bldgIdx: 5, lit: false, label: 'BLUE\nMÄX',     gameUrl: 'bluemax_c64/game_main.html' },
         { x: 625, bldgIdx: 7, lit: false, label: 'COM-\nMANDO',   gameUrl: null },
         { x: 720, bldgIdx: 8, lit: false, label: '???',           gameUrl: null }
@@ -520,7 +520,7 @@ const Street = (() => {
             if (Math.sqrt(dx*dx + dy*dy) < DOOR_RADIUS) {
                 if (lamp.lit) {
                     // Boulder Dash vaatii Dig Gamesta kerätyn avaimen
-                    if (lamp.gameUrl && lamp.gameUrl.includes('boulder_dash') && !digKeyCollected) {
+                    if (lamp.gameUrl && lamp.gameUrl.includes('digGame2') && !digKeyCollected) {
                         showNotification('🔑 Avain puuttuu.\nLäpäise Dig Game ensin!');
                         return;
                     }

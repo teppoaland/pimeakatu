@@ -62,14 +62,12 @@ class Game {
 
         if (!skipIntro) {
             this.showOverlay('⛏️ Dig Game',
-                'Kulje maailman halki vasemmalta oikealle!\n\n' +
-                'Kävele maan pinnalla. Kaivaudu maan alle ja\n' +
-                'pudota puut ja talot monttuun kaivamalla niiden\n' +
-                'alta, jotta pääset eteenpäin.\n\n' +
-                '📱 Käännä puhelin pystyasentoon\n' +
-                'parhaan pelikokemuksen saamiseksi!\n\n' +
-                'Etsi portti maailman itäpäästä!',
-                'Aloita kaivamaan');
+                'Kulje maailman halki vasemmalta oikealle!\n' +
+                'Kävele maan pinnalla tai kaivaudu maan alle.\n\n' +
+                'Puhelimella parhaan pelikokemuksen saamiseksi\n' +
+                'käännä 📱 puhelin pystyasentoon.\n\n' +
+                'Etsi avain maailman itäpäästä. GO!',
+                'Aloita');
         }
         this.renderer.render();
     }
@@ -152,7 +150,7 @@ class Game {
                 }
                 break;
             }
-            case TILE.EXIT:
+            case TILE.KEY:
                 // Kerää avain ja poista se ruudusta
                 this.grid[ny][nx] = (ny === SURFACE_ROW) ? TILE.GRASS : TILE.EMPTY;
                 this.collectKey();
@@ -216,7 +214,7 @@ class Game {
         if (this.gameOver) {
             this.startGame(true);
         } else if (this.worldComplete) {
-            this.startGame(true);
+            try { window.parent.postMessage('RETURN_TO_STREET', '*'); } catch(e) {}
         } else if (this.paused) {
             this.togglePause();
         }
@@ -227,7 +225,8 @@ class Game {
         if (this.gameOver) {
             this.startGame(true);
         } else if (this.worldComplete) {
-            this.startGame(true);
+            // Palaa kadulle (avain kerätty)
+            try { window.parent.postMessage('RETURN_TO_STREET', '*'); } catch(e) {}
         } else if (this.paused) {
             this.togglePause();
         }
