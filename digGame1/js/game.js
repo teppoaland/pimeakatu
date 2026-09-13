@@ -66,8 +66,8 @@ class Game {
                 'Kävele maan pinnalla. Kaivaudu maan alle ja\n' +
                 'pudota puut ja talot monttuun kaivamalla niiden\n' +
                 'alta, jotta pääset eteenpäin.\n\n' +
-                'Taivaalle ei voi kiivetä, eikä maan pinnalla\n' +
-                'tarvitse syödä mitään.\n\n' +
+                '📱 Käännä puhelin pystyasentoon\n' +
+                'parhaan pelikokemuksen saamiseksi!\n\n' +
                 'Etsi portti maailman itäpäästä!',
                 'Aloita kaivamaan');
         }
@@ -160,7 +160,6 @@ class Game {
                 this.killPlayer();
                 return;
             case TILE.WALL:
-            case TILE.SKY:        // taivaalle ei voi kiivetä
                 break;
         }
 

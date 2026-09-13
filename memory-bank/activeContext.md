@@ -6,11 +6,11 @@
 
 ## 📍 Nyt
 
-**v3.16** | 12.9.2026 | Commando MVP-pelimoottori valmis (4 tiedostoa) + bugikorjaus: syntaksivirhe korjattu (respawn), maasto #484, canvas min-height 200px
+**v3.17** | 13.9.2026 | Dig Game: aloitusruudun overlay pienennetty vaakaruutua varten (fontit + padding), lisätty kehotus kääntää puhelin pystyyn. Commando jäihin – tarvitaan valmis 3D HTML-moottori pohjaksi.
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 
-- Commando-pelin aloitus
+- **Commando:** Jäissä – tarvitaan valmis 3D HTML-moottori pohjaksi ennen jatkoa
 - Blue Mäx: TESTIMODE pois → palauta vihollisten ammunta normaalille 60% aggressiolle
 - Ääniefektit pääportaaliin
 - Pääsiäismunat Boulder Dashiin

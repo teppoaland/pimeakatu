@@ -35,6 +35,7 @@
 | Pisteytys | ✅ Valmis | Timantit, pudotukset |
 | Kosketusohjaus | ✅ Valmis | Mobiili-D-pad |
 | Iframe-integraatio | ✅ Valmis | Portaaliyhteensopiva |
+| Overlay skaalautuvuus | ✅ Korjattu | v3.17: fontit pienennetty, scrollaus, pystytilakehote |
 | Timanttien keräysseuranta | ✅ Valmis | UI-laskuri |
 
 ---
@@ -80,7 +81,7 @@
 
 | Ominaisuus | Tila | Huomiot |
 |-----------|------|---------|
-| Pelin runko | ✅ Valmis | MVP: ylhäältä kuvattu, vierivä, 4 tiedostoa |
+| Pelin runko | ✅ Valmis | MVP: ylhäältä kuvattu, vierivä, 4 tiedostoa. **Jäissä** – tarvitaan valmis 3D HTML-moottori |
 | Pelaajan ohjaus | ✅ Valmis | 8-suuntainen, WASD/nuolet + D-pad |
 | Auto-fire kivääri | ✅ Valmis | 0.15s välein ylös |
 | Kranaatit | ✅ Valmis | B-nappi, 6 kpl, räjähdyssäde 50px |
@@ -110,7 +111,7 @@
 
 ## 📝 Seuraavat kehitysaskeleet
 
-1. Aloita Commando-pelin kehitys
+1. **Commando jäissä** – etsi valmis 3D HTML-pelimoottori pohjaksi
 2. Lisää ääniefektit pääportaaliin
 3. Toteuta pääsiäismunia Boulder Dashiin
 4. Lisää ennätyspisteet (localStorage)
