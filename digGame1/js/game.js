@@ -296,8 +296,8 @@ class Game {
     collectKey() {
         this.score += SCORE_WORLD_BONUS;
         this.worldComplete = true;
-        this.showOverlay('🔑 Avain löytyi!',
-            'Nyt pääset pelaamaan\nBoulder Dashia pääkadulla!\n\n' +
+        this.showOverlay('🔑 Avain löydetty!',
+            'Nyt pääset seuraavaan\ntaloon pääkadulla!\n\n' +
             'Kerätyt timantit: ' + this.diamondsCollected +
             '\nPisteet: ' + this.score,
             'OK');
