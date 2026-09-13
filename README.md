@@ -36,9 +36,10 @@ git commit -m "viesti"
 
 ## Alapelien buildaus
 
-Alapelit (`digGame1/`, `digGame2/`) sisältävät erillisen standalone HTML-tiedoston
-(`dig_game.html`, `boulder_dash.html`) jossa kaikki CSS+JS on inline. Nämä ovat
-iframe-integraatiota varten. Kehitysversioita (`game_main.html`) ei käytetä portaalista.
+Alapelit (`digGame1/`, `digGame2/`, `bluemax_c64/`, `commando_c64/`) käyttävät
+`game_main.html`-kehitysversiota suoraan iframe-integraatiossa. Erillistä buildausta
+yhteen tiedostoon ei enää tarvita – kehitys on suoraviivaisempaa ja kaikki tiedostot
+ovat aina ajan tasalla.
 
 ## Tiedostot joita ei versionhallita
 

@@ -26,16 +26,9 @@ yläosa on maanpinta (puita ja taloja), alaosa maan alainen kaivettava maa.
 - `js/audio.js`     — prosedyraaliset ääniefektit (Web Audio API)
 - `js/game.js`      — pelin pääohjain (pääsilmukka, HUD, tilat)
 
-### "Buildattu" versio (yksi tiedosto — jaettava)
-- `dig_game.html` — YKSI tiedosto, kaikki (CSS + JS) sisään upotettuna.
-  Tämä on jaettava "online"-versio, jonka voi lähettää sellaisenaan.
-- `build_single.js`   — Node-skripti, joka kokoaa erilliset tiedostot yhdeksi.
-  Ajo: `node build_single.js`
-
 ## Kehityskäytäntö
 1. Kehitys tehdään AINA erillisissä tiedostoissa (`css/` + `js/`) — selkeämpää.
-2. Kun halutaan jaettava versio: aja `node build_single.js`
-   → syntyy päivitetty `dig_game.html`.
+2. **Buildausta ei enää tarvita** – `game_main.html` toimii suoraan portaalissa.
 3. **Versionumero**: Pelin versio on nyt 1.0. Jatkossa versionumero nousee
    +0.1 per muutos (1.0 → 1.1 → 1.2 → ...) ja merkitään MEMO:n yläreunaan
    sekä git-tagiksi.

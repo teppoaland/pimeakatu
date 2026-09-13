@@ -34,7 +34,8 @@
 | Ääniefektit | ✅ Valmis | Web Audio API |
 | Pisteytys | ✅ Valmis | Timantit, pudotukset |
 | Kosketusohjaus | ✅ Valmis | Mobiili-D-pad |
-| Iframe-integraatio | ✅ Valmis | Portaaliyhteensopiva |
+| Iframe-integraatio | ✅ Valmis | `game_main.html` suoraan portaalissa |
+| Buildaus poistettu | ✅ v3.18 | `dig_game.html` poistettu, ei enää pakkausta |
 | Overlay skaalautuvuus | ✅ Korjattu | v3.17: fontit pienennetty, scrollaus, pystytilakehote |
 | Timanttien keräysseuranta | ✅ Valmis | UI-laskuri |
 

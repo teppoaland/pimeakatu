@@ -50,8 +50,7 @@ D:\AI\Main\
 ├── digGame1/             ⛏️ Dig Game
 │   ├── css/style.css
 │   ├── js/ (8 tiedostoa)
-│   ├── dig_game.html     Buildattu standalone
-│   └── game_main.html    Kehitysversio
+│   ├── game_main.html    Kehitysversio (ainoa versio)
 │
 ├── digGame2/             💎 Boulder Däsh
 │   ├── css/style.css
