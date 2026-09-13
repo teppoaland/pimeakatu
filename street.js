@@ -726,7 +726,7 @@ const Street = (() => {
         el.style.opacity = '1';
         el.style.transition = 'none';
         el.style.animation = 'popIn 0.3s ease-out';
-        // 1.5s lukuaikaa, sitten fadeout 0.5s
+        // 2.5s lukuaikaa, sitten fadeout 0.5s
         el._timeout = setTimeout(() => {
             el.style.transition = 'opacity 0.5s';
             el.style.opacity = '0';
@@ -734,7 +734,7 @@ const Street = (() => {
                 el.textContent = '';
                 el.style.animation = 'none';
             }, 500);
-        }, 1500);
+        }, 2500);
     }
 
     function spawnParticles(x, y, color, count) {
@@ -843,6 +843,36 @@ const Street = (() => {
         ctx.globalAlpha = 1;
     }
 
+    /* ── Yksittäisen ikkunan random-valo ──────────── */
+    function getWindowLight(wx, wy, bldgIdx) {
+        // Pseudo-satunnainen seed ikkunan sijainnista
+        const seed = wx * 374761393 + wy * 668265263 + bldgIdx * 1274126177;
+        const hash = ((seed >> 16) ^ seed) * 0x45d9f3b;
+        const r = ((hash >> 16) ^ hash) % 1000 / 1000; // 0..1
+
+        // ~15% aina pimeänä, ~20% aina himmeänä, ~65% syklissä
+        if (r < 0.15) return { brightness: 0 };             // aina pimeä
+        if (r < 0.35) return { brightness: 0.7 };            // aina himmeä
+
+        // Syklivä ikkuna: 4-14s jakso, 40% ajasta päällä
+        const period = 4000 + (r - 0.35) / 0.65 * 10000;
+        const now = Date.now();
+        const phase = r * period;
+        const cycleT = (now + phase) % period;
+        const onTime = period * 0.4;
+        const trans = 500; // pehmeä siirtymä 0.5s
+
+        let brightness = 0;
+        if (cycleT < onTime) {
+            // Syttymisvaihe
+            brightness = Math.min(1, cycleT / trans);
+        } else {
+            // Sammumisvaihe
+            brightness = 1 - Math.min(1, (cycleT - onTime) / trans);
+        }
+        return { brightness };
+    }
+
     function drawBuildings() {
         for (const b of buildings) {
             const idx = buildings.indexOf(b);
@@ -870,10 +900,18 @@ const Street = (() => {
                         ctx.fillStyle = glow;
                         ctx.fillRect(wx-6, wy-5, 22, 24);
                     } else {
-                        const lit = Math.sin(b.x * 13 + wy * 7) > 0.2;
-                        ctx.fillStyle = lit ? 'rgba(255,200,80,0.12)' : '#0a0a15';
-                        ctx.fillRect(wx, wy, 10, 14);
-                        ctx.strokeStyle = '#2a2a3e'; ctx.lineWidth = 1;
+                        const wl = getWindowLight(wx, wy, idx);
+                        if (wl.brightness > 0) {
+                            const a = 0.12 * wl.brightness;
+                            ctx.fillStyle = 'rgba(255,200,80,' + a.toFixed(2) + ')';
+                            ctx.fillRect(wx, wy, 10, 14);
+                            ctx.strokeStyle = 'rgba(255,200,80,' + (0.4 * wl.brightness).toFixed(2) + ')';
+                        } else {
+                            ctx.fillStyle = '#0a0a15';
+                            ctx.fillRect(wx, wy, 10, 14);
+                            ctx.strokeStyle = '#2a2a3e';
+                        }
+                        ctx.lineWidth = 1;
                         ctx.strokeRect(wx, wy, 10, 14);
                     }
                 }

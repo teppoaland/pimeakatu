@@ -73,7 +73,7 @@ class Game {
         if (!skipIntro && !isDebug) {
             const lvl = LEVEL_DATA[0];
             this.showOverlay('💎 ' + lvl.name,
-                'Taso 1\nEtsi avaimia 🔑 Kerää ' + lvl.diamondsNeeded + ' timanttia\nja etene uloskäynnille!\n\n⏱ Aikaa on vain 45 sekuntia, että pidä kiirettä!',
+                'Etsi avaimia 🔑 Kerää ' + lvl.diamondsNeeded + ' timanttia\nja etene uloskäynnille!\n⏱ Aikaa on vain 45 sekuntia, että pidä kiirettä!',
                 'Aloita');
         }
         this.renderer.render();
