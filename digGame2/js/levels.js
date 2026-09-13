@@ -82,7 +82,7 @@ LEVEL_DATA.push({
 // === Taso 4: Timanttikaivos ===
 LEVEL_DATA.push({
     name: 'Timanttikaivos',
-    diamondsNeeded: 12,
+    diamondsNeeded: 9,
     width: 20,
     height: 15,
     map: [
