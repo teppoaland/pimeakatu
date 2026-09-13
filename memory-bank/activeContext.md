@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.20** | 13.9.2026 | DG1: Aloita-teksti korjattu, maalina avain oven sijaan, OK palauttaa kadulle
+**v3.21** | 13.9.2026 | DG2: Avain siirretty kenttään 3 (ei enää 1-2), kentän 4 läpäisy → Ok → RETURN_TO_STREET
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 
