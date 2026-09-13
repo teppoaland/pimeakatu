@@ -521,18 +521,18 @@ const Street = (() => {
                 if (lamp.lit) {
                     // Boulder Dash vaatii Dig Gamesta kerätyn avaimen
                     if (lamp.gameUrl && lamp.gameUrl.includes('digGame2') && !digKeyCollected) {
-                        showNotification('🔑 Avain puuttuu.\nLäpäise Dig Game ensin!');
+                        showNotification('🔑 Avain puuttuu! Saat avaimen kun läpäiset ensin pelin ensimmäisessä talossa!');
                         return;
                     }
                     // Blue Max vaatii Boulder Dashista kerätyn avaimen
                     if (lamp.gameUrl && lamp.gameUrl.includes('bluemax') && !boulderKeyCollected) {
-                        showNotification('🔑 Avain puuttuu.\nLäpäise Boulder Dash ensin!');
+                        showNotification('🔑 Avain puuttuu tonttu! Hae se edellisestä talosta!');
                         return;
                     }
                     if (lamp.gameUrl) { enterGame(lamp.gameUrl); }
                     else {
                         if (i === 3 && bmKeyCollected) { darkRoom = true; }
-                        else { showNotification('🚧 Tämä peli ei ole\nvielä valmis...'); }
+                        else { showNotification('🚧 Ei tänne pääse ilman avainta! Hanki avaimet tai keksi jotain muuta.'); }
                     }
                 } else {
                     showNotification('💡 Ovi on lukossa.\nSytytä lamppu ensin!');

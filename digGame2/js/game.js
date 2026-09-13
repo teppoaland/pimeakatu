@@ -24,6 +24,7 @@ class Game {
         this.lastFrameTime = 0;
         this.lastEnemyMove = 0;
         this.levelComplete = false;
+        this.allLevelsComplete = false;
 
         this.overlay = document.getElementById('overlay');
         this.overlayTitle = document.getElementById('overlay-title');
@@ -72,7 +73,7 @@ class Game {
         if (!skipIntro && !isDebug) {
             const lvl = LEVEL_DATA[0];
             this.showOverlay('💎 ' + lvl.name,
-                'Taso 1 — Kerää ' + lvl.diamondsNeeded + ' timanttia\nja etsi uloskäynti!\n\n⏱ Aikaa 45 sekuntia',
+                'Taso 1 — Kerää ' + lvl.diamondsNeeded + ' timanttia\nja etene uloskäynnille!\n\n🔑 Avain on vasta kolmannessa tasossa\n\n⏱ Aikaa on vain 45 sekuntia, että pidä kiirettä!',
                 'Aloita');
         }
         this.renderer.render();
@@ -80,11 +81,10 @@ class Game {
 
     loadLevel(index) {
         if (index >= LEVEL_DATA.length) {
-            try { window.parent.postMessage('BOULDER_KEY_COLLECTED', '*'); } catch(e) {}
-            this.showOverlay('🎉 Onnittelut!',
-                'Läpäisit kaikki tasot! Lopulliset pisteet: ' + this.score,
-                'Pelaa uudelleen');
-            this.gameOver = true;
+            this.allLevelsComplete = true;
+            this.showOverlay('🎉 Kaikki tasot läpäisty!',
+                'Lopulliset pisteet: ' + this.score,
+                'OK → Pimeälle kadulle');
             this.stopLoop();
             return;
         }
@@ -213,7 +213,9 @@ class Game {
 
     // Välilyönti: pelin tilan siirtymät (kaivu tapahtuu space+suunta)
     spaceAction() {
-        if (this.gameOver) {
+        if (this.allLevelsComplete) {
+            try { window.parent.postMessage('RETURN_TO_STREET', '*'); } catch(e) {}
+        } else if (this.gameOver) {
             this.startGame(true);
         } else if (this.levelComplete) {
             this.nextLevel();
@@ -224,6 +226,10 @@ class Game {
 
     // Enter / overlay-nappi: jatka tilan mukaan
     handleConfirm() {
+        if (this.allLevelsComplete) {
+            try { window.parent.postMessage('RETURN_TO_STREET', '*'); } catch(e) {}
+            return;
+        }
         if (this.gameOver) {
             this.startGame(true);
         } else if (this.levelComplete) {
@@ -243,7 +249,10 @@ class Game {
         this.keyCollected = true;
         this.score += SCORE_KEY;
         AudioFX.playDiamond();
-        try { window.parent.postMessage('BOULDER_KEY_COLLECTED', '*'); } catch(e) {}
+        // Avain lähettää BOULDER_KEY_COLLECTED vain tasolta 3 eteenpäin
+        if (this.level >= 2) {
+            try { window.parent.postMessage('BOULDER_KEY_COLLECTED', '*'); } catch(e) {}
+        }
     }
 
     applyGravity() {
@@ -277,9 +286,17 @@ class Game {
     completeLevel() {
         this.score += SCORE_LEVEL_BONUS;
         this.levelComplete = true;
-        this.showOverlay('✅ Taso läpäisty!',
-            'Keräsit ' + this.diamondsCollected + ' / ' + this.diamondsNeeded + ' timanttia\nBonus: +' + SCORE_LEVEL_BONUS,
-            'Seuraava taso');
+        if (this.level === MAX_LEVELS - 1) {
+            // Viimeinen taso: paluu kadulle
+            this.allLevelsComplete = true;
+            this.showOverlay('🎉 Kaikki tasot läpäisty!',
+                'Keräsit ' + this.diamondsCollected + ' / ' + this.diamondsNeeded + ' timanttia\nBonus: +' + SCORE_LEVEL_BONUS + '\nLopulliset pisteet: ' + this.score,
+                'OK → Pimeälle kadulle');
+        } else {
+            this.showOverlay('✅ Taso läpäisty!',
+                'Keräsit ' + this.diamondsCollected + ' / ' + this.diamondsNeeded + ' timanttia\nBonus: +' + SCORE_LEVEL_BONUS,
+                'Seuraava taso');
+        }
         this.updateHUD();
         this.renderer.render();
     }
