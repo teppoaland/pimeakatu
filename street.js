@@ -549,7 +549,7 @@ const Street = (() => {
             playKick();
             player.kicking = true;
             player.kickFrame = 0;
-            if (firstHouseWindowsLit) { spawnFlowerPot(buildings[0]); return; }
+            if (firstHouseWindowsLit && !flowerPot) { spawnFlowerPot(buildings[0]); return; }
             if (firstHouseKickTarget === 0) {
                 firstHouseKickTarget = 3 + Math.floor(Math.random() * 4); // 3-6
             }
@@ -572,7 +572,7 @@ const Street = (() => {
             if (Math.sqrt(dx*dx + dy*dy) < DOOR_RADIUS) {
                 playKick(); player.kicking = true; player.kickFrame = 0;
                 const sh = smallHouseLights[i];
-                if (sh.lit) { spawnFlowerPot(buildings[i]); }
+                if (sh.lit && !flowerPot) { spawnFlowerPot(buildings[i]); }
                 else { sh.lit = true; sh.timer = 1200; spawnParticles(dc.x, dc.y, '#ffdd88', 6); }
                 return;
             }
