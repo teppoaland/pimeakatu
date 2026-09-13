@@ -333,19 +333,20 @@ const Street = (() => {
         if (keys['ArrowRight'] || keys['d'] || keys['D']) moveX = 1;
         player.vx = moveX * PLAYER_SPEED;
 
-        const onGround = player.y + player.h >= GROUND_Y + 10;
-        if ((keys['ArrowUp'] || keys['w'] || keys['W']) && onGround) {
-            player.vy = JUMP_VEL;
-        }
-        player.vy += GRAVITY * dt;
-        player.y += player.vy * dt;
-        player.x += player.vx * dt;
+        // Vertikaalinen liike ylös/alas (ei hyppyä, ei painovoimaa)
+        const PLAYER_Y_MIN = GROUND_Y + 10 - player.h;   // 290 = yläraja (nykyinen kävelytaso)
+        const PLAYER_Y_MAX = WORLD_H - 50 - player.h;    // 320 = alaraja (jalat 50px pohjasta)
+        let moveY = 0;
+        if (keys['ArrowUp'] || keys['w'] || keys['W'])     moveY = -1;
+        if (keys['ArrowDown'] || keys['s'] || keys['S'])   moveY = 1;
+        player.y += moveY * PLAYER_SPEED * dt;
+        player.y = Math.max(PLAYER_Y_MIN, Math.min(PLAYER_Y_MAX, player.y));
+        player.vy = 0;
 
-        if (player.y + player.h >= GROUND_Y + 10) {
-            player.y = GROUND_Y + 10 - player.h;
-            player.vy = 0;
-        }
+        player.x += player.vx * dt;
         player.x = Math.max(0, Math.min(WORLD_W - player.w, player.x));
+
+        const onGround = true;  // pelaaja on aina pinnalla (ei hyppyjä)
 
         // Päivitä kävelyanimaatio
         if (moveX !== 0) {
@@ -450,7 +451,9 @@ const Street = (() => {
             animalSpawnTimer -= dt;
             if (animalSpawnTimer <= 0) {
                 const types = ['mouse','mouse','rat','rat','rabbit']; const type = types[Math.floor(Math.random()*types.length)];
-                const dir = Math.random()<0.5?1:-1; const baseY = GROUND_Y - 2;
+                const dir = Math.random()<0.5?1:-1;
+                // Satunnainen juoksukorkeus: aidan juuresta (335) nykyiseen ylälaitaan (305)
+                const baseY = GROUND_Y - 5 + Math.random() * (GROUND_Y + 25 - (GROUND_Y - 5));
                 let w,h,speed;
                 if (type==='mouse') { w=8; h=4; speed=1.8+Math.random()*1.2; }
                 else if (type==='rat') { w=14; h=6; speed=1.2+Math.random()*0.8; }
@@ -596,7 +599,7 @@ const Street = (() => {
         // Tarkista osuuko potku lamppuun
         for (let i = 0; i < lamps.length; i++) {
             const lamp = lamps[i];
-            const dx = px - lamp.x, dy = py - GROUND_Y;
+            const dx = px - lamp.x, dy = py - (GROUND_Y + 15);
             if (Math.sqrt(dx*dx + dy*dy) < LAMP_RADIUS + 10) {
                 // Jos lamppu on ylikuumentunut, älä tee mitään
                 if (lamp.overheat) {
@@ -630,14 +633,14 @@ const Street = (() => {
                     lamps[i].overheatTimer = 1200; // 20s @ ~60fps
                     state.litLamps[i] = false;
                     GameState.save(state);
-                    spawnParticles(lamp.x, GROUND_Y - LAMP_POST_H - 10, '#ff4400', 20);
+                    spawnParticles(lamp.x, GROUND_Y + 19 - LAMP_POST_H, '#ff4400', 20);
                     }
                     return;
                 }
 
                 GameState.save(state);
                 if (lamps[i].lit) {
-                    spawnParticles(lamp.x, GROUND_Y - LAMP_POST_H - 10, '#ffff88', 8);
+                    spawnParticles(lamp.x, GROUND_Y + 19 - LAMP_POST_H, '#ffff88', 8);
                 } else {
                     // Lamppu sammui – ei tekstiä, näkyy visuaalisesti
                 }
@@ -859,7 +862,8 @@ const Street = (() => {
             grassTufts: [],
             manholes: [],
             beetle: null,
-            newspaper: null
+            newspaper: null,
+            ironFence: null      // Rauta-aita alalaidassa
         };
 
         // Reunakivet (yläreuna)
@@ -884,11 +888,11 @@ const Street = (() => {
             }
         }
 
-        // Ruohotupsut (4 kpl, harvakseltaan)
+        // Ruohotupsut (4 kpl, heti aidan edessä)
         for (let i = 0; i < 4; i++) {
             foreground.grassTufts.push({
                 x: 60 + Math.random() * 680,
-                y: GROUND_Y + 8 + Math.random() * 22,
+                y: WORLD_H - 10 + Math.random() * 5,   // aidan juuressa, alareunan tuntumassa
                 blades: 3 + Math.floor(Math.random() * 3),  // 3-5 kortta
                 phase: Math.random() * Math.PI * 2
             });
@@ -924,6 +928,33 @@ const Street = (() => {
             x: 460 + Math.random() * 60,
             y: GROUND_Y + 40 + Math.random() * 10,
             angle: -0.05 + Math.random() * 0.1
+        };
+
+        // Rauta-aita – musta takorauta-aita kadun alalaitaan, keskellä aukko
+        const FENCE_TOP = WORLD_H - 50;        // aidan yläreuna
+        const FENCE_BOTTOM = WORLD_H;           // aidan alareuna (canvasin pohja)
+        const FENCE_BAR_SPACING = 12;           // pystypiikkien väli
+        const GAP_START = 335;                  // keskiaukon alku
+        const GAP_END = 465;                    // keskiaukon loppu (130px aukko)
+        const segments = [];
+        // Vasen segmentti
+        const segs = [{ start: 0, end: GAP_START }, { start: GAP_END, end: WORLD_W }];
+        for (const seg of segs) {
+            const bars = [];
+            let bx = seg.start + 6; // pieni marginaali reunasta
+            while (bx < seg.end - 2) {
+                bars.push(bx);
+                bx += FENCE_BAR_SPACING;
+            }
+            segments.push({ startX: seg.start, endX: seg.end, barX: bars });
+        }
+        foreground.ironFence = {
+            topY: FENCE_TOP,
+            bottomRailY: WORLD_H - 6,
+            barSpacing: FENCE_BAR_SPACING,
+            gapStart: GAP_START,
+            gapEnd: GAP_END,
+            segments: segments
         };
     }
 
@@ -1229,11 +1260,14 @@ const Street = (() => {
         // Sanomalehti
         if (foreground && foreground.newspaper) { drawNewspaper(); }
 
-        // Ruohotupsut
-        if (foreground) { drawGrassTufts(); }
-
         // Kuoriainen
         if (foreground && foreground.beetle) { drawBeetle(); }
+
+        // Rauta-aita (etualan alin elementti, lähinnä katsojaa)
+        if (foreground && foreground.ironFence) { drawIronFence(); }
+
+        // Ruohotupsut (aidan edessä, juuri aidan juuressa)
+        if (foreground) { drawGrassTufts(); }
 
         // Ala- ja yläreunaviivat
         ctx.fillStyle = '#2a2a2a';
@@ -1349,6 +1383,106 @@ const Street = (() => {
         ctx.restore();
     }
 
+    function drawIronFence() {
+        const f = foreground.ironFence;
+        if (!f || !f.segments) return;
+
+        for (const seg of f.segments) {
+            const startX = seg.startX;
+            const endX = seg.endX;
+            const bars = seg.barX;
+
+            // ── Varjo aidan takana ──
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.fillRect(startX + 2, f.topY + 2, endX - startX - 4, f.bottomRailY - f.topY + 2);
+
+            // ── Vaakaraudat ──
+            // Alajuoksu (paksumpi)
+            ctx.fillStyle = '#0d0d0d';
+            ctx.fillRect(startX, f.bottomRailY - 1, endX - startX, 7);
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(startX + 1, f.bottomRailY, endX - startX - 2, 4);
+            // Yläjuoksu
+            ctx.fillStyle = '#0d0d0d';
+            ctx.fillRect(startX, f.topY + 12, endX - startX, 4);
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(startX + 1, f.topY + 13, endX - startX - 2, 2);
+
+            // ── Pystypiikit ──
+            for (const bx of bars) {
+                // Piikin varsi
+                ctx.fillStyle = '#0a0a0a';
+                ctx.fillRect(bx, f.topY + 15, 2, f.bottomRailY - f.topY - 15);
+                // Piikin kärki (terävä yläosa)
+                ctx.fillStyle = '#111';
+                ctx.beginPath();
+                ctx.moveTo(bx - 1, f.topY + 15);
+                ctx.lineTo(bx + 1, f.topY + 15);
+                ctx.lineTo(bx + 1, f.topY + 1);
+                ctx.lineTo(bx + 0.5, f.topY - 1);
+                ctx.lineTo(bx, f.topY - 5);
+                ctx.lineTo(bx - 0.5, f.topY - 1);
+                ctx.lineTo(bx - 1, f.topY + 1);
+                ctx.closePath();
+                ctx.fill();
+                // Kevyt kiilto piikin kärkeen
+                ctx.fillStyle = '#2a2a2a';
+                ctx.beginPath();
+                ctx.moveTo(bx - 0.3, f.topY + 5);
+                ctx.lineTo(bx + 0.3, f.topY + 5);
+                ctx.lineTo(bx + 0.3, f.topY - 1);
+                ctx.lineTo(bx, f.topY - 4);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // ── Päätytolpat (segmenttien reunat) ──
+            const drawEndPost = (px) => {
+                ctx.fillStyle = '#080808';
+                ctx.fillRect(px - 3, f.topY - 2, 6, f.bottomRailY - f.topY + 8);
+                ctx.fillStyle = '#151515';
+                ctx.fillRect(px - 2, f.topY, 4, f.bottomRailY - f.topY);
+                // Tolpan pallo
+                ctx.fillStyle = '#0a0a0a';
+                ctx.beginPath();
+                ctx.arc(px, f.topY - 4, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1a1a1a';
+                ctx.beginPath();
+                ctx.arc(px - 0.5, f.topY - 5, 2, 0, Math.PI * 2);
+                ctx.fill();
+            };
+            drawEndPost(startX);
+            drawEndPost(endX);
+        }
+
+        // ── Keskiaukon reunatolpat (paksummat, koristeellisemmat) ──
+        const drawGapPost = (px) => {
+            // Tolpan runko
+            ctx.fillStyle = '#080808';
+            ctx.fillRect(px - 4, f.topY - 6, 8, f.bottomRailY - f.topY + 12);
+            ctx.fillStyle = '#121212';
+            ctx.fillRect(px - 3, f.topY - 2, 6, f.bottomRailY - f.topY + 4);
+            // Koriste-ura
+            ctx.fillStyle = '#080808';
+            ctx.fillRect(px - 2, f.topY + 18, 4, 14);
+            // Pallo huipulla
+            ctx.fillStyle = '#0a0a0a';
+            ctx.beginPath();
+            ctx.arc(px, f.topY - 6, 5.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1e1e1e';
+            ctx.beginPath();
+            ctx.arc(px - 1, f.topY - 8, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            // Alahela
+            ctx.fillStyle = '#151515';
+            ctx.fillRect(px - 4, f.bottomRailY + 2, 8, 6);
+        };
+        drawGapPost(f.gapStart);
+        drawGapPost(f.gapEnd);
+    }
+
     /* ── Pimeä huone (COMMANDO + BM-avain) ──────── */
     function drawDarkRoom() {
         // Täysin pimeä tausta
@@ -1432,9 +1566,9 @@ const Street = (() => {
 /* ── Lampputolppa ─────────────────────────────── */
     function drawLampPost(lamp) {
         const bx = lamp.x;                    // tolpan juuri (x)
-        const by = GROUND_Y;                   // tolpan juuri (y = maanpinta)
+        const by = GROUND_Y + 15;              // tolpan juuri (y = maanpinta + 15px alempana)
         const poleTop = by - LAMP_POST_H + 15; // tolpan yläpää
-        const bulbY = poleTop - 22;            // lampun kupu
+        const bulbY = poleTop - 8;             // lampun kupu (lähempänä tolppaa)
 // Ylikuumentuneen lampun punainen hehku + savu
         if (lamp.overheat) {
             const flicker = Math.sin(Date.now() * 0.02) * 0.4 + 0.6;
