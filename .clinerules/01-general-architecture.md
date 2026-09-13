@@ -57,7 +57,6 @@ D:\AI\Main\
 1. **Kunnioita olemassa olevaa koodia** – älä refaktoroi ilman pyyntöä
 2. **Pidä muutokset kohdistettuina** – jos teet alataskia, pysy sen scope:ssa
 3. **Älä lisää riippuvuuksia** – projektissa ei käytetä npm-paketteja, kaikki on vanilla JS/CSS/HTML
-4. **Kehitysversiot vs. buildatut versiot:**
-   - `game_main.html` = kehitysversio (lataa erilliset CSS/JS-tiedostot)
-   - `dig_game.html` / `boulder_dash.html` = buildattu yhden tiedoston versio (iframe-käyttöön)
-5. **Älä koske `build_single.js`-skripteihin** ilman erillistä pyyntöä
+4. **Kehitysversiot:** Kaikki pelit käyttävät `game_main.html`-kehitysversiota suoraan.
+   - `game_main.html` = kehitysversio (lataa erilliset CSS/JS-tiedostot) – ainoa versio
+   - Buildausta yhteen tiedostoon ei enää tehdä (Dig Game: `dig_game.html` poistettu)

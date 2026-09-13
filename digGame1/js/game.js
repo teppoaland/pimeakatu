@@ -1,4 +1,4 @@
-// game.js - Pelin pääohjain (yksi yhtenäinen maailma, ei tasoja)
+﻿// game.js - Pelin pääohjain (yksi yhtenäinen maailma, ei tasoja)
 
 class Game {
     constructor() {
@@ -153,7 +153,9 @@ class Game {
                 break;
             }
             case TILE.EXIT:
-                this.completeWorld();
+                // Kerää avain ja poista se ruudusta
+                this.grid[ny][nx] = (ny === SURFACE_ROW) ? TILE.GRASS : TILE.EMPTY;
+                this.collectKey();
                 return;
             case TILE.FIREFLY:
             case TILE.BUTTERFLY:
@@ -288,6 +290,20 @@ class Game {
             'Kerätyt timantit: ' + this.diamondsCollected +
             '\nPisteet: ' + this.score,
             'Pelaa uudelleen');
+        this.updateHUD();
+        this.renderer.render();
+    }
+
+    collectKey() {
+        this.score += SCORE_WORLD_BONUS;
+        this.worldComplete = true;
+        this.showOverlay('🔑 Avain löytyi!',
+            'Nyt pääset pelaamaan\nBoulder Dashia pääkadulla!\n\n' +
+            'Kerätyt timantit: ' + this.diamondsCollected +
+            '\nPisteet: ' + this.score,
+            'OK');
+        // Ilmoita pääsivulle että avain on kerätty
+        try { window.parent.postMessage('KEY_COLLECTED', '*'); } catch(e) {}
         this.updateHUD();
         this.renderer.render();
     }
