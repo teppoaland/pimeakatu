@@ -11,7 +11,7 @@
 | Katunäkymä ja hahmo | ✅ Valmis | 9 taloa, 5 lamppua |
 | Lamppujen potkiminen | ✅ Valmis | 5 lamppua sytytettävissä |
 | Ovista sisään astuminen | ✅ Valmis | 5 aktiivista ovea |
-| Kolikon kerääminen | ✅ Valmis | Kadun oikeassa reunassa |
+| Kolikon kerääminen | ✅ Valmis | v3.45: Satunnainen X-sijainti (50–730) joka latauskerralla |
 | Mobiiliohjaimet | ✅ Valmis | v1.2: JS force-show + D-pad + ⚡-nappi |
 | CRT-retro-teema | ✅ Valmis | Scanline-efekti, vihreä fontti |
 | Ääniefektit | ✅ Valmis | Potku (0.24) + kävely (0.12 lowpass-kahina) |

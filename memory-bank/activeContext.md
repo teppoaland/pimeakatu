@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.44** | 13.9.2026 | Lampputolppien törmäysesto: kiertäminen alhaalta (y>295). PLAYER_Y_MIN=280, PLAYER_Y_MAX=350 (aidan taakse). Aita piirretään pelaajan päälle.
+**v3.45** | 13.9.2026 | Kolikko arvotaan satunnaiseen X-sijaintiin (50–730) aina pelin käynnistyessä (F5 / avaus). Jos kerätty → pysyy piilossa.
 
 ## 🔒 Lukitut osa-alueet
 

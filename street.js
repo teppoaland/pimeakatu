@@ -56,7 +56,8 @@ const Street = (() => {
     const DOOR_H = 40;
     const DOOR_RADIUS = 24;
 /* ── Kolikko ─────────────────────────────────────── */
-    const coin = { x: 590, y: GROUND_Y - 8, collected: false, sparkle: 0 };
+    const coin = { x: 590, y: 325, collected: false, sparkle: 0 };
+    function randomCoinX() { return 50 + Math.random() * 680; }  // 50–730
 
     /* ── Avain (Dig Gamesta) ───────────────────────── */
     let digKeyCollected = false;
@@ -175,6 +176,7 @@ const Street = (() => {
         }
         coin.collected = state.inventory.coin;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
+        else { coin.x = randomCoinX(); coin.y = 325; }
         digKeyCollected = state.digKeyCollected || false;
         boulderKeyCollected = state.boulderKeyCollected || false;
         bmKeyCollected = state.bmKeyCollected || false;
@@ -740,6 +742,7 @@ const Street = (() => {
         }
         coin.collected = state.inventory.coin;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
+        else { coin.x = randomCoinX(); coin.y = 325; }
         digKeyCollected = state.digKeyCollected || false;
         boulderKeyCollected = state.boulderKeyCollected || false;
         bmKeyCollected = state.bmKeyCollected || false;
