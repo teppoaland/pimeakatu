@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.25** | 13.9.2026 | Katu: Ikkunavalot 0-5 (pooli päivittyy vain sammuessa), debug-ajastus 10-30s, ei discoa. Notifikaatio 2.5s.
+**v3.26** | 13.9.2026 | Katu: Varoitusdialogi talon 0 oveen 3. potkulla. Ikkunavalot 0-5, debug 10-30s.
 
 ## 🔒 Lukitut osa-alueet
 
