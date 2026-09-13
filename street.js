@@ -140,7 +140,7 @@ const Street = (() => {
             const src = audioCtx.createBufferSource(); src.buffer = buf;
             const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 300;
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.setValueAtTime(0.18, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
             src.connect(filter).connect(gain).connect(audioCtx.destination);
             src.start(now); src.stop(now + 0.05);
