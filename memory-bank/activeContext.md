@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.43** | 13.9.2026 | Pelaajan ohjaus: vertikaalinen liike ylös/alas nuolilla (ei hyppyä). Yläraja = nykyinen kävelytaso (y=290), alaraja = 50px pohjasta (y=320).
+**v3.44** | 13.9.2026 | Lampputolppien törmäysesto: kiertäminen alhaalta (y>295). PLAYER_Y_MIN=280, PLAYER_Y_MAX=350 (aidan taakse). Aita piirretään pelaajan päälle.
 
 ## 🔒 Lukitut osa-alueet
 
