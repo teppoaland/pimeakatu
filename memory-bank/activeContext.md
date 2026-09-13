@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.41** | 13.9.2026 | Pääkatu: Etualan maisemointi (kiveys, ruohotupsut, viemärinkannet + höyry, sanomalehti, kuoriainen). Pupun piirtokorkeus -25px.
+**v3.43** | 13.9.2026 | Pelaajan ohjaus: vertikaalinen liike ylös/alas nuolilla (ei hyppyä). Yläraja = nykyinen kävelytaso (y=290), alaraja = 50px pohjasta (y=320).
 
 ## 🔒 Lukitut osa-alueet
 

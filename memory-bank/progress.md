@@ -20,6 +20,10 @@
 | Valojen elävöitys | ✅ Valmis | RGB-tuikinta ikkunoissa, moskiitot lampuissa |
 | Poutayö-taivas | ✅ v3.40 | Sirppikuu + cirrus/hazy-pilvikaistale, tuuli 1–4 px/s |
 | Etualan maisemointi | ✅ v3.41 | Kiveys, ruohot, viemärikannet + höyry, sanomalehti, kuoriainen |
+| Rauta-aita | ✅ v3.42 | Musta takorauta-aita alalaidassa: pystypiikit, vaakaraudat, keskiaukko 130px, pallopäiset tolpat |
+| Ruohot aidan juuressa | ✅ v3.42 | Siirretty kiveykseltä aidan alareunan eteen |
+| Eläinten satunnainen rata | ✅ v3.42 | Juoksukorkeus arvotaan 305–335 jokaiselle spawnille |
+| Lamppujen korjaus | ✅ v3.42 | Tolpan juuri +15px alas, kupu poleTop-8 (oli -22) |
 | Taustamusiikki | ✅ Valmis | v3.28: "Running Free" täysi bändisoundi (rummut+basso+kitara+melodia, audio.js) |
 
 ---
