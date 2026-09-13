@@ -24,6 +24,7 @@
 | Ruohot aidan juuressa | ✅ v3.42 | Siirretty kiveykseltä aidan alareunan eteen |
 | Eläinten satunnainen rata | ✅ v3.42 | Juoksukorkeus arvotaan 305–335 jokaiselle spawnille |
 | Lamppujen korjaus | ✅ v3.42 | Tolpan juuri +15px alas, kupu poleTop-8 (oli -22) |
+| Lamppujen törmäysesto | ✅ v3.44 | Kiertäminen alhaalta (y>295). PLAYER_Y_MIN=280, MAX=350 (aidan taakse). Aita pelaajan päällä. |
 | Taustamusiikki | ✅ Valmis | v3.28: "Running Free" täysi bändisoundi (rummut+basso+kitara+melodia, audio.js) |
 
 ---

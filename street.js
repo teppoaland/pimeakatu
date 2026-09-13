@@ -334,8 +334,8 @@ const Street = (() => {
         player.vx = moveX * PLAYER_SPEED;
 
         // Vertikaalinen liike ylös/alas (ei hyppyä, ei painovoimaa)
-        const PLAYER_Y_MIN = GROUND_Y + 10 - player.h;   // 290 = yläraja (nykyinen kävelytaso)
-        const PLAYER_Y_MAX = WORLD_H - 50 - player.h;    // 320 = alaraja (jalat 50px pohjasta)
+        const PLAYER_Y_MIN = GROUND_Y - player.h;            // 280 = yläraja (maksimoitu liikealue)
+        const PLAYER_Y_MAX = WORLD_H - 50;                     // 350 = aidan yläreuna, pelaaja aidan takana
         let moveY = 0;
         if (keys['ArrowUp'] || keys['w'] || keys['W'])     moveY = -1;
         if (keys['ArrowDown'] || keys['s'] || keys['S'])   moveY = 1;
@@ -344,6 +344,25 @@ const Street = (() => {
         player.vy = 0;
 
         player.x += player.vx * dt;
+
+        // Estä pelaajaa kävelemästä lampputolppien läpi
+        // Lamppu on kadun puolella → pelaaja kiertää ALHAALTA (edestä, iso y)
+        // Ylhäältä (pieni y, talon puoli) lamppu estää kulun
+        const LAMP_BLOCK_X = 15;
+        const LAMP_PASS_Y = GROUND_Y;  // 310 – tätä alempana (isompi y) pelaaja kiertää edestä
+        for (const lamp of lamps) {
+            const cx = player.x + player.w / 2;
+            const cy = player.y + player.h / 2;
+            const dx = cx - lamp.x;
+            if (cy < LAMP_PASS_Y && Math.abs(dx) < LAMP_BLOCK_X) {
+                if (dx < 0) {
+                    player.x = lamp.x - LAMP_BLOCK_X - player.w / 2;
+                } else {
+                    player.x = lamp.x + LAMP_BLOCK_X - player.w / 2;
+                }
+            }
+        }
+
         player.x = Math.max(0, Math.min(WORLD_W - player.w, player.x));
 
         const onGround = true;  // pelaaja on aina pinnalla (ei hyppyjä)
@@ -1098,6 +1117,11 @@ const Street = (() => {
         // Pelaaja
         drawPlayer();
 
+        // Rauta-aita (etualalla, pelaajan takana → piirretään pelaajan päälle)
+        if (foreground && foreground.ironFence) { drawIronFence(); }
+        // Ruohotupsut aidan juuressa
+        if (foreground) { drawGrassTufts(); }
+
         // Partikkelit
         for (const p of particles) {
             ctx.globalAlpha = p.life / p.maxLife;
@@ -1262,12 +1286,6 @@ const Street = (() => {
 
         // Kuoriainen
         if (foreground && foreground.beetle) { drawBeetle(); }
-
-        // Rauta-aita (etualan alin elementti, lähinnä katsojaa)
-        if (foreground && foreground.ironFence) { drawIronFence(); }
-
-        // Ruohotupsut (aidan edessä, juuri aidan juuressa)
-        if (foreground) { drawGrassTufts(); }
 
         // Ala- ja yläreunaviivat
         ctx.fillStyle = '#2a2a2a';
