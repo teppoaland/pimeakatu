@@ -553,6 +553,9 @@ const Street = (() => {
                 firstHouseKickTarget = 3 + Math.floor(Math.random() * 4); // 3-6
             }
             firstHouseKickCount++;
+            if (firstHouseKickCount === 3) {
+                showNotification('Varo! Kohta saattaa käydä heikosti. Kokeile seuraavaa ovea.');
+            }
             firstHouseWindowTimer = 1200; // 20s
             if (firstHouseKickCount >= firstHouseKickTarget && !firstHouseWindowsLit) {
                 firstHouseWindowsLit = true;
