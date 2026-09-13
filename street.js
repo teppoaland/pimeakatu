@@ -844,7 +844,7 @@ const Street = (() => {
         ctx.globalAlpha = 1;
     }
 
-    /* ── Rauhalliset ikkunavalot (2-5 kpl, 1-10min paloaika) ── */
+    /* ── Rauhalliset ikkunavalot (0-5 kpl, 1-10min paloaika) ── */
     const litWindows = []; // { wx, wy, bldgIdx, offTime }
 
     function collectAllWindows() {
@@ -873,15 +873,12 @@ const Street = (() => {
         });
     }
 
-    function pickRandomWindow() {
-        const avail = getAvailableWindows();
-        if (avail.length === 0) return null;
-        return avail[Math.floor(Math.random() * avail.length)];
-    }
-
     function addRandomLitWindow() {
-        const w = pickRandomWindow();
-        if (!w) return;
+        const avail = getAvailableWindows().filter(w => 
+            !litWindows.some(l => l.wx === w.wx && l.wy === w.wy && l.bldgIdx === w.bldgIdx)
+        );
+        if (avail.length === 0) return;
+        const w = avail[Math.floor(Math.random() * avail.length)];
         // 1-10 min = 60 000–600 000 ms
         const duration = 60000 + Math.random() * 540000;
         litWindows.push({ wx: w.wx, wy: w.wy, bldgIdx: w.bldgIdx, offTime: Date.now() + duration });
@@ -893,8 +890,8 @@ const Street = (() => {
         for (let i = litWindows.length - 1; i >= 0; i--) {
             if (now >= litWindows[i].offTime) litWindows.splice(i, 1);
         }
-        // Täytä 2-5 ikkunaan
-        const target = 2 + Math.floor(Math.random() * 4); // 2..5
+        // Täytä 0-5 ikkunaan
+        const target = Math.floor(Math.random() * 6); // 0..5
         while (litWindows.length < target) addRandomLitWindow();
         // Jos yli 5, tiputa vanhin
         while (litWindows.length > 5) litWindows.shift();
@@ -904,8 +901,8 @@ const Street = (() => {
         return litWindows.some(w => w.wx === wx && w.wy === wy && w.bldgIdx === bldgIdx);
     }
 
-    // Alusta: 2-3 ikkunaa heti palamaan
-    for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) addRandomLitWindow();
+    // Alusta: 0-5 ikkunaa heti palamaan
+    for (let i = 0; i < Math.floor(Math.random() * 6); i++) addRandomLitWindow();
 
     function drawBuildings() {
         for (const b of buildings) {
