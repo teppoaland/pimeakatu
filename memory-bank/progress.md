@@ -18,6 +18,7 @@
 | Kukkaruukku-taloista | ✅ Valmis | Talot 0,2,4,6: valo varoituksena, potku → ruukku → tainnutus 10s |
 | Katueläimet | ✅ Valmis | Hiiri/rotta (lineaarinen), jänis (loikkii, pysähtyy), 15s välein |
 | Valojen elävöitys | ✅ Valmis | RGB-tuikinta ikkunoissa, moskiitot lampuissa |
+| Poutayö-taivas | ✅ v3.40 | Sirppikuu + cirrus/hazy-pilvikaistale, tuuli 1–4 px/s |
 | Taustamusiikki | ✅ Valmis | v3.28: "Running Free" täysi bändisoundi (rummut+basso+kitara+melodia, audio.js) |
 
 ---
@@ -38,6 +39,8 @@
 | Buildaus poistettu | ✅ v3.18 | `dig_game.html` poistettu, ei enää pakkausta |
 | Overlay skaalautuvuus | ✅ Korjattu | v3.17: fontit pienennetty, scrollaus, pystytilakehote |
 | Timanttien keräysseuranta | ✅ Valmis | UI-laskuri |
+| Poutayö-taivas | ✅ v3.30 | Tähdet, sirppikuu, cirrus+hazy (>100px), tuulianimaatio 7–16 px/s |
+| Avain oikeaan alakulmaan | ✅ v3.30 | Siirretty SURFACE_ROW → BEDROCK_ROW-1 |
 | Avain maalina + paluu kadulle | ✅ v3.20 | KEY-tiili, collectKey dialogista OK → RETURN_TO_STREET |
 
 ---

@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.28** | 13.9.2026 | Pääkatu: Taustamusiikki uusittu – täysi bändisoundi (rummut, basso, särökitara, laulumelodia). "Running Free" nyt tunnistettavissa.
+**v3.40** | 13.9.2026 | Pääkatu: Poutayö-taivas valmis (sirppikuu + cirrus/hazy-pilvikaistale, tuulianimaatio 1–4 px/s).
 
 ## 🔒 Lukitut osa-alueet
 

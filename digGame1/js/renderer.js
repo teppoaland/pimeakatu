@@ -12,6 +12,17 @@ class Renderer {
         this.lerpX = 0; 
         this.lerpY = 0;
         this.camLerpX = 0;
+
+        // === Yötaivas-järjestelmä ===
+        this.skyReady = false;
+        this._lastWorldW = 0;
+        this.skySeed = Math.random() * 10000;
+        this.windDir = Math.random() < 0.5 ? 1 : -1;
+        this.windSpeed = 7 + Math.random() * 9; // px/s: hidas tuuli
+        this.lastCloudTime = 0;
+        this.clouds = [];
+        this.stars = [];
+        this.moon = null;
     }
 
     resize() {
@@ -86,6 +97,22 @@ class Renderer {
         if (this.flashAlpha > 0) {
             this.flashAlpha = Math.max(0, this.flashAlpha - 0.015);
         }
+
+        // Pilvien liike tuulen mukana
+        if (this.skyReady) {
+            const now = performance.now();
+            if (this.lastCloudTime) {
+                const dt = Math.min((now - this.lastCloudTime) / 1000, 0.1); // cap 100ms
+                const worldW = this.game.cols * CELL_SIZE;
+                for (const c of this.clouds) {
+                    c.wx += this.windDir * this.windSpeed * dt;
+                    // Wrap-around: pilvi kiertää maailman ympäri
+                    if (c.wx > worldW + c.w) c.wx = -c.w;
+                    else if (c.wx < -c.w) c.wx = worldW + c.w;
+                }
+            }
+            this.lastCloudTime = now;
+        }
     }
 
     // Onko ruutu "kiinteää maata" (ei kaivettua aukkoa) - käytetään
@@ -116,8 +143,30 @@ class Renderer {
 
         const offsetX = this.camLerpX * cs;
 
-        ctx.fillStyle = '#7ec8e3';
-        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // === Yötaivas-gradientti (koko canvas) ===
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, cs);
+        skyGrad.addColorStop(0, '#0a1628');
+        skyGrad.addColorStop(0.5, '#0f1f38');
+        skyGrad.addColorStop(1, '#152240');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, this.canvas.width, cs);
+        // Maanalainen tumma tausta
+        ctx.fillStyle = '#0a0a1a';
+        ctx.fillRect(0, cs, this.canvas.width, this.canvas.height - cs);
+
+        // === Alusta taivas kerran (maailman leveyden tiedettyä) ===
+        const worldW = this.game.cols * cs;
+        if (!this.skyReady || this._lastWorldW !== worldW) {
+            this._lastWorldW = worldW;
+            this.initSky(worldW);
+        }
+
+        // === Piirrä tähdet, kuu ja pilvet taivasriville ===
+        if (this.skyReady) {
+            for (const s of this.stars) this.drawStar(ctx, s, offsetX);
+            this.drawMoon(ctx, this.moon, offsetX);
+            for (const c of this.clouds) this.drawCloud(ctx, c, offsetX);
+        }
 
         const baseCamX = Math.floor(this.camLerpX);
         for (let y = 0; y < VIEW_ROWS; y++) {
@@ -160,7 +209,7 @@ class Renderer {
             case TILE.KEY: this.drawKey(ctx, px, py); break;
             case TILE.FIREFLY: this.drawEnemy(ctx, px, py, cs, '#F22', '#F80', '#FC0'); break;
             case TILE.BUTTERFLY: this.drawEnemy(ctx, px, py, cs, '#F60', '#FA0', '#FD4'); break;
-            case TILE.SKY: this.drawSky(ctx, px, py, wx, wy); break;
+            case TILE.SKY: /* taivas läpinäkyvä – yötaivas piirretään render()-metodissa */ break;
             case TILE.GRASS: this.drawGrass(ctx, px, py, wx, wy); break;
             case TILE.TREE: this.drawTree(ctx, px, py, wx, wy); break;
             case TILE.HOUSE: this.drawHouse(ctx, px, py, wx, wy); break;
@@ -344,19 +393,152 @@ class Renderer {
         ctx.fill();
     }
 
-    drawSky(ctx, px, py, wx, wy) {
-        const cs = CELL_SIZE;
-        ctx.fillStyle = '#7ec8e3';
-        ctx.fillRect(px, py, cs, cs);
-        const seed = (wx * 13 + wy * 7) % 100;
-        if (seed < 30) {
-            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    // === Poutayö-taivasjärjestelmä ===
+
+    // Satunnainen siemenluku deterministisellä ulostulolla
+    _srnd(seed) {
+        const x = Math.sin(seed + this.skySeed) * 10000;
+        return x - Math.floor(x);
+    }
+
+    // Generoi tähdet, kuun ja pilvet kerran maailman luonnin yhteydessä
+    initSky(worldW) {
+        const skyH = CELL_SIZE;
+        const rnd = (s) => this._srnd(s);
+
+        // Uusi siemen ja tuuli joka kerralla kun taivas alustetaan
+        this.skySeed = Math.random() * 10000;
+        this.windDir = Math.random() < 0.5 ? 1 : -1;
+        this.windSpeed = 7 + Math.random() * 9; // px/s: puolet alkuperäisestä
+
+        // === Tähdet (~55 kpl) ===
+        this.stars = [];
+        for (let i = 0; i < 55; i++) {
+            this.stars.push({
+                wx: rnd(i * 3.7) * worldW,
+                wy: 1.5 + rnd(i * 3.7 + 1) * (skyH - 5),
+                size: 0.4 + rnd(i * 3.7 + 2) * 2.0,
+                brightness: 0.2 + rnd(i * 3.7 + 3) * 0.75,
+            });
+        }
+
+        // === Kuu ===
+        this.moon = {
+            wx: worldW * 0.55 + rnd(1) * worldW * 0.25,
+            wy: 5 + rnd(2) * 8,
+            radius: 10 + rnd(3) * 5,
+            crescentRight: rnd(4) > 0.5,
+        };
+
+        // === Pilvet (~20 kpl) ===
+        this.clouds = [];
+        for (let i = 0; i < 20; i++) {
+            const typeRoll = rnd(i * 5.9);
+            let ww, opacity, type;
+            if (typeRoll < 0.35) {
+                // Ohut cirrus-juova
+                type = 'cirrus';
+                ww = 100 + rnd(i * 5.9 + 1) * 300;
+                opacity = 0.008 + rnd(i * 5.9 + 2) * 0.023;
+            } else {
+                // Vaakasuuntainen hattarapilvi
+                type = 'hazy';
+                ww = 140 + rnd(i * 5.9 + 1) * 360;
+                opacity = 0.022 + rnd(i * 5.9 + 2) * 0.039;
+            }
+            this.clouds.push({
+                wx: rnd(i * 5.9 + 3) * worldW,
+                wy: 2 + rnd(i * 5.9 + 4) * (skyH * 0.5),
+                w: ww, opacity: opacity, type: type,
+            });
+        }
+
+        this.skyReady = true;
+    }
+
+    // Yksittäinen tähti: pieni piste + himmeä hehku kirkkaimmille
+    drawStar(ctx, star, offsetX) {
+        const x = star.wx - offsetX;
+        if (x < -5 || x > this.canvas.width + 5) return;
+        ctx.fillStyle = `rgba(255,255,255,${star.brightness})`;
+        ctx.beginPath();
+        ctx.arc(x, star.wy, Math.max(0.3, star.size), 0, Math.PI * 2);
+        ctx.fill();
+        if (star.brightness > 0.55) {
+            ctx.fillStyle = `rgba(255,255,240,${star.brightness * 0.2})`;
             ctx.beginPath();
-            ctx.arc(px + cs * 0.4, py + cs * 0.5, 5, 0, Math.PI * 2);
-            ctx.arc(px + cs * 0.6, py + cs * 0.45, 6, 0, Math.PI * 2);
+            ctx.arc(x, star.wy, star.size * 2.8, 0, Math.PI * 2);
             ctx.fill();
         }
     }
+
+    // Sirppikuu + hehku
+    drawMoon(ctx, moon, offsetX) {
+        const x = moon.wx - offsetX;
+        const y = moon.wy;
+        const r = moon.radius;
+        if (x < -r * 3 || x > this.canvas.width + r * 3) return;
+
+        const glow = ctx.createRadialGradient(x, y, r * 0.4, x, y, r * 2.8);
+        glow.addColorStop(0, 'rgba(255,255,240,0.18)');
+        glow.addColorStop(0.4, 'rgba(255,255,240,0.06)');
+        glow.addColorStop(1, 'rgba(255,255,240,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(x, y, r * 2.8, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#fefae0';
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+
+        const shadowOff = moon.crescentRight ? r * 0.4 : -r * 0.4;
+        ctx.fillStyle = '#0f1d30';
+        ctx.beginPath(); ctx.arc(x + shadowOff, y - r * 0.08, r * 0.78, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Pilvi: cirrus tai hazy – ohuita, vaakasuuntaisia, hattaraisia
+    drawCloud(ctx, cloud, offsetX) {
+        const x = cloud.wx - offsetX;
+        const y = cloud.wy;
+        if (x < -cloud.w || x > this.canvas.width + cloud.w) return;
+
+        const a = cloud.opacity;
+        const hw = cloud.w * 0.5;
+        ctx.save();
+
+        if (cloud.type === 'cirrus') {
+            // Ohuet haituvaiset cirrus-juovat (korkeus ~1-3px)
+            const streaks = 3 + Math.floor(cloud.w * 0.008);
+            for (let i = 0; i < streaks; i++) {
+                const ox = (i - (streaks - 1) / 2) * (cloud.w * 0.11);
+                const oy = (i % 3 - 1) * 1.4;
+                const sw = hw * (0.6 + 0.4 * (1 - Math.abs(i - (streaks - 1) / 2) / (streaks / 2)));
+                const fa = a * (0.35 + 0.65 * (1 - Math.abs(i - (streaks - 1) / 2) / (streaks / 2)));
+                ctx.fillStyle = `rgba(190,200,225,${fa})`;
+                ctx.beginPath();
+                ctx.ellipse(x + ox, y + oy, sw, 1.2, 0.015 * (i - 1), 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else {
+            // Hazy: vaakasuuntaisia päällekkäisiä hattaraellipsejä
+            const baseClr = '180,195,215';
+            const parts = 5 + Math.floor(cloud.w * 0.006);
+            for (let i = 0; i < parts; i++) {
+                const ox = (i - (parts - 1) / 2) * (cloud.w * 0.14);
+                const oy = Math.sin(i * 2.3) * 3;
+                const dist = Math.abs(i - (parts - 1) / 2) / ((parts - 1) / 2);
+                const lw = cloud.w * (0.15 + 0.10 * (1 - dist));
+                const la = a * (0.5 + 0.5 * (1 - dist));
+                ctx.fillStyle = `rgba(${baseClr},${la})`;
+                ctx.beginPath();
+                ctx.ellipse(x + ox, y + oy, lw, 4 + dist * 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        ctx.restore();
+    }
+
+    // Vanha drawSky – ei enää käytössä (SKY-tiili läpinäkyvä)
+    drawSky(ctx, px, py, wx, wy) {}
 
     drawGrass(ctx, px, py, wx, wy) {
         const cs = CELL_SIZE;
