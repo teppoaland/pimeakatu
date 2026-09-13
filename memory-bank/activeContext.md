@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.24** | 13.9.2026 | Katu: Rauhalliset ikkunavalot (2-5 kpl, 1-10min), ei discoa. Notifikaatio 2.5s.
+**v3.25** | 13.9.2026 | Katu: Ikkunavalot 0-5 (pooli päivittyy vain sammuessa), debug-ajastus 10-30s, ei discoa. Notifikaatio 2.5s.
 
 ## 🔒 Lukitut osa-alueet
 
