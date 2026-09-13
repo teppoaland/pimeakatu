@@ -73,7 +73,7 @@ class Game {
         if (!skipIntro && !isDebug) {
             const lvl = LEVEL_DATA[0];
             this.showOverlay('💎 ' + lvl.name,
-                'Taso 1 — Kerää ' + lvl.diamondsNeeded + ' timanttia\nja etene uloskäynnille!\n\nEtsi avaimia 🔑\n\n⏱ Aikaa on vain 45 sekuntia, että pidä kiirettä!',
+                'Taso 1\nEtsi avaimia 🔑 Kerää ' + lvl.diamondsNeeded + ' timanttia\nja etene uloskäynnille!\n\n⏱ Aikaa on vain 45 sekuntia, että pidä kiirettä!',
                 'Aloita');
         }
         this.renderer.render();
@@ -84,7 +84,7 @@ class Game {
             this.allLevelsComplete = true;
             this.showOverlay('🎉 Kaikki tasot läpäisty!',
                 'Lopulliset pisteet: ' + this.score,
-                'OK → Pimeälle kadulle');
+                'JATKA');
             this.stopLoop();
             return;
         }
@@ -296,7 +296,7 @@ class Game {
             this.allLevelsComplete = true;
             this.showOverlay('🎉 Kaikki tasot läpäisty!',
                 'Keräsit ' + this.diamondsCollected + ' / ' + this.diamondsNeeded + ' timanttia\nBonus: +' + SCORE_LEVEL_BONUS + '\nLopulliset pisteet: ' + this.score,
-                'OK → Pimeälle kadulle');
+                'OK');
         } else {
             this.showOverlay('✅ Taso läpäisty!',
                 'Keräsit ' + this.diamondsCollected + ' / ' + this.diamondsNeeded + ' timanttia\nBonus: +' + SCORE_LEVEL_BONUS,

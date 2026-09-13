@@ -8,6 +8,11 @@
 
 **v3.22** | 13.9.2026 | DG2: Bugikorjaus - exit toimii nyt ilman avainta kentissä joissa ei avainta (1-2)
 
+## 🔒 Lukitut osa-alueet
+
+- **Dialogi-tekstit:** Kaikkien pelien overlay/intro/viestit **LUKITTU**. Ei muutoksia ilman erillistä lupaa.
+- **Pelien välinen logiikka:** Koko polku testattu läpi järjestyksessä (DG1 → DG2 → Blue Mäx). Avaimet, postMessage-kutsut, paluu kadulle — **LUKITTU**. Ei muutoksia ilman erillistä lupaa.
+
 ## 🔜 Seuraavaksi (odottaa valintaa)
 
 - **Commando:** Jäissä – tarvitaan valmis 3D HTML-moottori pohjaksi ennen jatkoa
@@ -17,7 +22,6 @@
 
 ## ⚠️ Huomiot
 
-- **🛑 DIALOGI-TEKSTIT:** Pelien dialogeja (overlay-tekstit, intro-tekstit, napit, viestit) **EI SAA MUUTTAA ILMAN LUPAA**. Tekstit on tarkkaan harkittu pelin juonen ja tunnelman takia. Vain koodimuutokset sallittu.
 - **Pääportaali:** `position: absolute`, `opacity: 0.65`, landscape overlay, D-pad + ⚡
 - **Notifikaatiot:** Vain ovi/kolikko, `setTimeout` 1.5s + fade 0.5s
 - **Blue Mäx:** ✅ v3.10 – Musta ⅓-leveä mittari-HUD (polttoainepalkki + pommit + elämät + korkeus), ei pisteitä. Kentän ulkopuolella alt≤1 → STALL-kuolema. Ohjaus pois ST.TO:n ajalta. Viholliset 100% teholla. Polttoaineen loputtua syöksy + wrap-around, 3-kerroksinen räjähdys, mobiili-HUD overlayna. B=pommi, G=KK, L=laskeudu. Ilmapallo 8 taloa + 60s. Tankkaus. Kaikki talot bonus +5000.
