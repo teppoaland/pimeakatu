@@ -879,22 +879,27 @@ const Street = (() => {
         );
         if (avail.length === 0) return;
         const w = avail[Math.floor(Math.random() * avail.length)];
-        // 1-10 min = 60 000–600 000 ms
-        const duration = 60000 + Math.random() * 540000;
+        // 10-30 s (debug)
+        const duration = 10000 + Math.random() * 20000;
         litWindows.push({ wx: w.wx, wy: w.wy, bldgIdx: w.bldgIdx, offTime: Date.now() + duration });
     }
 
     function updateLitWindows() {
         const now = Date.now();
+        let changed = false;
         // Poista sammuneet
         for (let i = litWindows.length - 1; i >= 0; i--) {
-            if (now >= litWindows[i].offTime) litWindows.splice(i, 1);
+            if (now >= litWindows[i].offTime) {
+                litWindows.splice(i, 1);
+                changed = true;
+            }
         }
-        // Täytä 0-5 ikkunaan
-        const target = Math.floor(Math.random() * 6); // 0..5
-        while (litWindows.length < target) addRandomLitWindow();
-        // Jos yli 5, tiputa vanhin
-        while (litWindows.length > 5) litWindows.shift();
+        // Vain kun joku sammui: arvo uusi tavoite 0-5
+        if (changed) {
+            const target = Math.floor(Math.random() * 6); // 0..5
+            while (litWindows.length < target) addRandomLitWindow();
+            while (litWindows.length > 5) litWindows.shift();
+        }
     }
 
     function isWindowLit(wx, wy, bldgIdx) {
