@@ -357,15 +357,15 @@ const Street = (() => {
         player.x += player.vx * dt;
 
         // Estä pelaajaa kävelemästä lampputolppien läpi
-        // Lamppu on kadun puolella → pelaaja kiertää ALHAALTA (edestä, iso y)
-        // Ylhäältä (pieni y, talon puoli) lamppu estää kulun
+        // Lamppu on kadun puolella → pelaaja kiertää joko ALHAALTA (edestä) tai YLHÄÄLTÄ (takaa)
         const LAMP_BLOCK_X = 15;
-        const LAMP_PASS_Y = GROUND_Y;  // 310 – tätä alempana (isompi y) pelaaja kiertää edestä
+        const LAMP_PASS_FRONT_Y = GROUND_Y;       // 310 – center alle = edestä ohi
+        const LAMP_PASS_BEHIND_Y = 286;            // player.y ≤ 286 = takaa ohi (rakennusten juuressa)
         for (const lamp of lamps) {
             const cx = player.x + player.w / 2;
             const cy = player.y + player.h / 2;
             const dx = cx - lamp.x;
-            if (cy < LAMP_PASS_Y && Math.abs(dx) < LAMP_BLOCK_X) {
+            if (cy < LAMP_PASS_FRONT_Y && player.y > LAMP_PASS_BEHIND_Y && Math.abs(dx) < LAMP_BLOCK_X) {
                 if (dx < 0) {
                     player.x = lamp.x - LAMP_BLOCK_X - player.w / 2;
                 } else {
