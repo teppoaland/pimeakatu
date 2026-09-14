@@ -76,9 +76,9 @@ const Street = (() => {
     ];
 
     const LAMP_POST_H = 75;
-    const DOOR_W = 32;
-    const DOOR_H = 40;
-    const DOOR_RADIUS = 24;
+    const DOOR_W = 26;
+    const DOOR_H = 32;
+    const DOOR_RADIUS = 19;
 /* ── Kolikko ─────────────────────────────────────── */
     const coin = { x: 590, y: 325, collected: false, sparkle: 0 };
     function randomCoinX() { return 50 + Math.random() * 680; }  // 50–730
