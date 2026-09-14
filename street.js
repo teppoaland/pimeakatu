@@ -542,9 +542,30 @@ const Street = (() => {
 
         // ── Ajoneuvon törmäys (molemmat kaistat) ─────────
         if (!player.knockedDown) {
+            const playerCY = player.y + player.h / 2;
+            const gapCenter = (LANE_DEFS[0].y + LANE_DEFS[1].y) / 2;  // 334
+            const inGap = Math.abs(playerCY - gapCenter) < 5;          // ±5px turvakaista
+
+            // Kumman kaistan auton kanssa pelaaja on enemmän limittäin?
+            const CAR_H = 30; // tyypillinen auton korkeus
+            const pTop = player.y, pBot = player.y + player.h;
+            const ov0 = Math.max(0, Math.min(pBot, LANE_DEFS[0].y + CAR_H) - Math.max(pTop, LANE_DEFS[0].y));
+            const ov1 = Math.max(0, Math.min(pBot, LANE_DEFS[1].y + CAR_H) - Math.max(pTop, LANE_DEFS[1].y));
+
             for (let li = 0; li < LANE_DEFS.length; li++) {
                 const v = vehicles[li];
                 if (!v) continue;
+
+                // Pelaaja teräsaidan juuressa → ei kumpikaan kaista osu
+                if (player.y >= PLAYER_Y_MAX - 3) continue;
+
+                // Pelaaja kaistojen välisessä raossa → ei osumaa
+                if (inGap) continue;
+
+                // Pelaaja on vain lähimmällä kaistalla – kauemman kaistan autot menevät ohi
+                if (li === 0 && ov1 > ov0) continue;
+                if (li === 1 && ov0 > ov1) continue;
+
                 const vCollisionTop = v.y + v.h * 0.5;
                 if (v.x < player.x + player.w && v.x + v.w > player.x &&
                     player.y + player.h > vCollisionTop && player.y < v.y + v.h) {
@@ -744,7 +765,7 @@ const Street = (() => {
         // Näytä overlay ENSIN, sitten vasta lataa iframe
         // (estää 0×0 canvas -bugin pelien käynnistyessä)
         overlay.classList.add('active');
-        StreetAudio.stop();
+        // StreetAudio.stop(); – musiikki jatkaa soimista pelien aikana (sykli hoitaa tauot)
         iframe.onload = () => {
             try { iframe.contentWindow.focus(); } catch(e) {}
         };
@@ -794,7 +815,7 @@ const Street = (() => {
         setTimeout(() => {
             try { canvas.focus(); } catch(e) {}
         }, 50);
-        StreetAudio.start();
+        // StreetAudio.start(); – sykli hoitaa musiikin automaattisesti
         state = GameState.load();
         for (let i = 0; i < lamps.length; i++) {
             lamps[i].lit = state.litLamps[i];
@@ -1897,10 +1918,13 @@ const Street = (() => {
             ctx.fillStyle = '#6ab8c8'; ctx.fillRect(cx + v.w - 18, cy + 5, 10, v.h - 21);
             // Takaikkuna
             ctx.fillStyle = '#558899'; ctx.fillRect(cx + 4, cy + 5, 6, v.h - 21);
-            // Keltainen vilkkuvalo katolla + hehku
-            ctx.fillStyle = '#ffcc00'; ctx.fillRect(cx + v.w/2 - 4, cy - 3, 8, 4);
-            ctx.fillStyle = 'rgba(255,240,100,0.45)'; ctx.fillRect(cx + v.w/2 - 2, cy - 5, 4, 3);
-            ctx.fillRect(cx + v.w/2 - 6, cy - 2, 12, 2);
+            // Keltainen vilkkuvalo katolla + hehku (vilkkuva)
+            const flashOn = Math.sin(Date.now() * 0.012) > -0.3;
+            if (flashOn) {
+                ctx.fillStyle = '#ffcc00'; ctx.fillRect(cx + v.w/2 - 4, cy - 3, 8, 4);
+                ctx.fillStyle = 'rgba(255,240,100,0.45)'; ctx.fillRect(cx + v.w/2 - 2, cy - 5, 4, 3);
+                ctx.fillRect(cx + v.w/2 - 6, cy - 2, 12, 2);
+            }
             // Renkaat
             const wr = 5;
             ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(cx + 14, cy + v.h - 4, wr, 0, Math.PI * 2); ctx.fill();
