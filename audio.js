@@ -56,7 +56,7 @@ const StreetAudio = (() => {
         try {
             ctx = new (window.AudioContext || window.webkitAudioContext)();
             masterGain = ctx.createGain();
-            masterGain.gain.value = 0.002;
+            masterGain.gain.value = 0.003;
             masterGain.connect(ctx.destination);
 
             drumGain = ctx.createGain();
@@ -329,10 +329,41 @@ const StreetAudio = (() => {
         }, LOOP * 1000);
     }
 
+    // ── Syklin ajastimet: 30s soittoa, 30–90s taukoa ──
+    let cycleTimer = null;       // setTimeout-tunniste
+    let phase = 'silent';        // 'playing' | 'silent'
+    const PLAY_DURATION = 30000; // 30s soittoa
+
+    function getSilenceDuration() {
+        return 30000 + Math.random() * 60000; // 30–90s taukoa
+    }
+
+    function silencePhase() {
+        if (!ctx) return;
+        phase = 'silent';
+        if (loopId) { clearInterval(loopId); loopId = null; }
+        started = false;
+        const delay = getSilenceDuration();
+        cycleTimer = setTimeout(playPhase, delay);
+    }
+
+    function playPhase() {
+        if (!ctx) return;
+        phase = 'playing';
+        if (!started) {
+            started = true;
+            scheduleAll(ctx.currentTime + 0.05);
+            loopId = setInterval(() => {
+                scheduleAll(ctx.currentTime + 0.05);
+            }, LOOP * 1000);
+        }
+        cycleTimer = setTimeout(silencePhase, PLAY_DURATION);
+    }
+
     function onGesture() {
         init();
         if (ctx && ctx.state === 'suspended') ctx.resume();
-        tryStart();
+        if (phase === 'silent' && !started) playPhase();
     }
 
     document.addEventListener('touchstart', onGesture, { once: true, passive: true });
@@ -340,11 +371,17 @@ const StreetAudio = (() => {
     document.addEventListener('keydown', onGesture, { once: true });
 
     /* ── Julkinen API ────────────────────────────────── */
-    function start() { tryStart(); }
+    function start() {
+        init();
+        if (!ctx || ctx.state === 'suspended') return;
+        playPhase();
+    }
 
     function stop() {
         if (loopId) { clearInterval(loopId); loopId = null; }
+        if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
         started = false;
+        phase = 'silent';
     }
 
     return { init, start, stop };
