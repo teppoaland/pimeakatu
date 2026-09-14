@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.51** | 14.9.2026 | Kaksisuuntainen liikenne + 🚑 ambulanssi: alempi (L→R, y=340) + ylempi (R→L, y=328). Kolmas ajoneuvotyyppi: valkoinen pakettiauto punaisella ristillä ja keltaisella vilkulla, nopeus 1.8–3.0 (hiiren vauhti). Pelaaja-animaatio elävöitetty.
+**v3.56** | 14.9.2026 | Talot: 18 sävyä + 7 lippaa + 7 ovea. Kaikki arvotaan jokaiselle 9 talolle erikseen joka F5:llä. Ovet: 0=kaksipaneeli, 1=yksipaneeli, 2=kaariovi, 3=ikkunaovi, 4=lautaovi, 5=moderni, 6=koristeellinen.
 
 ## 🔒 Lukitut osa-alueet
 

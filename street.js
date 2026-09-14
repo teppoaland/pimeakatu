@@ -42,6 +42,30 @@ const Street = (() => {
         { x: 730, w: 70, h: 195 }
     ];
 
+    // Yölliset harmaansävyt – arvotaan taloille joka latauskerralla
+    const BUILDING_PALETTE = [
+        '#1a1a2e', '#1c1a1e', '#1a1f1c', '#1e1a1a', '#1a1c24',
+        '#1a1e22', '#1c1c1a', '#1a1a24', '#1e1c1a',
+        '#1b1a20', '#1a1d1e', '#1d1a1c', '#1a1b26', '#1c1e1a',
+        '#1e1a1e', '#1a221e', '#1c1a22', '#1a1e1c'
+    ];
+
+    function randomizeBuildingColors() {
+        // Fisher-Yates shuffle kopio paletista
+        const shuffled = BUILDING_PALETTE.slice();
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        for (let i = 0; i < buildings.length; i++) {
+            buildings[i].bodyColor = shuffled[i];
+            buildings[i].corniceType = Math.floor(Math.random() * 7);  // 0–6
+            // Ovityypit ilman lautamallia (4)
+            const doorTypes = [0,1,3,5,6];
+            buildings[i].doorType = doorTypes[Math.floor(Math.random() * doorTypes.length)];
+        }
+    }
+
     /* ── Lamput (talojen väleissä) ──────────────────── */
     const lamps = [
         { x: 85,  bldgIdx: 1, lit: false, label: 'DIG\nGAME',    gameUrl: 'digGame1/game_main.html' },
@@ -176,6 +200,7 @@ const Street = (() => {
     function init(canvasEl) {
         canvas = canvasEl;
         ctx = canvas.getContext('2d');
+        randomizeBuildingColors();  // arvo taloille uudet sävyt joka kerta
         state = GameState.load();
         for (let i = 0; i < lamps.length; i++) {
             lamps[i].lit = state.litLamps[i];
@@ -1283,14 +1308,23 @@ const Street = (() => {
         return litWindows.some(w => w.wx === wx && w.wy === wy && w.bldgIdx === bldgIdx);
     }
 
+    // Apufunktio: vaalentaa hex-väriä lisäämällä offsetin RGB-kanaviin
+    function lightenHex(hex, offset) {
+        const r = Math.min(255, parseInt(hex.slice(1,3), 16) + offset);
+        const g = Math.min(255, parseInt(hex.slice(3,5), 16) + offset);
+        const b = Math.min(255, parseInt(hex.slice(5,7), 16) + offset);
+        return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+    }
+
     // Alusta: 0-5 ikkunaa heti palamaan
     for (let i = 0; i < Math.floor(Math.random() * 6); i++) addRandomLitWindow();
 
     function drawBuildings() {
         for (const b of buildings) {
             const idx = buildings.indexOf(b);
-            // Runko
-            ctx.fillStyle = '#1a1a2e';
+            // Runko – käytä talon omaa yönsävyä, fallback jos puuttuu
+            const bodyC = b.bodyColor || '#1a1a2e';
+            ctx.fillStyle = bodyC;
             ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
             // Ikkunat
             const houseLit = (idx === 0 && firstHouseWindowsLit) || (smallHouseLights[idx] && smallHouseLights[idx].lit);
@@ -1338,9 +1372,70 @@ const Street = (() => {
                     }
                 }
             }
-            // Yläreuna
-            ctx.fillStyle = '#2a2a3e';
-            ctx.fillRect(b.x - 2, GROUND_Y - b.h - 3, b.w + 4, 5);
+            // Yläreuna / lippa – tyyli arvottu per talo
+            drawCornice(b, bodyC);
+        }
+    }
+
+    // Lippatyylit (0–6): erilaisia kattolippoja
+    function drawCornice(b, bodyC) {
+        const topY = GROUND_Y - b.h;
+        const topC = lightenHex(bodyC, 0x0e);
+        const topC2 = lightenHex(bodyC, 0x06);
+        const topCDark = lightenHex(bodyC, 0x04);
+
+        switch (b.corniceType || 0) {
+            case 0: // Tasainen peruslippa (alkuperäinen)
+                ctx.fillStyle = topC;
+                ctx.fillRect(b.x - 2, topY - 3, b.w + 4, 5);
+                break;
+            case 1: // Leveä uloke
+                ctx.fillStyle = topC2;
+                ctx.fillRect(b.x - 2, topY - 2, b.w + 4, 3);
+                ctx.fillStyle = topC;
+                ctx.fillRect(b.x - 6, topY - 6, b.w + 12, 4);
+                break;
+            case 2: // Porrastettu (3 askelmaa)
+                ctx.fillStyle = topC2;
+                ctx.fillRect(b.x - 1, topY - 2, b.w + 2, 3);
+                ctx.fillStyle = topC;
+                ctx.fillRect(b.x - 3, topY - 5, b.w + 6, 3);
+                ctx.fillStyle = topCDark;
+                ctx.fillRect(b.x - 4, topY - 8, b.w + 8, 3);
+                break;
+            case 3: // Kaksoiskaista
+                ctx.fillStyle = topC;
+                ctx.fillRect(b.x - 3, topY - 4, b.w + 6, 3);
+                ctx.fillStyle = topC2;
+                ctx.fillRect(b.x - 3, topY - 8, b.w + 6, 3);
+                ctx.fillStyle = bodyC;
+                ctx.fillRect(b.x - 3, topY - 7, b.w + 6, 1);
+                break;
+            case 4: // Viistetty / trapezoidi (leveämpi alhaalta)
+                ctx.fillStyle = topC;
+                ctx.fillRect(b.x - 5, topY - 3, b.w + 10, 7);
+                ctx.fillStyle = topC2;
+                ctx.fillRect(b.x - 2, topY - 7, b.w + 4, 4);
+                break;
+            case 5: // Hammasrivikoriste (dentil)
+                ctx.fillStyle = topC;
+                ctx.fillRect(b.x - 3, topY - 6, b.w + 6, 5);
+                ctx.fillStyle = topC2;
+                ctx.fillRect(b.x - 3, topY - 9, b.w + 6, 3);
+                // Pienet pystyhampaat
+                ctx.fillStyle = topCDark;
+                const dentW = 5, gap = 6, count = Math.floor(b.w / (dentW + gap));
+                const startX = b.x + (b.w - count * (dentW + gap) + gap) / 2;
+                for (let d = 0; d < count; d++) {
+                    ctx.fillRect(startX + d * (dentW + gap), topY - 6, dentW, 5);
+                }
+                break;
+            case 6: // Ohut moderni
+                ctx.fillStyle = topC;
+                ctx.fillRect(b.x - 1, topY - 3, b.w + 2, 4);
+                ctx.fillStyle = topC2;
+                ctx.fillRect(b.x - 4, topY - 5, b.w + 8, 2);
+                break;
         }
     }
 
@@ -1768,37 +1863,124 @@ const Street = (() => {
         const dc = doorCenter(bldg);
         const dx = dc.x - DOOR_W / 2;
         const dy = GROUND_Y - DOOR_H;
+        const ownerLamp = lamps.find(l => l.bldgIdx === buildings.indexOf(bldg));
+        const isActive = ownerLamp && ownerLamp.lit;
+        const doorType = bldg.doorType || 0;
 
-        // Ovikaari / syvennys
+        // Ovikaari / syvennys (kaikille yhteinen)
         ctx.fillStyle = '#0a0a15';
         ctx.fillRect(dx - 2, dy - 2, DOOR_W + 4, DOOR_H + 2);
 
-        // Ovi
-        // Etsi lamppu joka kuuluu tähän taloon
-        const ownerLamp = lamps.find(l => l.bldgIdx === buildings.indexOf(bldg));
-        const isActive = ownerLamp && ownerLamp.lit;
-        ctx.fillStyle = isActive ? '#5a3a20' : '#1a1010';
-        ctx.fillRect(dx, dy, DOOR_W, DOOR_H);
+        // Oven runkovärit
+        const doorBase = isActive ? '#5a3a20' : '#1a1010';
+        const doorAccent = isActive ? '#7a4a30' : '#2a1a1a';
+        const doorLight = isActive ? '#8a5a40' : '#1e1515';
+        const doorDark = isActive ? '#3a2010' : '#0e0a0a';
 
-        // Ovipaneelit
-        ctx.strokeStyle = isActive ? '#7a4a30' : '#2a1a1a';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(dx + 3, dy + 3, Math.floor(DOOR_W/2) - 6, DOOR_H - 10);
-        ctx.strokeRect(dx + DOOR_W/2 + 2, dy + 3, Math.floor(DOOR_W/2) - 6, DOOR_H - 10);
+        switch (doorType) {
+            case 0: // Klassinen kaksipaneeli (alkuperäinen)
+                ctx.fillStyle = doorBase; ctx.fillRect(dx, dy, DOOR_W, DOOR_H);
+                ctx.strokeStyle = doorAccent; ctx.lineWidth = 1;
+                ctx.strokeRect(dx + 3, dy + 3, Math.floor(DOOR_W/2) - 6, DOOR_H - 10);
+                ctx.strokeRect(dx + DOOR_W/2 + 2, dy + 3, Math.floor(DOOR_W/2) - 6, DOOR_H - 10);
+                drawHandle(dx + DOOR_W - 6, dy + DOOR_H/2, isActive);
+                break;
+            case 1: // Yksipaneeli (keskitetty)
+                ctx.fillStyle = doorBase; ctx.fillRect(dx, dy, DOOR_W, DOOR_H);
+                ctx.strokeStyle = doorAccent; ctx.lineWidth = 1;
+                const pw = DOOR_W - 12, ph = DOOR_H - 16;
+                ctx.strokeRect(dx + 6, dy + 5, pw, ph);
+                ctx.strokeStyle = doorDark; ctx.lineWidth = 0.5;
+                ctx.strokeRect(dx + 8, dy + 7, pw - 4, ph - 4);
+                drawHandle(dx + DOOR_W - 7, dy + DOOR_H/2, isActive);
+                break;
+            case 2: // Kaariovi
+                ctx.fillStyle = doorBase; ctx.fillRect(dx, dy + 8, DOOR_W, DOOR_H - 8);
+                ctx.beginPath(); ctx.arc(dc.x, dy + 8, DOOR_W/2, Math.PI, 0); ctx.fill();
+                ctx.strokeStyle = doorAccent; ctx.lineWidth = 1; ctx.stroke();
+                ctx.strokeStyle = doorAccent; ctx.lineWidth = 0.7;
+                ctx.beginPath(); ctx.arc(dc.x - DOOR_W/4 + 1, dy + 12, DOOR_W/4 - 3, Math.PI*0.9, Math.PI*2.1); ctx.stroke();
+                ctx.beginPath(); ctx.arc(dc.x + DOOR_W/4 - 1, dy + 12, DOOR_W/4 - 3, Math.PI*0.9, Math.PI*2.1, true); ctx.stroke();
+                drawHandle(dx + DOOR_W - 6, dy + DOOR_H/2 + 4, isActive);
+                break;
+            case 3: // Ikkunaovi (lasi yläosassa)
+                ctx.fillStyle = doorBase; ctx.fillRect(dx, dy, DOOR_W, DOOR_H);
+                const wiY = dy + 4, wiH = 14, wiP = 5;
+                ctx.fillStyle = isActive ? '#3a3020' : '#0a0a10';
+                ctx.fillRect(dx + wiP, wiY, DOOR_W - wiP*2, wiH);
+                ctx.fillStyle = isActive ? 'rgba(255,200,100,0.25)' : 'rgba(20,20,30,0.4)';
+                ctx.fillRect(dx + wiP + 1, wiY + 1, DOOR_W - wiP*2 - 2, wiH - 2);
+                ctx.strokeStyle = doorDark; ctx.lineWidth = 0.7;
+                ctx.strokeRect(dx + wiP + 1, wiY + 1, DOOR_W - wiP*2 - 2, wiH - 2);
+                ctx.beginPath(); ctx.moveTo(dc.x, wiY + 1); ctx.lineTo(dc.x, wiY + wiH - 2); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(dx + wiP + 1, wiY + wiH/2); ctx.lineTo(dx + DOOR_W - wiP - 2, wiY + wiH/2); ctx.stroke();
+                ctx.strokeStyle = doorAccent; ctx.lineWidth = 1;
+                ctx.strokeRect(dx + 4, wiY + wiH + 5, DOOR_W - 8, DOOR_H - wiH - 14);
+                drawHandle(dx + DOOR_W - 6, dy + DOOR_H/2, isActive);
+                break;
+            case 4: // Lautaovi (pystylaudoitus)
+                ctx.fillStyle = doorBase; ctx.fillRect(dx, dy, DOOR_W, DOOR_H);
+                const pW = 6, pN = Math.floor(DOOR_W / pW);
+                for (let p = 0; p < pN; p++) {
+                    ctx.fillStyle = p % 2 === 0 ? doorBase : doorDark;
+                    ctx.fillRect(dx + p * pW, dy, pW, DOOR_H);
+                }
+                ctx.fillStyle = doorDark;
+                ctx.fillRect(dx + 1, dy + 6, DOOR_W - 2, 3);
+                ctx.fillRect(dx + 1, dy + DOOR_H - 10, DOOR_W - 2, 3);
+                ctx.fillStyle = doorLight;
+                for (let p = 0; p < pN; p++) {
+                    ctx.fillRect(dx + p * pW + 1, dy + 7, 2, 1);
+                    ctx.fillRect(dx + p * pW + 1, dy + DOOR_H - 9, 2, 1);
+                }
+                drawHandle(dx + DOOR_W - 7, dy + DOOR_H/2, isActive);
+                break;
+            case 5: // Moderni sileä ovi
+                ctx.fillStyle = doorBase;
+                ctx.fillRect(dx + 1, dy + 1, DOOR_W - 2, DOOR_H - 2);
+                ctx.strokeStyle = doorAccent; ctx.lineWidth = 1.5;
+                ctx.strokeRect(dx + 1, dy + 1, DOOR_W - 2, DOOR_H - 2);
+                const barY = dy + DOOR_H/2;
+                ctx.fillStyle = isActive ? '#ccaa66' : '#444';
+                ctx.fillRect(dx + DOOR_W - 10, barY - 1, 8, 3);
+                ctx.fillStyle = isActive ? '#ffd700' : '#555';
+                ctx.fillRect(dx + DOOR_W - 9, barY - 0.5, 6, 2);
+                ctx.fillStyle = isActive ? '#ffd700' : '#333';
+                ctx.beginPath();
+                ctx.arc(dx + DOOR_W - 7, dy + DOOR_H/2 - 6, 1.8, 0, Math.PI*2);
+                ctx.fill();
+                break;
+            case 6: // Koristeellinen (listoitukset + tympanoni)
+                ctx.fillStyle = doorBase; ctx.fillRect(dx, dy, DOOR_W, DOOR_H);
+                ctx.strokeStyle = doorAccent; ctx.lineWidth = 1;
+                ctx.strokeRect(dx + 2, dy + 2, DOOR_W - 4, DOOR_H - 4);
+                ctx.strokeStyle = doorLight; ctx.lineWidth = 0.7;
+                ctx.strokeRect(dx + 4, dy + 4, DOOR_W - 8, DOOR_H - 8);
+                ctx.fillStyle = doorDark;
+                ctx.fillRect(dx + 5, dy + 6, DOOR_W - 10, 10);
+                ctx.strokeStyle = doorLight; ctx.lineWidth = 0.5;
+                ctx.strokeRect(dx + 5, dy + 6, DOOR_W - 10, 10);
+                ctx.strokeStyle = doorAccent; ctx.lineWidth = 0.7;
+                ctx.strokeRect(dx + 7, dy + 20, DOOR_W/2 - 10, DOOR_H - 28);
+                ctx.strokeRect(dx + DOOR_W/2 + 2, dy + 20, DOOR_W/2 - 10, DOOR_H - 28);
+                drawHandle(dx + DOOR_W - 7, dy + DOOR_H/2, isActive);
+                break;
+        }
 
-        // Ovenkahva
-        ctx.fillStyle = (ownerLamp && ownerLamp.lit) ? '#ffd700' : '#333';
-        ctx.beginPath();
-        ctx.arc(dx + DOOR_W - 6, dy + DOOR_H/2, 2.5, 0, Math.PI*2);
-        ctx.fill();
-
-        // Merkkivalo oven yllä
+        // Merkkivalo oven yllä (kaikille yhteinen)
         if (ownerLamp) {
             ctx.fillStyle = ownerLamp.lit ? '#ffd700' : '#222';
             if (ownerLamp.lit) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 6; }
             ctx.fillRect(dx + DOOR_W/2 - 5, dy - 7, 10, 3);
             ctx.shadowBlur = 0;
         }
+    }
+
+    function drawHandle(hx, hy, isActive) {
+        ctx.fillStyle = isActive ? '#ffd700' : '#333';
+        ctx.beginPath();
+        ctx.arc(hx, hy, 2.5, 0, Math.PI*2);
+        ctx.fill();
     }
 /* ── Kolikko ──────────────────────────────────── */
     function drawCoin() {
