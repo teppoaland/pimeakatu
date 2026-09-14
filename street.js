@@ -72,8 +72,15 @@ const Street = (() => {
     const smallHouseLights = {};     // { '2': { lit: false, timer: 0 }, ... }
     let groundAnimal = null;         // { type, x, y, vx, direction, hopY, hopVel, animTimer, pauseTimer }
     let animalSpawnTimer = 900;      // 15s välein
-    let streetVehicle = null;        // TESTI: ajoneuvo kadulla – { x, y, w, h, vx, direction }
-    let vehicleSpawnTimer = 300;     // TESTI: 5s ekaan spawniin
+    // Kaksisuuntainen liikenne: kaksi ajorataa (kaistaa)
+    // 0 = alempi (lahempana kameraa), vasemmalta oikealle
+    // 1 = ylempi (kauempana), oikealta vasemmalle
+    const LANE_DEFS = [
+        { y: 340, direction: 1  },  // alempi (L→R)
+        { y: 328, direction: -1 }   // ylempi (R→L)
+    ];
+    let vehicles = [null, null];      // yksi ajoneuvo per kaista
+    let spawnTimers = [300, 300];     // 5 s ekaan spawniin molemmille
 
     /* ── Kukkaruukun pudotus ──────────────────────── */
     function spawnFlowerPot(bldg) {
@@ -498,49 +505,56 @@ const Street = (() => {
             if ((a.direction>0 && a.x>WORLD_W+a.w+10) || (a.direction<0 && a.x<-a.w-10)) groundAnimal = null;
         }
 
-        // ── Ajoneuvo ────────────────────────────────────
-        if (!streetVehicle) {
-            vehicleSpawnTimer -= dt;
-            if (vehicleSpawnTimer <= 0) {
-                const dir = Math.random() < 0.5 ? 1 : -1;
-                const isCar = Math.random() < 0.5;
-                let w, h, speed;
-                if (isCar) {
-                    w = 80; h = 30; speed = 1.0 + Math.random() * 0.5;  // auto: 4x pelaaja
-                } else {
-                    w = 40; h = 22; speed = 1.5 + Math.random() * 1.0;  // MP: 2x pelaaja
+        // ── Ajoneuvo: kaksi ajorataa ──────────────────────
+        for (let li = 0; li < LANE_DEFS.length; li++) {
+            const lane = LANE_DEFS[li];
+            if (!vehicles[li]) {
+                spawnTimers[li] -= dt;
+                if (spawnTimers[li] <= 0) {
+                    const dir = lane.direction;
+                    const vehRnd = Math.random();
+                    let type, w, h, speed;
+                    if (vehRnd < 0.4) {
+                        type = 'car'; w = 80; h = 30; speed = 1.0 + Math.random() * 0.5;
+                    } else if (vehRnd < 0.8) {
+                        type = 'motorcycle'; w = 40; h = 22; speed = 1.5 + Math.random() * 1.0;
+                    } else {
+                        type = 'ambulance'; w = 80; h = 34; speed = 1.8 + Math.random() * 1.2;
+                    }
+                    vehicles[li] = {
+                        type,
+                        x: dir > 0 ? -w : WORLD_W + w,
+                        y: lane.y,
+                        w, h,
+                        vx: dir * speed,
+                        direction: dir
+                    };
+                    spawnTimers[li] = 1200 + Math.random() * 1200; // 20–40s
                 }
-                streetVehicle = {
-                    type: isCar ? 'car' : 'motorcycle',
-                    x: dir > 0 ? -w : WORLD_W + w,
-                    y: 340,        // yläreuna, alaosa osuu pelaajan jalkoihin
-                    w, h,
-                    vx: dir * speed,
-                    direction: dir
-                };
-                vehicleSpawnTimer = 1200 + Math.random() * 1200; // 20–40s
-            }
-        } else {
-            const v = streetVehicle;
-            v.x += v.vx * dt;
-            if ((v.direction > 0 && v.x > WORLD_W + v.w + 10) || (v.direction < 0 && v.x < -v.w - 10)) {
-                streetVehicle = null;
+            } else {
+                const v = vehicles[li];
+                v.x += v.vx * dt;
+                if ((v.direction > 0 && v.x > WORLD_W + v.w + 10) || (v.direction < 0 && v.x < -v.w - 10)) {
+                    vehicles[li] = null;
+                }
             }
         }
 
-        // ── Ajoneuvon törmäys ─────────────────────────
-        if (streetVehicle && !player.knockedDown) {
-            const v = streetVehicle;
-            // Törmäys vain ajoneuvon alemmalla puoliskolla (3D-illuusio)
-            const vCollisionTop = v.y + v.h * 0.5;  // alin 50% korkeudesta
-            if (v.x < player.x + player.w && v.x + v.w > player.x &&
-                player.y + player.h > vCollisionTop && player.y < v.y + v.h) {
-                // Törmäys!
-                player.knockedDown = true;
-                player.knockdownTimer = 600;
-                player.kicking = false;
-                player.kickFrame = 0;
-                spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ffaa44', 15);
+        // ── Ajoneuvon törmäys (molemmat kaistat) ─────────
+        if (!player.knockedDown) {
+            for (let li = 0; li < LANE_DEFS.length; li++) {
+                const v = vehicles[li];
+                if (!v) continue;
+                const vCollisionTop = v.y + v.h * 0.5;
+                if (v.x < player.x + player.w && v.x + v.w > player.x &&
+                    player.y + player.h > vCollisionTop && player.y < v.y + v.h) {
+                    player.knockedDown = true;
+                    player.knockdownTimer = 600;
+                    player.kicking = false;
+                    player.kickFrame = 0;
+                    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ffaa44', 15);
+                    break;
+                }
             }
         }
 
@@ -1168,8 +1182,9 @@ const Street = (() => {
         // Pelaaja
         drawPlayer();
 
-        // Ajoneuvo
-        if (streetVehicle) drawVehicle();
+        // Ajoneuvot – ylempi kaista (kauempana) ensin, alempi (lähempänä) päälle
+        if (vehicles[1]) drawVehicle(vehicles[1]);
+        if (vehicles[0]) drawVehicle(vehicles[0]);
 
         // Rauta-aita (etualalla, pelaajan takana → piirretään pelaajan päälle)
         if (foreground && foreground.ironFence) { drawIronFence(); }
@@ -1839,8 +1854,8 @@ const Street = (() => {
     }
 
     /* ── Ajoneuvo ──────────────────────────────────── */
-    function drawVehicle() {
-        const v = streetVehicle; if (!v) return;
+    function drawVehicle(v) {
+        if (!v) return;
         const vx = Math.round(v.x), vy = Math.round(v.y), dir = v.direction;
         ctx.save();
         if (dir === -1) { ctx.translate(vx + v.w / 2, 0); ctx.scale(-1, 1); ctx.translate(-(vx + v.w / 2), 0); }
@@ -1863,6 +1878,37 @@ const Street = (() => {
             ctx.beginPath(); ctx.arc(cx + v.w - 14, cy + v.h - 4, wr, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#555'; ctx.beginPath(); ctx.arc(cx + 14, cy + v.h - 4, 2.5, 0, Math.PI * 2); ctx.fill();
             ctx.beginPath(); ctx.arc(cx + v.w - 14, cy + v.h - 4, 2.5, 0, Math.PI * 2); ctx.fill();
+        } else if (v.type === 'ambulance') {
+            const cx = vx, cy = vy;
+            // Varjo
+            ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(cx + 3, cy + v.h - 4, v.w - 6, 6);
+            // Valkoinen kori
+            ctx.fillStyle = '#e8e8e8'; ctx.fillRect(cx + 2, cy + 4, v.w - 4, v.h - 14);
+            // Katto
+            ctx.fillStyle = '#f4f4f4'; ctx.fillRect(cx + 6, cy + 1, v.w - 12, v.h - 15);
+            // Tumma alareuna
+            ctx.fillStyle = '#555'; ctx.fillRect(cx + 4, cy + v.h - 12, v.w - 8, 2);
+            // Punainen risti kyljessä
+            const rcx = cx + v.w / 2, rcy = cy + 14;
+            ctx.fillStyle = '#cc0000';
+            ctx.fillRect(rcx - 12, rcy - 2, 24, 4);
+            ctx.fillRect(rcx - 2, rcy - 12, 4, 24);
+            // Etuikkuna
+            ctx.fillStyle = '#6ab8c8'; ctx.fillRect(cx + v.w - 18, cy + 5, 10, v.h - 21);
+            // Takaikkuna
+            ctx.fillStyle = '#558899'; ctx.fillRect(cx + 4, cy + 5, 6, v.h - 21);
+            // Keltainen vilkkuvalo katolla + hehku
+            ctx.fillStyle = '#ffcc00'; ctx.fillRect(cx + v.w/2 - 4, cy - 3, 8, 4);
+            ctx.fillStyle = 'rgba(255,240,100,0.45)'; ctx.fillRect(cx + v.w/2 - 2, cy - 5, 4, 3);
+            ctx.fillRect(cx + v.w/2 - 6, cy - 2, 12, 2);
+            // Renkaat
+            const wr = 5;
+            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(cx + 14, cy + v.h - 4, wr, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx + v.w - 14, cy + v.h - 4, wr, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#555'; ctx.beginPath(); ctx.arc(cx + 14, cy + v.h - 4, 2.5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx + v.w - 14, cy + v.h - 4, 2.5, 0, Math.PI * 2); ctx.fill();
+            // Takavalo
+            ctx.fillStyle = '#cc3333'; ctx.fillRect(cx - 1, cy + v.h - 16, 4, 3);
         } else {
             const cx = vx, cy = vy;
             ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(cx + 2, cy + v.h - 2, v.w - 4, 4);

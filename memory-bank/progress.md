@@ -17,7 +17,7 @@
 | Ääniefektit | ✅ Valmis | Potku (0.24) + kävely (0.12 lowpass-kahina) |
 | Kukkaruukku-taloista | ✅ Valmis | Talot 0,2,4,6: valo varoituksena, potku → ruukku → tainnutus 10s |
 | Katueläimet | ✅ Valmis | Hiiri/rotta (lineaarinen), jänis (loikkii, pysähtyy), 15s välein |
-| Ajoneuvot kadulla | ✅ v3.46 | 🚗 Auto (80×30) + 🏍️ MP (40×22), Y=340, 20–40s, törmäys alempi 50% → tainnutus |
+| Ajoneuvot kadulla | ✅ v3.51 | Kaksisuuntainen (L→R 340 + R→L 328), 3 tyyppiä: 🚗 auto, 🏍️ MP, 🚑 ambulanssi (valkoinen, punainen risti, keltainen vilkku, 20%) |
 | Valojen elävöitys | ✅ Valmis | RGB-tuikinta ikkunoissa, moskiitot lampuissa |
 | Poutayö-taivas | ✅ v3.40 | Sirppikuu + cirrus/hazy-pilvikaistale, tuuli 1–4 px/s |
 | Etualan maisemointi | ✅ v3.41 | Kiveys, ruohot, viemärikannet + höyry, sanomalehti, kuoriainen |
