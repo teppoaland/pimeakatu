@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.49** | 13.9.2026 | Pelaaja-animaatio elävöitetty: kävelyssä jalat heiluvat, kädet heiluvat, vartalo pomppii. Kaatumisessa pää kiinni kehossa + kädet sivuille. Lipan lippa 7→12px.
+**v3.51** | 14.9.2026 | Kaksisuuntainen liikenne + 🚑 ambulanssi: alempi (L→R, y=340) + ylempi (R→L, y=328). Kolmas ajoneuvotyyppi: valkoinen pakettiauto punaisella ristillä ja keltaisella vilkulla, nopeus 1.8–3.0 (hiiren vauhti). Pelaaja-animaatio elävöitetty.
 
 ## 🔒 Lukitut osa-alueet
 
