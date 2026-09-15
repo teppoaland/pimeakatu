@@ -6,12 +6,13 @@
 
 ## 📍 Nyt
 
-**v3.56** | 14.9.2026 | Talot: 18 sävyä + 7 lippaa + 7 ovea. Kaikki arvotaan jokaiselle 9 talolle erikseen joka F5:llä. Ovet: 0=kaksipaneeli, 1=yksipaneeli, 2=kaariovi, 3=ikkunaovi, 4=lautaovi, 5=moderni, 6=koristeellinen.
+**v3.57** | 15.9.2026 | Talon 8 pokaaliovi: aukeaa kaikilla avaimilla TAI 3 kolikolla. Kolikkolaskuri + 20s respawn (testaus). HUD näyttää avainten ja kolikoiden määrän.
 
 ## 🔒 Lukitut osa-alueet
 
 - **Dialogi-tekstit:** Kaikkien pelien overlay/intro/viestit **LUKITTU**. Ei muutoksia ilman erillistä lupaa.
 - **Pelien välinen logiikka:** Koko polku testattu läpi järjestyksessä (DG1 → DG2 → Blue Mäx). Avaimet, postMessage-kutsut, paluu kadulle — **LUKITTU**. Ei muutoksia ilman erillistä lupaa.
+- **KAIKKI tekstit:** HUD-bar, notifikaatiot, lamppujen labelit, ovet, dialogit, overlay-tekstit — **LUKITTU**. Ei mitään tekstimuutoksia ilman erillistä pyyntöä.
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 

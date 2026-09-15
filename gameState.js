@@ -11,7 +11,8 @@ const GameState = (() => {
     const defaultState = {
         litLamps: [false, false, false, false, false],
         inventory: {
-            coin: false
+            coin: false,
+            coinCount: 0
         },
         // Onko Dig Game -pelin avain kerätty (avaa Boulder Dashin)
         digKeyCollected: false,

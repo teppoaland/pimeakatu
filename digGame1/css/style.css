@@ -65,6 +65,13 @@ body {
     border: 1px solid #0f3460;
 }
 
+#timer-display {
+    font-weight: bold;
+    color: #ffd700;
+    min-width: 60px;
+    text-align: right;
+}
+
 #canvas-wrapper {
     border: 3px solid #0f3460;
     border-radius: 4px;
