@@ -72,7 +72,7 @@ const Street = (() => {
         { x: 255, bldgIdx: 3, lit: false, label: 'BOULDER\nDASH', gameUrl: 'digGame2/game_main.html' },
         { x: 445, bldgIdx: 5, lit: false, label: 'BLUE\nMÄX',     gameUrl: 'bluemax_c64/game_main.html' },
         { x: 625, bldgIdx: 7, lit: false, label: 'COM-\nMANDO',   gameUrl: null },
-        { x: 720, bldgIdx: 8, lit: false, label: '???',           gameUrl: null }
+        { x: 720, bldgIdx: 8, lit: false, label: '🏆\nPOKAALI',   gameUrl: null }
     ];
 
     const LAMP_POST_H = 75;
@@ -88,6 +88,8 @@ const Street = (() => {
     let boulderKeyCollected = false;
     let bmKeyCollected = false;
     let darkRoom = false;
+    let coinCount = 0;
+    let coinRespawnTimer = 0;
     let firstHouseWindowsLit = false;
     let firstHouseKickCount = 0;
     let firstHouseKickTarget = 0;    // random 3-6, arvotaan ekan potkun yhteydessä
@@ -209,6 +211,8 @@ const Street = (() => {
             lamps[i].overheatTimer = lamps[i].overheatTimer || 0;
         }
         coin.collected = state.inventory.coin;
+        coinCount = state.inventory.coinCount || 0;
+        coinRespawnTimer = 0;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
         else { coin.x = randomCoinX(); coin.y = 325; }
         digKeyCollected = state.digKeyCollected || false;
@@ -230,6 +234,7 @@ const Street = (() => {
         lastTime = performance.now();
         loop(lastTime);
         StreetAudio.init();
+        updateHUD();
     }
 
     /* ═══════════════════════════════════════════════════
@@ -434,13 +439,25 @@ const Street = (() => {
             const dy = (player.y + player.h/2) - coin.y;
             if (Math.sqrt(dx*dx + dy*dy) < 30) {
                 const cx = coin.x, cy = coin.y;
-                coin.collected = true;
+                coinCount++;
                 state.inventory.coin = true;
+                state.inventory.coinCount = coinCount;
                 GameState.save(state);
-                coin.x = -100; coin.y = -100;
-                showNotification('💰 Löysit kolikon!');
+                coin.collected = true; coin.x = -100; coin.y = -100;
+                coinRespawnTimer = 7200;  // 120s @ 60fps
+                showNotification('💰 Löysit kolikon! (' + coinCount + ' kpl)');
                 spawnParticles(cx, cy, '#ffd700', 12);
                 updateHUD();
+            }
+        }
+
+        // ── Kolikon respawn (120s välein) ──────
+        if (coin.collected && coinRespawnTimer > 0) {
+            coinRespawnTimer -= dt;
+            if (coinRespawnTimer <= 0) {
+                coin.collected = false;
+                coin.x = randomCoinX(); coin.y = 325;
+                coinRespawnTimer = 0;
             }
         }
 
@@ -674,10 +691,15 @@ const Street = (() => {
                         return;
                     }
                     if (lamp.gameUrl) { enterGame(lamp.gameUrl); }
-                    else {
-                        if (i === 3 && bmKeyCollected) { darkRoom = true; }
-                        else { showNotification('🚧 Ei tänne pääse ilman avainta! Hanki avaimet tai keksi jotain muuta.'); }
-                    }
+                    else if (i === 3) {
+                        // Talo 7: Palkintohuone – vaatii kaikki avaimet tai 3 kolikkoa
+                        const allKeys = digKeyCollected && boulderKeyCollected && bmKeyCollected;
+                        if (allKeys || coinCount >= 3) {
+                            darkRoom = true;
+                        } else {
+                            showNotification('🚧 Ei tänne pääse ilman avainta! Hanki avaimet tai keksi jotain muuta.');
+                        }
+                    } else { showNotification('🚧 Ei tänne pääse ilman avainta! Hanki avaimet tai keksi jotain muuta.'); }
                 } else {
                     showNotification('💡 Ovi on lukossa.\nSytytä lamppu ensin!');
                 }
@@ -849,6 +871,8 @@ const Street = (() => {
             lamps[i].overheatTimer = 0;
         }
         coin.collected = state.inventory.coin;
+        coinCount = state.inventory.coinCount || 0;
+        coinRespawnTimer = 0;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
         else { coin.x = randomCoinX(); coin.y = 325; }
         digKeyCollected = state.digKeyCollected || false;
@@ -901,6 +925,17 @@ const Street = (() => {
     function updateHUD() {
         const coinEl = document.querySelector('#hud-inventory .inv-coin');
         if (coinEl) coinEl.classList.toggle('has', state.inventory.coin);
+        // Inventaario HUD-palkkiin (ei muuta alkuperäistä tekstiä, lisää vain statuksen)
+        const hudBar = document.getElementById('hud-bar');
+        const allKeys = digKeyCollected && boulderKeyCollected && bmKeyCollected;
+        let status = '';
+        if (allKeys) status = ' 🗝️ Kaikki avaimet!';
+        else {
+            const keys = (digKeyCollected?1:0) + (boulderKeyCollected?1:0) + (bmKeyCollected?1:0);
+            status = ' 🔑 Avaimia: ' + keys + '/3';
+        }
+        if (coinCount > 0) status += ' | 💰 Kolikoita: ' + coinCount;
+        if (hudBar) hudBar.innerHTML = 'Liiku kadulla, potki kaikkea, mutta omalla vastuulla. Saattaa asukkaat hermostua!<br><span style="display:block;text-align:center;margin-top:2px">' + status + '</span>';
     }
 
     /* ── Pilvijärjestelmä (cirrus + hazy, kapea kaistale) ── */
@@ -1686,7 +1721,7 @@ const Street = (() => {
         drawGapPost(f.gapEnd);
     }
 
-    /* ── Pimeä huone (COMMANDO + BM-avain) ──────── */
+    /* ── Pimeä huone (Pokaali / COMMANDO) ──────── */
     function drawDarkRoom() {
         // Täysin pimeä tausta
         ctx.fillStyle = '#050508';
@@ -1836,16 +1871,16 @@ const Street = (() => {
             ctx.beginPath();
             ctx.arc(bx, bulbY + 4, 4, 0, Math.PI*2);
             ctx.fill();
-            // Moskiitot lampun valossa
+            // Moskiitot lampun valossa (näkyvyys +40%)
             const t = Date.now() * 0.001;
             for (let m = 0; m < 4; m++) {
                 const mt = t * (1.1 + m * 0.25);
                 const mx = bx + Math.cos(mt + m * 2.3) * (10 + Math.sin(mt * 0.6) * 5);
                 const my = bulbY + 6 + Math.sin(mt * 1.2 + m * 1.7) * (8 + Math.cos(mt * 0.8) * 4);
-                const malpha = 0.09 + Math.sin(mt * 2.5 + m) * 0.045;
+                const malpha = 0.126 + Math.sin(mt * 2.5 + m) * 0.063;
                 ctx.fillStyle = 'rgba(255,220,140,' + malpha + ')';
                 ctx.beginPath();
-                ctx.arc(mx, my, 0.9, 0, Math.PI * 2);
+                ctx.arc(mx, my, 1.3, 0, Math.PI * 2);
                 ctx.fill();
             }
         }

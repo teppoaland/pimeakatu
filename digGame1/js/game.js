@@ -24,6 +24,8 @@ class Game {
         this.lastFrameTime = 0;
         this.lastEnemyMove = 0;
         this.deathEnd = 0;
+        this.timerEnd = 0;
+        this.timeRemaining = 0;
 
         this.overlay = document.getElementById('overlay');
         this.overlayTitle = document.getElementById('overlay-title');
@@ -53,6 +55,7 @@ class Game {
         this.gameOver = false;
         this.worldComplete = false;
         this.deathEnd = 0;
+        this.timerEnd = 0;
         this.paused = !skipIntro;
         this.hideOverlay();
         this.buildWorld();
@@ -236,8 +239,12 @@ class Game {
         if (this.gameOver || this.worldComplete) return;
         this.paused = !this.paused;
         if (this.paused) {
+            this.timeRemaining = this.timerEnd > 0 ? this.timerEnd - performance.now() : 0;
             this.showOverlay('⏸️ Tauko', 'Paina P tai Enter jatkaaksesi', 'Jatka');
         } else {
+            if (this.timerEnd > 0 && this.timeRemaining > 0) {
+                this.timerEnd = performance.now() + this.timeRemaining;
+            }
             this.hideOverlay();
         }
     }
@@ -260,6 +267,7 @@ class Game {
 
     killPlayer() {
         if (this.deathEnd > 0) return; // jo kuolemassa
+        this.timerEnd = 0;
         AudioFX.playExplosion();
         this.renderer.addDeathExplosion(this.player.x, this.player.y);
         this.deathEnd = performance.now() + 3000;
@@ -322,6 +330,13 @@ class Game {
             'Pisteet: ' + this.score;
         document.getElementById('lives-display').textContent =
             '❤️ ' + this.lives;
+        // Ajastin
+        const timerEl = document.getElementById('timer-display');
+        if (timerEl && this.timerEnd > 0 && !this.paused && !this.worldComplete) {
+            const s = Math.max(0, Math.ceil((this.timerEnd - performance.now()) / 1000));
+            timerEl.textContent = '⏱ ' + s;
+            timerEl.style.color = s <= 10 ? '#ff4444' : '#ffd700';
+        }
     }
 
     showOverlay(title, message, buttonText) {
@@ -366,6 +381,16 @@ class Game {
         }
 
         if (!this.paused && !this.worldComplete) {
+            // Aloita ajastin (45s)
+            if (this.timerEnd === 0) {
+                this.timerEnd = performance.now() + 45000;
+            }
+            // Aika loppui → kuolema
+            if (timestamp >= this.timerEnd) {
+                this.timerEnd = 0;
+                this.killPlayer();
+                return;
+            }
             // Painovoima joka kehyksellä
             if (timestamp - this.lastFrameTime >= FRAME_DELAY) {
                 this.lastFrameTime = timestamp;
