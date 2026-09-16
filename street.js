@@ -137,20 +137,30 @@ const Street = (() => {
     let clouds = [];            // Pilvet (cirrus + hazy)
     let lastCloudTime = 0;     // Pilvien dt-laskenta
     let windDir = Math.random() < 0.5 ? 1 : -1;
-    let windSpeed = 1 + Math.random() * 3; // px/s (1–4)
-    let foreground = null;       // Etualan elementit
+    let windSpeed = 2 + Math.random() * 3; // px/s (2–5)
 
     /* ── Potkuääni (Web Audio API) ────────────────── */
     let audioCtx = null;
+    let _audioListenersAdded = false;
     function initAudio() {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
         if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (!_audioListenersAdded) {
+            _audioListenersAdded = true;
+            const resumeAudio = () => {
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            };
+            document.addEventListener('touchstart', resumeAudio, { passive: true });
+            document.addEventListener('mousedown', resumeAudio);
+            document.addEventListener('keydown', resumeAudio);
+        }
     }
     function playKick() {
         try {
             initAudio();
+            if (audioCtx.state !== 'running') return;
             const now = audioCtx.currentTime;
             // Lyhyt napsaus – kohina + terävä alku
             const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.06), audioCtx.sampleRate);
@@ -175,6 +185,7 @@ const Street = (() => {
     function playWalk() {
         try {
             initAudio();
+            if (audioCtx.state !== 'running') return;
             const now = audioCtx.currentTime;
             const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.05), audioCtx.sampleRate);
             const data = buf.getChannelData(0);
@@ -186,6 +197,25 @@ const Street = (() => {
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
             src.connect(filter).connect(gain).connect(audioCtx.destination);
             src.start(now); src.stop(now + 0.05);
+        } catch(e) {}
+    }
+    /* ── Kolikkoääni ──────────────────────────────── */
+    function playCoin() {
+        try {
+            initAudio();
+            if (audioCtx.state !== 'running') return;
+            const now = audioCtx.currentTime;
+            // Vieno pling – kaksi sine-oskillaattoria (1200 + 1800 Hz)
+            [1200, 1800].forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.038, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.connect(gain).connect(audioCtx.destination);
+                osc.start(now); osc.stop(now + 0.08);
+            });
         } catch(e) {}
     }
 
@@ -452,6 +482,7 @@ const Street = (() => {
                 state.inventory.coinCount = coinCount;
                 GameState.save(state);
                 coin.collected = true; coin.x = -100; coin.y = -100;
+                playCoin();
                 coinRespawnTimer = 7200;  // 120s @ 60fps
                 showNotification('💰 Löysit kolikon! (' + coinCount + ' kpl)');
                 spawnParticles(cx, cy, '#ffd700', 12);
@@ -972,7 +1003,7 @@ const Street = (() => {
     function initClouds() {
         clouds = [];
         windDir = Math.random() < 0.5 ? 1 : -1;
-        windSpeed = 1 + Math.random() * 3; // px/s (1–4)
+        windSpeed = 2 + Math.random() * 3; // px/s (2–5)
 
         // Pilvikaistale: y=40..80, noin 40px korkea
         const bandTop = 40, bandH = 40;
