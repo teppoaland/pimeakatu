@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.66** | 16.9.2026 | Ajoneuvojen ajovalot: eteenpäin osoittava valokeila (kolmio, 70px, gradientti) kaikille ajoneuvotyypeille (auto, MP, ambulanssi). Ikkunoiden valot: 60% keltaisia (eri sävyjä), 20% sinertäviä (TV-valo), 20% punertavia (tunnelma). Keltaisissa ikkunoissa 50% ihmisen varjosiluetti (testaus, myöh. 5%).
+**v3.67** | 16.9.2026 | Bugikorjauksia: musiikin soittosykli korjattu (onGesture ei enää katkaise hiljaisuutta, phantom-ajastimet siivottu). Kävely- ja potkuäänet korjattu (AudioContext suspend -bugi, lisätty gesture-kuuntelijat + running-guardit). Kolikolle vieno pling-ääni (sine 1200+1800Hz, gain 0.038). Pilvien miniminopeus nostettu 2 px/s (oli 1).
 
 ## 🔒 Lukitut osa-alueet
 

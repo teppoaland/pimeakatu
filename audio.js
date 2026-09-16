@@ -345,6 +345,7 @@ const StreetAudio = (() => {
 
     function silencePhase() {
         if (!ctx) return;
+        if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
         phase = 'silent';
         if (loopId) { clearInterval(loopId); loopId = null; }
         started = false;
@@ -354,6 +355,7 @@ const StreetAudio = (() => {
 
     function playPhase() {
         if (!ctx) return;
+        if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
         phase = 'playing';
         melodyReverse = Math.random() < 0.5;
         BPM = BPM_MIN + Math.random() * (BPM_MAX - BPM_MIN);
@@ -372,7 +374,8 @@ const StreetAudio = (() => {
     function onGesture() {
         init();
         if (ctx && ctx.state === 'suspended') ctx.resume();
-        if (phase === 'silent' && !started) playPhase();
+        // Käynnistä vain jos mikään sykli ei ole käynnissä (ensimmäinen ele)
+        if (!cycleTimer && phase === 'silent' && !started) playPhase();
     }
 
     document.addEventListener('touchstart', onGesture, { passive: true });
@@ -384,10 +387,10 @@ const StreetAudio = (() => {
         init();
         if (!ctx) return;
         if (ctx.state === 'suspended') {
-            ctx.resume().then(() => playPhase());
-            return;
+            ctx.resume();
         }
-        playPhase();
+        // Käynnistä vain jos mikään sykli ei ole käynnissä
+        if (!cycleTimer && !started) playPhase();
     }
 
     function stop() {
