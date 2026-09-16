@@ -80,7 +80,7 @@ const Street = (() => {
     const DOOR_H = 32;
     const DOOR_RADIUS = 19;
 /* ── Kolikko ─────────────────────────────────────── */
-    const coin = { x: 590, y: 325, collected: false, sparkle: 0 };
+    const coin = { x: 590, y: 325, collected: false, sparkle: 0, despawnTimer: 0, despawnCooldown: 0 };
     function randomCoinX() { return 50 + Math.random() * 680; }  // 50–730
 
     /* ── Avain (Dig Gamesta) ───────────────────────── */
@@ -98,6 +98,7 @@ const Street = (() => {
     const smallHouseLights = {};     // { '2': { lit: false, timer: 0 }, ... }
     let groundAnimal = null;         // { type, x, y, vx, direction, hopY, hopVel, animTimer, pauseTimer }
     let animalSpawnTimer = 900;      // 15s välein
+    let isTouchDevice = false;
     // Kaksisuuntainen liikenne: kaksi ajorataa (kaistaa)
     // 0 = alempi (lahempana kameraa), vasemmalta oikealle
     // 1 = ylempi (kauempana), oikealta vasemmalle
@@ -209,10 +210,16 @@ const Street = (() => {
             lamps[i].kickCount = lamps[i].kickCount || 0;
             lamps[i].overheat = lamps[i].overheat || false;
             lamps[i].overheatTimer = lamps[i].overheatTimer || 0;
+            if (!lamps[i].baseShade) {
+                const g = 35 + Math.random() * 30;  // 35–65 harmaan vaaleus
+                lamps[i].baseShade = 'hsl(0,0%,' + g + '%)';
+                lamps[i].hatShade  = 'hsl(0,0%,' + (g - 8) + '%)';
+            }
         }
         coin.collected = state.inventory.coin;
         coinCount = state.inventory.coinCount || 0;
-        coinRespawnTimer = 0;
+        coinRespawnTimer = coin.collected ? 1 : 0;
+        coin.despawnTimer = coin.collected ? 0 : 600;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
         else { coin.x = randomCoinX(); coin.y = 325; }
         digKeyCollected = state.digKeyCollected || false;
@@ -244,6 +251,7 @@ const Street = (() => {
         // ⚡ Pakota D-pad näkyviin kaikilla kosketuslaitteilla
         //    (varmempi kuin pelkkä CSS @media, toimii myös HTTPS/Pagesissa)
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            isTouchDevice = true;
             const tr = document.getElementById('touch-row');
             if (tr) tr.classList.add('force-show');
         }
@@ -457,7 +465,27 @@ const Street = (() => {
             if (coinRespawnTimer <= 0) {
                 coin.collected = false;
                 coin.x = randomCoinX(); coin.y = 325;
+                coin.despawnTimer = 600;  // 10s katoamisajastin
                 coinRespawnTimer = 0;
+            }
+        }
+
+        // ── Kolikon katoaminen (10s) ──────
+        if (!coin.collected && coin.despawnTimer > 0) {
+            coin.despawnTimer -= dt;
+            if (coin.despawnTimer <= 0) {
+                coin.x = -100; coin.y = -100;        // piilota
+                coin.despawnTimer = 0;
+                coin.despawnCooldown = 1800;          // 30s tauko ennen uutta
+            }
+        }
+
+        // ── Kolikon cooldown katoamisen jälkeen ──────
+        if (!coin.collected && coin.despawnCooldown > 0) {
+            coin.despawnCooldown -= dt;
+            if (coin.despawnCooldown <= 0) {
+                coin.x = randomCoinX(); coin.y = 325;
+                coin.despawnTimer = 600;  // uusi 10s
             }
         }
 
@@ -569,7 +597,8 @@ const Street = (() => {
                         y: lane.y,
                         w, h,
                         vx: dir * speed,
-                        direction: dir
+                        direction: dir,
+                        hasHeadlight: type !== 'motorcycle' || Math.random() < 0.5
                     };
                     spawnTimers[li] = 1200 + Math.random() * 1200; // 20–40s
                 }
@@ -862,7 +891,7 @@ const Street = (() => {
         setTimeout(() => {
             try { canvas.focus(); } catch(e) {}
         }, 50);
-        // StreetAudio.start(); – sykli hoitaa musiikin automaattisesti
+        StreetAudio.start(); // herätä AudioContext jos suspendattu
         state = GameState.load();
         for (let i = 0; i < lamps.length; i++) {
             lamps[i].lit = state.litLamps[i];
@@ -872,7 +901,8 @@ const Street = (() => {
         }
         coin.collected = state.inventory.coin;
         coinCount = state.inventory.coinCount || 0;
-        coinRespawnTimer = 0;
+        coinRespawnTimer = coin.collected ? 1 : 0;
+        coin.despawnTimer = coin.collected ? 0 : 600;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
         else { coin.x = randomCoinX(); coin.y = 325; }
         digKeyCollected = state.digKeyCollected || false;
@@ -934,7 +964,7 @@ const Street = (() => {
             const keys = (digKeyCollected?1:0) + (boulderKeyCollected?1:0) + (bmKeyCollected?1:0);
             status = ' 🔑 Avaimia: ' + keys + '/3';
         }
-        if (coinCount > 0) status += ' | 💰 Kolikoita: ' + coinCount;
+        status += ' | 💰 Kolikoita: ' + coinCount;
         if (hudBar) hudBar.innerHTML = 'Liiku kadulla, potki kaikkea, mutta omalla vastuulla. Saattaa asukkaat hermostua!<br><span style="display:block;text-align:center;margin-top:2px">' + status + '</span>';
     }
 
@@ -1310,6 +1340,22 @@ const Street = (() => {
         });
     }
 
+    // Väriavustajat ikkunoille: keltainen (60%), sinertävä TV (20%), punertava tunnelma (20%)
+    function pickColorType() {
+        const r = Math.random() * 100;
+        if (r < 60) return 'yellow';
+        if (r < 80) return 'blue';
+        return 'red';
+    }
+
+    // Deterministinen väri ikkunan sijainnin perusteella (houseLit-taloille)
+    function getWindowColorType(wx, wy, bldgIdx) {
+        const hash = (wx * 31 + wy * 17 + bldgIdx * 7) % 100;
+        if (hash < 60) return 'yellow';
+        if (hash < 80) return 'blue';
+        return 'red';
+    }
+
     function addRandomLitWindow() {
         const avail = getAvailableWindows().filter(w => 
             !litWindows.some(l => l.wx === w.wx && l.wy === w.wy && l.bldgIdx === w.bldgIdx)
@@ -1318,7 +1364,7 @@ const Street = (() => {
         const w = avail[Math.floor(Math.random() * avail.length)];
         // 10-30 s (debug)
         const duration = 10000 + Math.random() * 20000;
-        litWindows.push({ wx: w.wx, wy: w.wy, bldgIdx: w.bldgIdx, offTime: Date.now() + duration });
+        litWindows.push({ wx: w.wx, wy: w.wy, bldgIdx: w.bldgIdx, offTime: Date.now() + duration, colorType: pickColorType() });
     }
 
     function updateLitWindows() {
@@ -1351,8 +1397,71 @@ const Street = (() => {
         return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
     }
 
+    // Siluetin todennäköisyys keltaisessa ikkunassa (0.50 = testaus, myöhemmin 0.05)
+    const SILHOUETTE_CHANCE = 0.50;
+
+    function shouldShowSilhouette(wx, wy, bldgIdx, colorType) {
+        if (colorType !== 'yellow') return false;
+        const hash = (wx * 13 + wy * 29 + bldgIdx * 41) % 1000;
+        return hash < SILHOUETTE_CHANCE * 1000;
+    }
+
+    function drawSilhouette(wx, wy) {
+        // Pieni tumma figuuri 10×14 ikkunassa (seisoo alalaidalla)
+        const cx = wx + 5, cy = wy;
+        // Pää – tummempi
+        ctx.fillStyle = 'rgba(6,3,1,0.72)';
+        ctx.beginPath();
+        ctx.arc(cx, cy + 5.8, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        // Hartiat – selkeästi leveät, tunnistettava siluetti
+        ctx.fillStyle = 'rgba(8,4,1,0.62)';
+        ctx.fillRect(cx - 2.0, cy + 8, 4.0, 1.1);
+        // Vartalo – selvästi kapeampi, kapenee jalkoihin
+        ctx.beginPath();
+        ctx.moveTo(cx - 1.0, cy + 9.1);
+        ctx.lineTo(cx + 1.0, cy + 9.1);
+        ctx.lineTo(cx + 0.6, cy + 13);
+        ctx.lineTo(cx - 0.6, cy + 13);
+        ctx.closePath();
+        ctx.fill();
+    }
+
     // Alusta: 0-5 ikkunaa heti palamaan
     for (let i = 0; i < Math.floor(Math.random() * 6); i++) addRandomLitWindow();
+
+    // Palauttaa ikkunan värit tyypin perusteella: keltainen, sinertävä (TV), punertava (tunnelma)
+    function getWindowColors(colorType, wx, wy) {
+        const dt = Date.now() * 0.001;
+        const f1 = 0.92 + Math.sin(dt*2.3 + wx*0.07 + wy*0.13)*0.08;
+        let r, g, b, glowR, glowG, glowB;
+        if (colorType === 'blue') {
+            // Sinertävä TV-valo: kylmä sinivalkoinen
+            r = Math.floor(60 + Math.sin(dt*1.9+wy*0.1)*15);
+            g = Math.floor(150 + Math.sin(dt*2.1+wx*0.08)*20);
+            b = Math.floor(220 + Math.sin(dt*1.5+wy*0.06)*10);
+            glowR = 80; glowG = 180; glowB = 255;
+        } else if (colorType === 'red') {
+            // Punertava tunnelmavalo: lämmin oranssi/punainen
+            r = Math.floor(230 + Math.sin(dt*1.9+wy*0.1)*10);
+            g = Math.floor(55 + Math.sin(dt*2.1+wx*0.08)*15);
+            b = Math.floor(25 + Math.sin(dt*1.5+wy*0.06)*15);
+            glowR = 255; glowG = 80; glowB = 60;
+        } else {
+            // Keltainen (oletus): eri keltaisen sävyjä
+            r = Math.floor(240 + Math.sin(dt*1.9+wy*0.1)*10);
+            g = Math.floor(195 + Math.sin(dt*2.1+wx*0.08)*15);
+            b = Math.floor(75 + Math.sin(dt*1.5+wy*0.06)*20);
+            glowR = 255; glowG = 200; glowB = 80;
+        }
+        const fillAlpha = (0.72 * f1).toFixed(3);
+        return {
+            fill: `rgba(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)},${fillAlpha})`,
+            stroke: `rgba(${Math.floor(r*1.08)},${Math.floor(g*0.95)},${Math.floor(b*1.3)},0.55)`,
+            glow0: `rgba(${glowR},${glowG},${glowB},0.22)`,
+            glow1: `rgba(${glowR},${glowG},${glowB},0)`
+        };
+    }
 
     function drawBuildings() {
         for (const b of buildings) {
@@ -1367,35 +1476,31 @@ const Street = (() => {
                 for (let wx = b.x + 10; wx < b.x + b.w - 15; wx += 24) {
                     if (wx + 10 > b.x + b.w - 6) continue;
                     if (houseLit) {
-                        const dt = Date.now() * 0.001;
-                        const f1 = 0.92 + Math.sin(dt*2.3 + wx*0.07 + wy*0.13)*0.08;
-                        const r = Math.floor(240 + Math.sin(dt*1.9+wy*0.1)*10);
-                        const g = Math.floor(210 + Math.sin(dt*2.1+wx*0.08)*10);
-                        const b = Math.floor(100 + Math.sin(dt*1.5+wy*0.06)*15);
-                        ctx.fillStyle = 'rgba('+r+','+g+','+b+','+(0.72*f1)+')';
+                        const ct = getWindowColorType(wx, wy, idx);
+                        const wc = getWindowColors(ct, wx, wy);
+                        ctx.fillStyle = wc.fill;
                         ctx.fillRect(wx, wy, 10, 14);
-                        ctx.strokeStyle = 'rgba(255,200,100,0.55)'; ctx.lineWidth = 1;
+                        if (shouldShowSilhouette(wx, wy, idx, ct)) drawSilhouette(wx, wy);
+                        ctx.strokeStyle = wc.stroke; ctx.lineWidth = 1;
                         ctx.strokeRect(wx, wy, 10, 14);
                         const glow = ctx.createRadialGradient(wx+5, wy+7, 1, wx+5, wy+7, 12);
-                        glow.addColorStop(0, 'rgba(255,200,80,0.22)');
-                        glow.addColorStop(1, 'rgba(255,200,80,0)');
+                        glow.addColorStop(0, wc.glow0);
+                        glow.addColorStop(1, wc.glow1);
                         ctx.fillStyle = glow;
                         ctx.fillRect(wx-6, wy-5, 22, 24);
                     } else {
-                        const lit = isWindowLit(wx, wy, idx);
-                        if (lit) {
-                            const dt = Date.now() * 0.001;
-                            const f1 = 0.92 + Math.sin(dt*2.3 + wx*0.07 + wy*0.13)*0.08;
-                            const r = Math.floor(240 + Math.sin(dt*1.9+wy*0.1)*10);
-                            const g = Math.floor(210 + Math.sin(dt*2.1+wx*0.08)*10);
-                            const b = Math.floor(100 + Math.sin(dt*1.5+wy*0.06)*15);
-                            ctx.fillStyle = 'rgba('+r+','+g+','+b+','+(0.72*f1)+')';
+                        const litWin = litWindows.find(w => w.wx === wx && w.wy === wy && w.bldgIdx === idx);
+                        if (litWin) {
+                            const ct = litWin.colorType || 'yellow';
+                            const wc = getWindowColors(ct, wx, wy);
+                            ctx.fillStyle = wc.fill;
                             ctx.fillRect(wx, wy, 10, 14);
-                            ctx.strokeStyle = 'rgba(255,200,100,0.55)'; ctx.lineWidth = 1;
+                            if (shouldShowSilhouette(wx, wy, idx, ct)) drawSilhouette(wx, wy);
+                            ctx.strokeStyle = wc.stroke; ctx.lineWidth = 1;
                             ctx.strokeRect(wx, wy, 10, 14);
                             const glow = ctx.createRadialGradient(wx+5, wy+7, 1, wx+5, wy+7, 12);
-                            glow.addColorStop(0, 'rgba(255,200,80,0.22)');
-                            glow.addColorStop(1, 'rgba(255,200,80,0)');
+                            glow.addColorStop(0, wc.glow0);
+                            glow.addColorStop(1, wc.glow1);
                             ctx.fillStyle = glow;
                             ctx.fillRect(wx-6, wy-5, 22, 24);
                         } else {
@@ -1841,8 +1946,8 @@ const Street = (() => {
         ctx.fillStyle = '#4a3820';
         ctx.fillRect(bx - 3, poleTop, 6, by - poleTop);
 
-        // Tolpan jalusta
-        ctx.fillStyle = '#555';
+        // Tolpan jalusta (satunnainen harmaan patina)
+        ctx.fillStyle = lamp.baseShade || '#555';
         ctx.fillRect(bx - 7, by - 6, 14, 6);
 
         // Poikkipalkki lampun alla
@@ -1861,8 +1966,8 @@ const Street = (() => {
         ctx.arc(bx, bulbY + 6, 9, Math.PI, 0);
         ctx.stroke();
 
-        // Kuvun "hattu"
-        ctx.fillStyle = lamp.overheat ? '#662200' : '#555';
+        // Kuvun "hattu" (patinoitu harmaa)
+        ctx.fillStyle = lamp.overheat ? '#662200' : (lamp.hatShade || '#555');
         ctx.fillRect(bx - 9, bulbY - 3, 18, 4);
 
         // Pieni valopilkku kuvun sisällä
@@ -1871,16 +1976,29 @@ const Street = (() => {
             ctx.beginPath();
             ctx.arc(bx, bulbY + 4, 4, 0, Math.PI*2);
             ctx.fill();
-            // Moskiitot lampun valossa (näkyvyys +40%)
+            // Moskiitot lampun valossa
             const t = Date.now() * 0.001;
+            const mAlphaMin = isTouchDevice ? 0.25 : 0.126;
+            const mAlphaRange = isTouchDevice ? 0.2 : 0.063;
+            const mRadius = isTouchDevice ? 2.0 : 1.3;
+            const mGlow = isTouchDevice;
             for (let m = 0; m < 4; m++) {
                 const mt = t * (1.1 + m * 0.25);
                 const mx = bx + Math.cos(mt + m * 2.3) * (10 + Math.sin(mt * 0.6) * 5);
                 const my = bulbY + 6 + Math.sin(mt * 1.2 + m * 1.7) * (8 + Math.cos(mt * 0.8) * 4);
-                const malpha = 0.126 + Math.sin(mt * 2.5 + m) * 0.063;
-                ctx.fillStyle = 'rgba(255,220,140,' + malpha + ')';
+                const malpha = mAlphaMin + Math.sin(mt * 2.5 + m) * mAlphaRange;
+                if (mGlow) {
+                    const glow = ctx.createRadialGradient(mx, my, 0, mx, my, mRadius * 2);
+                    glow.addColorStop(0, 'rgba(255,220,140,' + malpha + ')');
+                    glow.addColorStop(1, 'rgba(255,220,140,0)');
+                    ctx.fillStyle = glow;
+                    ctx.beginPath();
+                    ctx.arc(mx, my, mRadius * 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.fillStyle = 'rgba(255,240,170,' + Math.min(1, malpha + (mGlow ? 0.15 : 0)) + ')';
                 ctx.beginPath();
-                ctx.arc(mx, my, 1.3, 0, Math.PI * 2);
+                ctx.arc(mx, my, mRadius, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -2020,18 +2138,22 @@ const Street = (() => {
 /* ── Kolikko ──────────────────────────────────── */
     function drawCoin() {
         const cx = coin.x, cy = coin.y;
-        const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, 18);
+        // Hehku
+        const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, 4.5);
         g.addColorStop(0, 'rgba(255,215,0,0.5)');
         g.addColorStop(1, 'rgba(255,215,0,0)');
         ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(cx, cy, 4.5, 2, 0, 0, Math.PI*2); ctx.fill();
+        // Kolikon pinta (litistetty perspektiivi)
         ctx.fillStyle = '#ffd700';
-        ctx.beginPath(); ctx.arc(cx, cy, 7+Math.sin(coin.sparkle), 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = '#cc9900'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(cx, cy, 4 + Math.sin(coin.sparkle) * 0.3, 1.5, 0, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#cc9900'; ctx.lineWidth = 0.5;
+        ctx.stroke();
+        // $ -merkki
         ctx.fillStyle = '#aa7700';
-        ctx.font = 'bold 10px monospace';
+        ctx.font = 'bold 3px monospace';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('$', cx, cy+1);
+        ctx.fillText('$', cx, cy + 1);
         ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
     }
 
@@ -2170,6 +2292,28 @@ const Street = (() => {
             ctx.fillStyle = 'rgba(255,240,150,0.4)'; ctx.fillRect(cx + v.w + 2, cy + 5, 2, 5);
             ctx.fillStyle = '#cc3333'; ctx.fillRect(cx - 2, cy + 6, 3, 2);
         }
+
+        // ── Ajovalot eteenpäin (kaikille ajoneuvotyypeille) ──
+        if (v.hasHeadlight !== false) {
+        {
+            const beamY = v.type === 'motorcycle' ? vy + v.h * 0.3 : vy + v.h - 12;
+            const beamLen = v.type === 'ambulance' ? 140 : v.type === 'car' ? 105 : 70;
+            const beamSpread = 10;
+            const beamGrad = ctx.createLinearGradient(vx + v.w, beamY, vx + v.w + beamLen, beamY);
+            beamGrad.addColorStop(0, 'rgba(255,250,220,0.32)');
+            beamGrad.addColorStop(0.4, 'rgba(255,250,220,0.12)');
+            beamGrad.addColorStop(1, 'rgba(255,250,220,0)');
+            ctx.fillStyle = beamGrad;
+            ctx.beginPath();
+            ctx.moveTo(vx + v.w, beamY - 3);
+            ctx.lineTo(vx + v.w + beamLen, beamY - beamSpread);
+            ctx.lineTo(vx + v.w + beamLen, beamY + beamSpread);
+            ctx.lineTo(vx + v.w, beamY + 3);
+            ctx.closePath();
+            ctx.fill();
+        }
+        }
+
         ctx.restore();
     }
 
