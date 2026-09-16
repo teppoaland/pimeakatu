@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.57** | 15.9.2026 | Talon 8 pokaaliovi: aukeaa kaikilla avaimilla TAI 3 kolikolla. Kolikkolaskuri + 20s respawn (testaus). HUD näyttää avainten ja kolikoiden määrän.
+**v3.66** | 16.9.2026 | Ajoneuvojen ajovalot: eteenpäin osoittava valokeila (kolmio, 70px, gradientti) kaikille ajoneuvotyypeille (auto, MP, ambulanssi). Ikkunoiden valot: 60% keltaisia (eri sävyjä), 20% sinertäviä (TV-valo), 20% punertavia (tunnelma). Keltaisissa ikkunoissa 50% ihmisen varjosiluetti (testaus, myöh. 5%).
 
 ## 🔒 Lukitut osa-alueet
 

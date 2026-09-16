@@ -13,12 +13,15 @@ const StreetAudio = (() => {
     let leadGain = null;
     let loopId = null;
     let started = false;
+    let melodyReverse = false;
 
-    const BPM = 138;
-    const BEAT = 60 / BPM;        // ~0.435 s per isku
-    const S16 = BEAT / 4;         // ~0.109 s – 16-osa
-    const S8 = BEAT / 2;          // ~0.217 s – 8-osa
-    const BAR = BEAT * 4;         // ~1.739 s per tahti
+    const BPM_MIN = 110;
+    const BPM_MAX = 150;
+    let BPM = 138;
+    let BEAT = 60 / BPM;
+    let S16 = BEAT / 4;
+    let S8 = BEAT / 2;
+    let BAR = BEAT * 4;
 
     // 6 tahdin kiertävä sointukulku: E - E - G - A - B - A (→G lopussa)
     const CHORD_ROOTS = [
@@ -30,7 +33,7 @@ const StreetAudio = (() => {
         { freq: 110.00, name: 'A2' },
     ];
     const LOOP_BARS = CHORD_ROOTS.length;
-    const LOOP = BAR * LOOP_BARS;
+    let LOOP = BAR * LOOP_BARS;
 
     // "Running Free" -laulumelodia (E-molli, E3–B4)
     // Tahdit 1-2, 3, 4, 5, 6 – jokaisessa 8 nuottia
@@ -292,15 +295,17 @@ const StreetAudio = (() => {
         o3.start(time); o3.stop(time + dur + 0.02);
     }
 
-    function scheduleMelody(startTime, nBars) {
+    function scheduleMelody(startTime, nBars, reverse) {
         if (!ok()) return;
         const perBar = Math.floor(MELODY_NOTES.length / nBars);
         for (let bar = 0; bar < nBars; bar++) {
             const bs = startTime + bar * BAR;
             for (let i = 0; i < perBar; i++) {
-                const idx = bar * perBar + i;
+                const revI = reverse ? (perBar - 1 - i) : i;
+                const idx = bar * perBar + revI;
                 if (idx >= MELODY_NOTES.length) continue;
-                const t = bs + (MEL_OFF[idx] || i * 2) * S16;
+                const offIdx = bar * perBar + i;
+                const t = bs + (MEL_OFF[offIdx] || i * 2) * S16;
                 leadNote(MELODY_NOTES[idx], t, S16 * 1.7);
             }
         }
@@ -315,7 +320,7 @@ const StreetAudio = (() => {
         scheduleDrums(startTime, LOOP_BARS);
         scheduleBass(startTime, LOOP_BARS);
         scheduleGuitar(startTime, LOOP_BARS);
-        scheduleMelody(startTime, LOOP_BARS);
+        scheduleMelody(startTime, LOOP_BARS, melodyReverse);
     }
 
     function tryStart() {
@@ -350,6 +355,10 @@ const StreetAudio = (() => {
     function playPhase() {
         if (!ctx) return;
         phase = 'playing';
+        melodyReverse = Math.random() < 0.5;
+        BPM = BPM_MIN + Math.random() * (BPM_MAX - BPM_MIN);
+        BEAT = 60 / BPM; S16 = BEAT / 4; S8 = BEAT / 2; BAR = BEAT * 4;
+        LOOP = BAR * LOOP_BARS;
         if (!started) {
             started = true;
             scheduleAll(ctx.currentTime + 0.05);
@@ -366,14 +375,18 @@ const StreetAudio = (() => {
         if (phase === 'silent' && !started) playPhase();
     }
 
-    document.addEventListener('touchstart', onGesture, { once: true, passive: true });
-    document.addEventListener('mousedown', onGesture, { once: true });
-    document.addEventListener('keydown', onGesture, { once: true });
+    document.addEventListener('touchstart', onGesture, { passive: true });
+    document.addEventListener('mousedown', onGesture);
+    document.addEventListener('keydown', onGesture);
 
     /* ── Julkinen API ────────────────────────────────── */
     function start() {
         init();
-        if (!ctx || ctx.state === 'suspended') return;
+        if (!ctx) return;
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(() => playPhase());
+            return;
+        }
         playPhase();
     }
 
