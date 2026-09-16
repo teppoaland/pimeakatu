@@ -16,7 +16,7 @@ const StreetAudio = (() => {
     let melodyReverse = false;
 
     const BPM_MIN = 110;
-    const BPM_MAX = 150;
+    const BPM_MAX = 142;
     let BPM = 138;
     let BEAT = 60 / BPM;
     let S16 = BEAT / 4;
@@ -59,23 +59,23 @@ const StreetAudio = (() => {
         try {
             ctx = new (window.AudioContext || window.webkitAudioContext)();
             masterGain = ctx.createGain();
-            masterGain.gain.value = 0.003;
+            masterGain.gain.value = 0.0039;
             masterGain.connect(ctx.destination);
 
             drumGain = ctx.createGain();
-            drumGain.gain.value = 0.55;
+            drumGain.gain.value = 0.715;
             drumGain.connect(masterGain);
 
             bassGain = ctx.createGain();
-            bassGain.gain.value = 0.50;
+            bassGain.gain.value = 0.65;
             bassGain.connect(masterGain);
 
             guitarGain = ctx.createGain();
-            guitarGain.gain.value = 0.38;
+            guitarGain.gain.value = 0.494;
             guitarGain.connect(masterGain);
 
             leadGain = ctx.createGain();
-            leadGain.gain.value = 0.33;
+            leadGain.gain.value = 0.429;
             leadGain.connect(masterGain);
         } catch (e) {}
     }
