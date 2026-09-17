@@ -12,7 +12,8 @@ const GameState = (() => {
         litLamps: [false, false, false, false, false],
         inventory: {
             coin: false,
-            coinCount: 0
+            coinCount: 0,
+            hamburgerCount: 5
         },
         // Onko Dig Game -pelin avain kerätty (avaa Boulder Dashin)
         digKeyCollected: false,

@@ -290,6 +290,16 @@ body::after {
     to { opacity: 0; }
 }
 
+/* Hampurilaisen varoitusvilkkuminen */
+@keyframes burgerBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.15; }
+}
+.burger-warning {
+    animation: burgerBlink 0.8s ease-in-out infinite;
+    color: #ff4444;
+}
+
 /* ── Responsiivisuus ─────────────────────────────────── */
 /* Mobiili (pysty + vaaka): ohjaimet overlayna canvaksen päällä */
 @media (max-width: 768px), (max-height: 768px) {

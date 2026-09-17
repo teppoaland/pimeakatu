@@ -72,7 +72,7 @@ const Street = (() => {
         { x: 255, bldgIdx: 3, lit: false, label: 'BOULDER\nDASH', gameUrl: 'digGame2/game_main.html' },
         { x: 445, bldgIdx: 5, lit: false, label: 'BLUE\nMÄX',     gameUrl: 'bluemax_c64/game_main.html' },
         { x: 625, bldgIdx: 7, lit: false, label: 'COM-\nMANDO',   gameUrl: null },
-        { x: 720, bldgIdx: 8, lit: false, label: '🏆\nPOKAALI',   gameUrl: null }
+        { x: 720, bldgIdx: 8, lit: false, label: 'BAR',   gameUrl: null }
     ];
 
     const LAMP_POST_H = 75;
@@ -88,8 +88,11 @@ const Street = (() => {
     let boulderKeyCollected = false;
     let bmKeyCollected = false;
     let darkRoom = false;
+    let barRoom = false;
     let coinCount = 0;
     let coinRespawnTimer = 0;
+    let hamburgerCount = 5;
+    let hamburgerTimer = 2400;  // 40s @ ~60fps
     let firstHouseWindowsLit = false;
     let firstHouseKickCount = 0;
     let firstHouseKickTarget = 0;    // random 3-6, arvotaan ekan potkun yhteydessä
@@ -250,6 +253,8 @@ const Street = (() => {
         coinCount = state.inventory.coinCount || 0;
         coinRespawnTimer = coin.collected ? 1 : 0;
         coin.despawnTimer = coin.collected ? 0 : 600;
+        hamburgerCount = state.inventory.hamburgerCount || 5;
+        hamburgerTimer = 2400;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
         else { coin.x = randomCoinX(); coin.y = 325; }
         digKeyCollected = state.digKeyCollected || false;
@@ -385,6 +390,22 @@ const Street = (() => {
             return;
         }
 
+        // BAR room
+        if (barRoom) {
+            if (actionJustPressed && hamburgerCount < 10 && coinCount > 0) {
+                const canBuy = Math.min(coinCount, 10 - hamburgerCount);
+                hamburgerCount += canBuy;
+                coinCount -= canBuy;
+                state.inventory.hamburgerCount = hamburgerCount;
+                state.inventory.coinCount = coinCount;
+                GameState.save(state);
+                updateHUD();
+            }
+            if (actionJustPressed) { barRoom = false; }
+            actionJustPressed = false;
+            return;
+        }
+
         updateClouds(dt);
         updateForeground(dt);
 
@@ -517,6 +538,23 @@ const Street = (() => {
             if (coin.despawnCooldown <= 0) {
                 coin.x = randomCoinX(); coin.y = 325;
                 coin.despawnTimer = 600;  // uusi 10s
+            }
+        }
+
+        // ── Hampurilaisajastin (1/60s) ──────────
+        if (hamburgerCount > 0) {
+            hamburgerTimer -= dt;
+            if (hamburgerTimer <= 0) {
+                hamburgerCount--;
+                state.inventory.hamburgerCount = hamburgerCount;
+                GameState.save(state);
+                updateHUD();
+                if (hamburgerCount <= 0) {
+                    GameState.reset();
+                    location.reload();
+                    return;
+                }
+                hamburgerTimer = 2400;
             }
         }
 
@@ -739,6 +777,11 @@ const Street = (() => {
             const dc = doorCenter(buildings[lamp.bldgIdx]);
             const dx = px - dc.x, dy = py - dc.y;
             if (Math.sqrt(dx*dx + dy*dy) < DOOR_RADIUS) {
+                // BAR – aina auki (talo 8, lamp[4])
+                if (i === 4) {
+                    barRoom = true;
+                    return;
+                }
                 if (lamp.lit) {
                     // Boulder Dash vaatii Dig Gamesta kerätyn avaimen
                     if (lamp.gameUrl && lamp.gameUrl.includes('digGame2') && !digKeyCollected) {
@@ -934,11 +977,15 @@ const Street = (() => {
         coinCount = state.inventory.coinCount || 0;
         coinRespawnTimer = coin.collected ? 1 : 0;
         coin.despawnTimer = coin.collected ? 0 : 600;
+        hamburgerCount = state.inventory.hamburgerCount || 5;
+        hamburgerTimer = 2400;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
         else { coin.x = randomCoinX(); coin.y = 325; }
         digKeyCollected = state.digKeyCollected || false;
         boulderKeyCollected = state.boulderKeyCollected || false;
         bmKeyCollected = state.bmKeyCollected || false;
+        darkRoom = false;
+        barRoom = false;
         player.x = savedPlayerX; player.y = savedPlayerY;
         player.vx = 0; player.vy = 0;
         updateHUD();
@@ -996,6 +1043,14 @@ const Street = (() => {
             status = ' 🔑 Avaimia: ' + keys + '/3';
         }
         status += ' | 💰 Kolikoita: ' + coinCount;
+        // Hampurilaiset (lives)
+        var burgerStr = '';
+        if (hamburgerCount === 1) {
+            burgerStr = '<span class="burger-warning">🍔</span>';
+        } else {
+            for (var bi = 0; bi < hamburgerCount; bi++) burgerStr += '🍔';
+        }
+        status += ' | ' + burgerStr;
         if (hudBar) hudBar.innerHTML = 'Liiku kadulla, potki kaikkea, mutta omalla vastuulla. Saattaa asukkaat hermostua!<br><span style="display:block;text-align:center;margin-top:2px">' + status + '</span>';
     }
 
@@ -1237,6 +1292,8 @@ const Street = (() => {
         ctx.clearRect(0, 0, WORLD_W, WORLD_H);
 
         if (darkRoom) { drawDarkRoom(); return; }
+
+        if (barRoom) { drawBarRoom(); return; }
 
         // Taivas
         const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
@@ -1937,6 +1994,145 @@ const Street = (() => {
         ctx.textAlign = 'start';
     }
 
+    /* ── BAR-huone (talo 8) ────────────────────── */
+    function drawBarRoom() {
+        // Täysin pimeä tausta
+        ctx.fillStyle = '#100808';
+        ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+        // Seinä – lämmin sävy
+        const ga = ctx.createLinearGradient(0, 0, 0, WORLD_H);
+        ga.addColorStop(0, '#1a1210');
+        ga.addColorStop(1, '#252015');
+        ctx.fillStyle = ga;
+        ctx.fillRect(60, 60, WORLD_W - 120, WORLD_H - 120);
+
+        // Pöytä
+        const tw = 200, th = 14;
+        const tx = (WORLD_W - tw) / 2, ty = GROUND_Y - 50;
+        ctx.fillStyle = '#4a3520';
+        ctx.fillRect(tx, ty, tw, th);
+        ctx.fillStyle = '#5a4530';
+        ctx.fillRect(tx + 4, ty - 2, tw - 8, 4);
+        ctx.fillStyle = '#3a2510';
+        ctx.fillRect(tx + 10, ty + th, 10, 50);
+        ctx.fillRect(tx + tw - 20, ty + th, 10, 50);
+
+        // Iso hampurilainen
+        const bx = tx + tw / 2, by = ty - 8;
+
+        // Alapulla
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.ellipse(bx, by + 28, 40, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#A0522D';
+        ctx.beginPath();
+        ctx.ellipse(bx, by + 25, 38, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pihvi
+        ctx.fillStyle = '#4a2010';
+        ctx.fillRect(bx - 36, by + 13, 72, 18);
+        ctx.fillStyle = '#3a1810';
+        ctx.fillRect(bx - 33, by + 16, 66, 12);
+        ctx.fillStyle = '#5a3020';
+        ctx.beginPath();
+        ctx.ellipse(bx, by + 13, 37, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Juusto
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.moveTo(bx - 34, by + 8);
+        ctx.lineTo(bx - 10, by - 2);
+        ctx.lineTo(bx + 10, by + 8);
+        ctx.lineTo(bx + 34, by + 8);
+        ctx.lineTo(bx + 20, by + 13);
+        ctx.lineTo(bx - 20, by + 13);
+        ctx.closePath();
+        ctx.fill();
+
+        // Salaatti
+        ctx.fillStyle = '#4CAF50';
+        ctx.beginPath();
+        ctx.moveTo(bx - 34, by);
+        for (let i = 0; i < 12; i++) {
+            const sx = bx - 34 + i * 5.8;
+            const sy = by + Math.sin(i * 0.8) * 3;
+            ctx.lineTo(sx, sy);
+        }
+        ctx.lineTo(bx + 34, by + 5);
+        ctx.lineTo(bx - 34, by + 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#388E3C';
+        ctx.beginPath();
+        ctx.moveTo(bx - 34, by);
+        for (let i = 0; i < 12; i++) {
+            const sx = bx - 34 + i * 5.8;
+            const sy = by + Math.sin(i * 0.8) * 3;
+            ctx.lineTo(sx, sy + 1);
+        }
+        ctx.lineTo(bx + 34, by + 6);
+        ctx.lineTo(bx - 34, by + 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Ylapulla
+        ctx.fillStyle = '#A0522D';
+        ctx.beginPath();
+        ctx.ellipse(bx, by - 8, 38, 18, 0, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.ellipse(bx, by - 10, 40, 16, 0, Math.PI, 0);
+        ctx.fill();
+
+        // Seesaminsiemenet
+        ctx.fillStyle = '#F5DEB3';
+        var seeds = [[-12, -16], [5, -19], [18, -14], [-20, -10], [25, -8],
+            [-8, -6], [0, -5], [15, -6], [-16, -5], [10, -10]];
+        for (var si = 0; si < seeds.length; si++) {
+            ctx.fillRect(bx + seeds[si][0], by + seeds[si][1], 3, 3);
+        }
+
+        // Hoyry
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = 1.5;
+        var steamT = Date.now() / 600;
+        for (var si2 = 0; si2 < 3; si2++) {
+            var sx2 = bx - 15 + si2 * 15;
+            var sy2 = by - 30 + Math.sin(steamT + si2 * 2.1) * 8;
+            ctx.beginPath();
+            ctx.moveTo(sx2, sy2);
+            ctx.quadraticCurveTo(sx2 + 4, sy2 - 10, sx2 + 8, sy2 - 3);
+            ctx.stroke();
+        }
+
+        // Info-tekstit
+        ctx.fillStyle = '#eeddcc';
+        ctx.font = '14px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        var canBuy = Math.min(coinCount, 10 - hamburgerCount);
+        if (coinCount > 0 && hamburgerCount < 10) {
+            ctx.fillText('🍔 ' + coinCount + ' kolikolla → +' + canBuy + ' hampurilaista!', 400, 240);
+        } else if (hamburgerCount >= 10) {
+            ctx.fillText('🍔 Hampurilaiset täynnä (max 10).', 400, 240);
+        } else {
+            ctx.fillText('🍔 Ei kolikoita. Kerää kolikoita kadulta!', 400, 240);
+        }
+        ctx.fillText('🍔 Hampurilaisia jäljellä: ' + hamburgerCount, 400, 262);
+
+        // Poistumisvihje
+        var pulse = Math.sin(Date.now() / 800) * 0.3 + 0.7;
+        ctx.fillStyle = 'rgba(255,255,255,' + pulse + ')';
+        ctx.font = '10px Arial, sans-serif';
+        ctx.fillText('Paina Space ostaaksesi / poistuaksesi', 400, 370);
+        ctx.fillText('Mobiilissa: napauta hampurilaista', 400, 387);
+        ctx.textAlign = 'start';
+    }
+
 /* ── Lampputolppa ─────────────────────────────── */
     function drawLampPost(lamp) {
         const bx = lamp.x;                    // tolpan juuri (x)
@@ -2048,7 +2244,9 @@ const Street = (() => {
         const dx = dc.x - DOOR_W / 2;
         const dy = GROUND_Y - DOOR_H;
         const ownerLamp = lamps.find(l => l.bldgIdx === buildings.indexOf(bldg));
-        const isActive = ownerLamp && ownerLamp.lit;
+        const bldgIdx = buildings.indexOf(bldg);
+        const isBar = (bldgIdx === 8);
+        const isActive = isBar ? true : (ownerLamp && ownerLamp.lit);
         const doorType = bldg.doorType || 0;
 
         // Ovikaari / syvennys (kaikille yhteinen)
@@ -2157,6 +2355,19 @@ const Street = (() => {
             if (ownerLamp.lit) { ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 6; }
             ctx.fillRect(dx + DOOR_W/2 - 5, dy - 7, 10, 3);
             ctx.shadowBlur = 0;
+        }
+
+        // BAR-kyltti oven yllä (talo 8)
+        if (isBar) {
+            ctx.fillStyle = '#6b2d0a';
+            ctx.fillRect(dx - 4, dy - 32, DOOR_W + 8, 16);
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(dx - 2, dy - 30, DOOR_W + 4, 12);
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 9px "Courier New", monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('  BAR  ', dc.x, dy - 20);
+            ctx.textAlign = 'start';
         }
     }
 
