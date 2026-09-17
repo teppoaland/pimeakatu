@@ -163,9 +163,11 @@ const Street = (() => {
     let _audioListenersAdded = false;
     function initAudio() {
         if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audioCtx = StreetAudio.getCtx();
         }
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
         if (!_audioListenersAdded) {
             _audioListenersAdded = true;
             const resumeAudio = () => {
@@ -179,7 +181,7 @@ const Street = (() => {
     function playKick() {
         try {
             initAudio();
-            if (audioCtx.state !== 'running') return;
+            if (!audioCtx || audioCtx.state !== 'running') return;
             const now = audioCtx.currentTime;
             // Lyhyt napsaus – kohina + terävä alku
             const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.06), audioCtx.sampleRate);
@@ -193,7 +195,7 @@ const Street = (() => {
             filter.type = 'highpass';
             filter.frequency.value = 800;
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.17, now);
+            gain.gain.setValueAtTime(0.83, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
             src.connect(filter).connect(gain).connect(audioCtx.destination);
             src.start(now);
@@ -204,7 +206,7 @@ const Street = (() => {
     function playWalk() {
         try {
             initAudio();
-            if (audioCtx.state !== 'running') return;
+            if (!audioCtx || audioCtx.state !== 'running') return;
             const now = audioCtx.currentTime;
             const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.05), audioCtx.sampleRate);
             const data = buf.getChannelData(0);
@@ -212,7 +214,7 @@ const Street = (() => {
             const src = audioCtx.createBufferSource(); src.buffer = buf;
             const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 300;
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.14, now);
+            gain.gain.setValueAtTime(0.68, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
             src.connect(filter).connect(gain).connect(audioCtx.destination);
             src.start(now); src.stop(now + 0.05);
@@ -222,7 +224,7 @@ const Street = (() => {
     function playCoin() {
         try {
             initAudio();
-            if (audioCtx.state !== 'running') return;
+            if (!audioCtx || audioCtx.state !== 'running') return;
             const now = audioCtx.currentTime;
             // Vieno pling – kaksi sine-oskillaattoria (1200 + 1800 Hz)
             [1200, 1800].forEach(freq => {
@@ -230,7 +232,7 @@ const Street = (() => {
                 osc.type = 'sine';
                 osc.frequency.value = freq;
                 const gain = audioCtx.createGain();
-                gain.gain.setValueAtTime(0.04, now);
+                gain.gain.setValueAtTime(0.18, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
                 osc.connect(gain).connect(audioCtx.destination);
                 osc.start(now); osc.stop(now + 0.08);
@@ -2158,7 +2160,7 @@ const Street = (() => {
         } else if (hamburgerCount >= 10) {
             ctx.fillText('🍔 Hampurilaiset täynnä (max 10).', 400, 185);
         } else {
-            ctx.fillText('🍔 Ei kolikoita. Kerää kolikoita kadulta!', 400, 185);
+            ctx.fillText('🍔 Ei kolikoita. Kerää kolikoita kadulta tai peleistä!', 400, 185);
         }
 
         // Poistumisvihje
