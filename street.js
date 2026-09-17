@@ -635,7 +635,14 @@ const Street = (() => {
             flowerPot.vy += 0.12 * dt; flowerPot.x += flowerPot.vx * dt; flowerPot.y += flowerPot.vy * dt; flowerPot.rotation += 0.08 * dt;
             const fpx = flowerPot.x, fpy = flowerPot.y, ppx = player.x + player.w/2, ppy = player.y;
             if (Math.sqrt((fpx-ppx)*(fpx-ppx)+(fpy-ppy)*(fpy-ppy)) < 20) {
-                player.knockedDown = true; player.knockdownTimer = 600; player.kicking = false; player.kickFrame = 0;
+                if (!player.knockedDown) {
+                    player.knockedDown = true; player.knockdownTimer = 600; player.kicking = false; player.kickFrame = 0;
+                    hamburgerCount--;
+                    state.inventory.hamburgerCount = hamburgerCount;
+                    GameState.save(state);
+                    updateHUD();
+                    if (hamburgerCount <= 0) { killPlayer(); }
+                }
                 spawnParticles(ppx, ppy, '#ff6644', 15); flowerPot = null;
             } else if (flowerPot.y > GROUND_Y + 20 || flowerPot.x < -30 || flowerPot.x > WORLD_W + 30) {
                 if (flowerPot.y > GROUND_Y) spawnParticles(flowerPot.x, GROUND_Y, '#8B4513', 5);
@@ -742,6 +749,11 @@ const Street = (() => {
                     player.kicking = false;
                     player.kickFrame = 0;
                     spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ffaa44', 15);
+                    hamburgerCount--;
+                    state.inventory.hamburgerCount = hamburgerCount;
+                    GameState.save(state);
+                    updateHUD();
+                    if (hamburgerCount <= 0) { killPlayer(); }
                     break;
                 }
             }
@@ -2169,7 +2181,7 @@ const Street = (() => {
         ctx.fillStyle = 'rgba(255,255,255,' + pulse + ')';
         ctx.font = '10px Arial, sans-serif';
         ctx.fillText('Paina Space ostaaksesi / poistuaksesi', 400, 370);
-        ctx.fillText('Mobiilissa: napauta hampurilaista', 400, 387);
+        ctx.fillText('Mobiilissa: paina nappia', 400, 387);
         ctx.textAlign = 'start';
     }
 
