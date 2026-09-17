@@ -59,7 +59,7 @@ const StreetAudio = (() => {
         try {
             ctx = new (window.AudioContext || window.webkitAudioContext)();
             masterGain = ctx.createGain();
-            masterGain.gain.value = 0.0039;
+            masterGain.gain.value = 0.15;
             masterGain.connect(ctx.destination);
 
             drumGain = ctx.createGain();
@@ -382,6 +382,64 @@ const StreetAudio = (() => {
     document.addEventListener('mousedown', onGesture);
     document.addEventListener('keydown', onGesture);
 
+    /* ── Kuolinääni: Gongi / syvä jyrähdys ──────────── */
+    function playDeathGong() {
+        if (!ok()) return;
+        try {
+            const now = ctx.currentTime;
+            const dur = 4.0;
+            const peak = 1.5;
+
+            // Kerros 1: Syvä bassojyrinä (gongi)
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(55, now);
+            osc.frequency.exponentialRampToValueAtTime(18, now + dur);
+            const oscGain = ctx.createGain();
+            oscGain.gain.setValueAtTime(0.05, now);
+            oscGain.gain.linearRampToValueAtTime(0.55, now + peak);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+            osc.connect(oscGain).connect(masterGain);
+            osc.start(now);
+            osc.stop(now + dur);
+
+            // Kerros 2: Kohinajyrinä (lowpass)
+            const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1);
+            }
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            const lpFilter = ctx.createBiquadFilter();
+            lpFilter.type = 'lowpass';
+            lpFilter.frequency.setValueAtTime(200, now);
+            lpFilter.frequency.exponentialRampToValueAtTime(30, now + dur);
+            const lpGain = ctx.createGain();
+            lpGain.gain.setValueAtTime(0.03, now);
+            lpGain.gain.linearRampToValueAtTime(0.22, now + peak);
+            lpGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+            src.connect(lpFilter).connect(lpGain).connect(masterGain);
+            src.start(now);
+            src.stop(now + dur);
+
+            // Kerros 3: Metallinen rengas (kaksi epävireistä sineä)
+            [0.98, 1.02].forEach(detune => {
+                const ring = ctx.createOscillator();
+                ring.type = 'triangle';
+                ring.frequency.setValueAtTime(140 * detune, now);
+                ring.frequency.exponentialRampToValueAtTime(60 * detune, now + dur);
+                const ringGain = ctx.createGain();
+                ringGain.gain.setValueAtTime(0.06, now);
+                ringGain.gain.linearRampToValueAtTime(0.18, now + 0.8);
+                ringGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+                ring.connect(ringGain).connect(masterGain);
+                ring.start(now);
+                ring.stop(now + dur);
+            });
+        } catch(e) {}
+    }
+
     /* ── Julkinen API ────────────────────────────────── */
     function start() {
         init();
@@ -400,5 +458,5 @@ const StreetAudio = (() => {
         phase = 'silent';
     }
 
-    return { init, start, stop };
+    return { init, start, stop, playDeathGong };
 })();

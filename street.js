@@ -98,6 +98,9 @@ const Street = (() => {
     let firstHouseKickTarget = 0;    // random 3-6, arvotaan ekan potkun yhteydessä
     let firstHouseWindowTimer = 0;   // 20s laskuri, nollautuu joka potkusta
     let flowerPot = null;            // { x, y, vx, vy, active, rotation }
+    let playerDead = false;          // kuolemasekvenssi käynnissä
+    let deathTimer = 0;              // laskuri ennen reloadia (frameä)
+    let deathAlpha = 0;              // mustan overlayn alpha (0→1 pimennyksen aikana)
     const smallHouseLights = {};     // { '2': { lit: false, timer: 0 }, ... }
     let groundAnimal = null;         // { type, x, y, vx, direction, hopY, hopVel, animTimer, pauseTimer }
     let animalSpawnTimer = 900;      // 15s välein
@@ -118,6 +121,19 @@ const Street = (() => {
         spawnParticles(dc.x, dc.y, '#ff6644', 8);
         const windowY = GROUND_Y - bldg.h + 40;
         flowerPot = { x: dc.x, y: windowY, vx: 0, vy: 0, rotation: 0, active: true };
+    }
+
+    /* ── Pelaajan kuolema (hampurilaiset loppu) ────── */
+    function killPlayer() {
+        playerDead = true;
+        deathTimer = 180;          // 3s @ ~60fps
+        deathAlpha = 0;
+        player.knockedDown = true; // pelaaja kaatuu maahan
+        player.knockdownTimer = 9999; // pysyy maassa koko sekvenssin ajan
+        player.vx = 0;
+        player.kicking = false;
+        StreetAudio.stop();        // pysäytä taustamusiikki
+        StreetAudio.playDeathGong(); // gongi kumahtaa
     }
 
     /* ── Pienten talojen valot ──────────────────── */
@@ -177,7 +193,7 @@ const Street = (() => {
             filter.type = 'highpass';
             filter.frequency.value = 800;
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.24, now);
+            gain.gain.setValueAtTime(0.17, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
             src.connect(filter).connect(gain).connect(audioCtx.destination);
             src.start(now);
@@ -196,7 +212,7 @@ const Street = (() => {
             const src = audioCtx.createBufferSource(); src.buffer = buf;
             const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 300;
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.setValueAtTime(0.14, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
             src.connect(filter).connect(gain).connect(audioCtx.destination);
             src.start(now); src.stop(now + 0.05);
@@ -214,7 +230,7 @@ const Street = (() => {
                 osc.type = 'sine';
                 osc.frequency.value = freq;
                 const gain = audioCtx.createGain();
-                gain.gain.setValueAtTime(0.038, now);
+                gain.gain.setValueAtTime(0.04, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
                 osc.connect(gain).connect(audioCtx.destination);
                 osc.start(now); osc.stop(now + 0.08);
@@ -384,6 +400,17 @@ const Street = (() => {
        PÄIVITYS
        ═══════════════════════════════════════════════════ */
     function update(dt) {
+        // ── Kuolemasekvenssi ─────────────────────────
+        if (playerDead) {
+            deathTimer -= dt;
+            deathAlpha = Math.min(1, 1 - (deathTimer / 180));
+            if (deathTimer <= 0) {
+                GameState.reset();
+                location.reload();
+            }
+            return;
+        }
+
         // Dark room
         if (darkRoom) {
             if (actionJustPressed) { darkRoom = false; actionJustPressed = false; }
@@ -550,8 +577,7 @@ const Street = (() => {
                 GameState.save(state);
                 updateHUD();
                 if (hamburgerCount <= 0) {
-                    GameState.reset();
-                    location.reload();
+                    killPlayer();
                     return;
                 }
                 hamburgerTimer = 2400;
@@ -936,6 +962,12 @@ const Street = (() => {
                 boulderKeyCollected = true;
                 state.boulderKeyCollected = true;
                 GameState.save(state);
+            }
+            if (e.data === 'COIN_COLLECTED') {
+                coinCount++;
+                state.inventory.coinCount = coinCount;
+                GameState.save(state);
+                updateHUD();
             }
         };
         window.addEventListener('message', window._streetReturn);
@@ -1397,6 +1429,12 @@ const Street = (() => {
             ctx.fillRect(p.x-2, p.y-2, 4, 4);
         }
         ctx.globalAlpha = 1;
+
+        // ── Kuoleman pimennys ─────────────────────────
+        if (playerDead) {
+            ctx.fillStyle = 'rgba(0,0,0,' + deathAlpha + ')';
+            ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+        }
     }
 
     /* ── Rauhalliset ikkunavalot (0-5 kpl, 1-10min paloaika) ── */
@@ -2019,7 +2057,7 @@ const Street = (() => {
         ctx.fillRect(tx + tw - 20, ty + th, 10, 50);
 
         // Iso hampurilainen
-        const bx = tx + tw / 2, by = ty - 8;
+        const bx = tx + tw / 2, by = ty - 42;
 
         // Alapulla
         ctx.fillStyle = '#8B4513';
@@ -2116,13 +2154,12 @@ const Street = (() => {
         ctx.textAlign = 'center';
         var canBuy = Math.min(coinCount, 10 - hamburgerCount);
         if (coinCount > 0 && hamburgerCount < 10) {
-            ctx.fillText('🍔 ' + coinCount + ' kolikolla → +' + canBuy + ' hampurilaista!', 400, 240);
+            ctx.fillText('🍔 ' + coinCount + ' kolikolla → +' + canBuy + ' hampurilaista!', 400, 185);
         } else if (hamburgerCount >= 10) {
-            ctx.fillText('🍔 Hampurilaiset täynnä (max 10).', 400, 240);
+            ctx.fillText('🍔 Hampurilaiset täynnä (max 10).', 400, 185);
         } else {
-            ctx.fillText('🍔 Ei kolikoita. Kerää kolikoita kadulta!', 400, 240);
+            ctx.fillText('🍔 Ei kolikoita. Kerää kolikoita kadulta!', 400, 185);
         }
-        ctx.fillText('🍔 Hampurilaisia jäljellä: ' + hamburgerCount, 400, 262);
 
         // Poistumisvihje
         var pulse = Math.sin(Date.now() / 800) * 0.3 + 0.7;
@@ -2363,10 +2400,16 @@ const Street = (() => {
             ctx.fillRect(dx - 4, dy - 32, DOOR_W + 8, 16);
             ctx.fillStyle = '#8B4513';
             ctx.fillRect(dx - 2, dy - 30, DOOR_W + 4, 12);
-            ctx.fillStyle = '#ffd700';
+            const barPhase = Date.now() / 500;
+            const barHue = 46 + Math.sin(barPhase * 1.7) * 8;
+            const barLight = 48 + Math.sin(barPhase) * 10;
+            ctx.fillStyle = 'hsl(' + barHue + ', 100%, ' + barLight + '%)';
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 10;
             ctx.font = 'bold 9px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.fillText('  BAR  ', dc.x, dy - 20);
+            ctx.shadowBlur = 0;
             ctx.textAlign = 'start';
         }
     }

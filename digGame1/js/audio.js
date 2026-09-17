@@ -32,7 +32,7 @@ const AudioFX = (() => {
             filter.frequency.value = 2000;
             filter.Q.value = 0.5;
             const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.10, now);
+            gain.gain.setValueAtTime(0.30, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
             src.connect(filter).connect(gain).connect(ctx.destination);
             src.start(now);
@@ -50,7 +50,7 @@ const AudioFX = (() => {
             osc.frequency.setValueAtTime(1400, now);
             osc.frequency.exponentialRampToValueAtTime(900, now + 0.08);
             const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.13, now);
+            gain.gain.setValueAtTime(0.40, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
             osc.connect(gain).connect(ctx.destination);
             osc.start(now);
@@ -79,8 +79,8 @@ const AudioFX = (() => {
             lpFilter.frequency.setValueAtTime(300, now);
             lpFilter.frequency.exponentialRampToValueAtTime(40, now + dur);
             const lpGain = ctx.createGain();
-            lpGain.gain.setValueAtTime(0.08, now);
-            lpGain.gain.linearRampToValueAtTime(0.30, now + peak);
+            lpGain.gain.setValueAtTime(0.24, now);
+            lpGain.gain.linearRampToValueAtTime(0.70, now + peak);
             lpGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
             src.connect(lpFilter).connect(lpGain).connect(ctx.destination);
             src.start(now);
@@ -92,8 +92,8 @@ const AudioFX = (() => {
             osc.frequency.setValueAtTime(60, now);
             osc.frequency.exponentialRampToValueAtTime(20, now + dur);
             const oscGain = ctx.createGain();
-            oscGain.gain.setValueAtTime(0.10, now);
-            oscGain.gain.linearRampToValueAtTime(0.35, now + peak);
+            oscGain.gain.setValueAtTime(0.30, now);
+            oscGain.gain.linearRampToValueAtTime(0.70, now + peak);
             oscGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
             osc.connect(oscGain).connect(ctx.destination);
             osc.start(now);
@@ -112,7 +112,7 @@ const AudioFX = (() => {
             hpFilter.type = 'highpass';
             hpFilter.frequency.value = 1500;
             const crackGain = ctx.createGain();
-            crackGain.gain.setValueAtTime(0.15, now);
+            crackGain.gain.setValueAtTime(0.40, now);
             crackGain.gain.exponentialRampToValueAtTime(0.001, now + crackDur);
             crackSrc.connect(hpFilter).connect(crackGain).connect(ctx.destination);
             crackSrc.start(now);
@@ -137,7 +137,7 @@ const AudioFX = (() => {
             filter.type = 'lowpass';
             filter.frequency.value = 500;
             const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.20, now);
+            gain.gain.setValueAtTime(0.50, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
             src.connect(filter).connect(gain).connect(ctx.destination);
             src.start(now);
@@ -155,7 +155,7 @@ const AudioFX = (() => {
             osc.frequency.setValueAtTime(120, now);
             osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
             const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.setValueAtTime(0.55, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
             osc.connect(gain).connect(ctx.destination);
             osc.start(now);

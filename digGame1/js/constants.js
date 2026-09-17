@@ -15,6 +15,7 @@ const TILE = Object.freeze({
     TREE:    12,   // Puu (putoaa, kun alta kaivetaan)
     HOUSE:   13,   // Talo (putoaa, kun alta kaivetaan)
     KEY:     14,   // Avain (kerättävä, palauttaa kadulle)
+    COIN:    15,   // Kolikko (kerättävä, hiljaisesti kadulle)
 });
 
 const DIR = Object.freeze({
@@ -63,6 +64,7 @@ const COLORS = {
     [TILE.TREE]:      '#2e7d32',
     [TILE.HOUSE]:     '#c96b4a',
     [TILE.KEY]:       '#FFD700',
+    [TILE.COIN]:      '#FFC107',
 };
 
 const GRAVITY_DELAY = 1;  // Kehystä putoamiselle (0 = välitön)

@@ -207,6 +207,7 @@ class Renderer {
             case TILE.DIAMOND: this.drawDiamond(ctx, px, py); break;
             case TILE.EXIT: this.drawExit(ctx, px, py); break;
             case TILE.KEY: this.drawKey(ctx, px, py); break;
+            case TILE.COIN: this.drawCoin(ctx, px, py); break;
             case TILE.FIREFLY: this.drawEnemy(ctx, px, py, cs, '#F22', '#F80', '#FC0'); break;
             case TILE.BUTTERFLY: this.drawEnemy(ctx, px, py, cs, '#F60', '#FA0', '#FD4'); break;
             case TILE.SKY: /* taivas läpinäkyvä – yötaivas piirretään render()-metodissa */ break;
@@ -374,6 +375,38 @@ class Renderer {
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         ctx.beginPath();
         ctx.arc(cx + cs * 0.12, cy - cs * 0.33, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawCoin(ctx, px, py) {
+        const cs = CELL_SIZE;
+        const cx = px + cs / 2, cy = py + cs / 2;
+        const r = cs / 2 - 3;
+        // Kultainen kolikko pyörivällä kiillolla
+        const shimmer = Math.sin(Date.now() / 350 + px + py) * 0.3 + 0.7;
+        ctx.fillStyle = `rgba(255, 193, 7, ${shimmer})`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#C79100';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Sisärengas
+        ctx.strokeStyle = '#E6A800';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 4, 0, Math.PI * 2);
+        ctx.stroke();
+        // $-merkki keskellä
+        ctx.fillStyle = '#8B6914';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', cx, cy + 1);
+        // Kimallus
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath();
+        ctx.arc(cx - r * 0.35, cy - r * 0.35, 2.5, 0, Math.PI * 2);
         ctx.fill();
     }
 

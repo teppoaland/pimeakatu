@@ -217,6 +217,10 @@ function buildWorld() {
     const keyY = BEDROCK_ROW - 1;
     grid[keyY][exitX] = TILE.KEY;
 
+    // Kolikko maailman puolivälissä (segmenttien 2 ja 3 rajalla)
+    const coinX = START_PAD + 2 * SEGMENT_W - 1;  // ~37
+    grid[keyY][coinX] = TILE.COIN;
+
     return {
         grid: grid,
         width: width,

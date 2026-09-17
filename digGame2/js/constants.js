@@ -11,6 +11,7 @@ const TILE = Object.freeze({
     BUTTERFLY:8,  // Perhonen (vihollinen, liikkuu spiraalina)
     EXPLOSION:9,  // Räjähdys-animaatio
     KEY:     10,  // Avain (kerättävä, avaa uloskäynnin)
+    COIN:    11,  // Kolikko (kerättävä, hiljaisesti kadulle)
 });
 
 const DIR = Object.freeze({
@@ -36,6 +37,7 @@ const COLORS = {
     [TILE.BUTTERFLY]: '#FF8800',
     [TILE.EXPLOSION]: '#FFFF00',
     [TILE.KEY]:       '#FFAA00',
+    [TILE.COIN]:      '#FFC107',
 };
 
 const GRAVITY_DELAY = 1;  // Kehystä putoamiselle (0 = välitön)
