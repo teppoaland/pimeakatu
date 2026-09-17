@@ -59,7 +59,7 @@ const StreetAudio = (() => {
         try {
             ctx = new (window.AudioContext || window.webkitAudioContext)();
             masterGain = ctx.createGain();
-            masterGain.gain.value = 0.12;
+            masterGain.gain.value = 0.067;
             masterGain.connect(ctx.destination);
 
             drumGain = ctx.createGain();

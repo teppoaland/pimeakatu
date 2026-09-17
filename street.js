@@ -1079,8 +1079,9 @@ const Street = (() => {
         status += ' | 💰 Kolikoita: ' + coinCount;
         // Hampurilaiset (lives)
         var burgerStr = '';
-        if (hamburgerCount === 1) {
-            burgerStr = '<span class="burger-warning">🍔</span>';
+        if (hamburgerCount <= 2) {
+            for (var bi = 0; bi < hamburgerCount; bi++) burgerStr += '🍔';
+            burgerStr = '<span class="burger-warning">' + burgerStr + '</span>';
         } else {
             for (var bi = 0; bi < hamburgerCount; bi++) burgerStr += '🍔';
         }
