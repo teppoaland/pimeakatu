@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.68** | 17.9.2026 | Uusi ominaisuus: Hampurilaiset (lives) + BAR-rakennus. HUD-palkkiin lisätty 🍔-ikonit (alussa 5, max 10, vähenee 1/60s). Kun hampurilaiset loppuvat → game over (täysi reset). Viimeinen talo (talo 8) muutettu BAR:ksi: ovi aina auki, [ BAR ] -kyltti, sisällä iso hampurilainen pöydällä, kolikoilla ostetaan hampurilaisia (kaikki kolikot → max 10 🍔). Space/napautus ostaa ja poistuu.
+**v3.73** | 17.9.2026 | Pääportaali: Dramaattinen kuolemasekvenssi hampurilaisten loppuessa – gongi kumahtaa (playDeathGong), ruutu pimenee vähitellen mustaksi (3s), pelaaja kaatuu maahan, sitten peli nollautuu.
 
 ## 🔒 Lukitut osa-alueet
 
@@ -16,7 +16,6 @@
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 
-- **Commando:** Jäissä – tarvitaan valmis 3D HTML-moottori pohjaksi ennen jatkoa
 - Blue Mäx: TESTIMODE pois → palauta vihollisten ammunta normaalille 60% aggressiolle
 - **Ääniefektit pääportaaliin:** ✅ Valmis v3.28 – "Running Free" täysi bändisoundi (rummut + basso + kitara + melodia, audio.js)
 - **Pääsiäismunat Boulder Dashiin**

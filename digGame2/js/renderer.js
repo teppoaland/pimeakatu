@@ -160,6 +160,32 @@ class Renderer {
                 ctx.lineWidth = 1;
                 ctx.strokeRect(px + cs / 2 - 2, py + 4, 4, cs - 8);
                 break;
+            case TILE.COIN:
+                const cm = Math.sin(Date.now() / 350 + px + py) * 0.3 + 0.7;
+                const cr = cs / 2 - 3;
+                const ccx = px + cs / 2, ccy = py + cs / 2;
+                ctx.fillStyle = `rgba(255, 193, 7, ${cm})`;
+                ctx.beginPath();
+                ctx.arc(ccx, ccy, cr, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#C79100';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.strokeStyle = '#E6A800';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(ccx, ccy, cr - 4, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.fillStyle = '#8B6914';
+                ctx.font = 'bold 12px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('$', ccx, ccy + 1);
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.beginPath();
+                ctx.arc(ccx - cr * 0.35, ccy - cr * 0.35, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                break;
 case TILE.EXIT:
                 const open = this.game.diamondsCollected >= this.game.diamondsNeeded && this.game.keyCollected;
                 ctx.fillStyle = open ? '#0F0' : '#030';

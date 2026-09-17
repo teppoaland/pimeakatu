@@ -10,8 +10,6 @@ Versionumero näkyy pääsivun (`index.html`) oikeassa alakulmassa elementissä 
 
 **Nykyinen versio:** `v1.0`
 
-> **Commando-poikkeus:** `commando_c64/` pelillä on **oma versionumero** (`#commando-version`, oikeassa alanurkassa harmaalla). Commando-muutokset **eivät nosta** pääportaalin `#version-tag`:ia – sen versionumeroa kasvatetaan vain kun Commandon omaa versiota (`game_main.html` → `#commando-version`) päivitetään.
-
 ---
 
 ## ⬆️ Milloin päivitetään (+0.1)

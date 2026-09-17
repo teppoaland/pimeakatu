@@ -162,6 +162,11 @@ class Game {
                 this.player.x = nx; this.player.y = ny;
                 this.collectKey();
                 break;
+            case TILE.COIN:
+                this.grid[ny][nx] = TILE.EMPTY;
+                this.player.x = nx; this.player.y = ny;
+                try { window.parent.postMessage('COIN_COLLECTED', '*'); } catch(e) {}
+                break;
             case TILE.BOULDER: {
                 const bx = nx + dir.dx;
                 const by = ny + dir.dy;

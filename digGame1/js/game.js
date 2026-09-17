@@ -158,6 +158,11 @@ class Game {
                 this.grid[ny][nx] = (ny === SURFACE_ROW) ? TILE.GRASS : TILE.EMPTY;
                 this.collectKey();
                 return;
+            case TILE.COIN:
+                this.grid[ny][nx] = (ny === SURFACE_ROW) ? TILE.GRASS : TILE.EMPTY;
+                this.player.x = nx; this.player.y = ny;
+                try { window.parent.postMessage('COIN_COLLECTED', '*'); } catch(e) {}
+                break;
             case TILE.FIREFLY:
             case TILE.BUTTERFLY:
                 this.killPlayer();

@@ -11,10 +11,10 @@
 │                   🏮 Pimeä Katu (pääportaali)            │
 │  index.html  │  style.css  │  street.js  │  gameState.js │
 │                                                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐│
-│  │ digGame1 │  │ digGame2 │  │bluemax   │  │commando  ││
-│  │ (iframe) │  │ (iframe) │  │(iframe)  │  │(iframe)  ││
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘│
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐│
+│  │ digGame1 │  │ digGame2 │  │bluemax   ││
+│  │ (iframe) │  │ (iframe) │  │(iframe)  ││
+│  └──────────┘  └──────────┘  └──────────┘│
 └─────────────────────────────────────────────────────────┘
 ```
 
