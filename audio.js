@@ -59,7 +59,7 @@ const StreetAudio = (() => {
         try {
             ctx = new (window.AudioContext || window.webkitAudioContext)();
             masterGain = ctx.createGain();
-            masterGain.gain.value = 0.15;
+            masterGain.gain.value = 0.12;
             masterGain.connect(ctx.destination);
 
             drumGain = ctx.createGain();
@@ -458,5 +458,8 @@ const StreetAudio = (() => {
         phase = 'silent';
     }
 
-    return { init, start, stop, playDeathGong };
+    function getCtx() { init(); return ctx; }
+    function getDestination() { init(); return ctx ? ctx.destination : null; }
+
+    return { init, start, stop, playDeathGong, getCtx, getDestination };
 })();
