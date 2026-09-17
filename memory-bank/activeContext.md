@@ -6,13 +6,14 @@
 
 ## 📍 Nyt
 
-**v3.73** | 17.9.2026 | Pääportaali: Dramaattinen kuolemasekvenssi hampurilaisten loppuessa – gongi kumahtaa (playDeathGong), ruutu pimenee vähitellen mustaksi (3s), pelaaja kaatuu maahan, sitten peli nollautuu.
+**v3.79** | 17.9.2026 | Pääportaali: Törmäyksistä seuraamus – kukkapurkki tai auto vie yhden hampurilaisen (liven). Musiikin volyymi -25%.
 
 ## 🔒 Lukitut osa-alueet
 
 - **Dialogi-tekstit:** Kaikkien pelien overlay/intro/viestit **LUKITTU**. Ei muutoksia ilman erillistä lupaa.
 - **Pelien välinen logiikka:** Koko polku testattu läpi järjestyksessä (DG1 → DG2 → Blue Mäx). Avaimet, postMessage-kutsut, paluu kadulle — **LUKITTU**. Ei muutoksia ilman erillistä lupaa.
 - **KAIKKI tekstit:** HUD-bar, notifikaatiot, lamppujen labelit, ovet, dialogit, overlay-tekstit — **LUKITTU**. Ei mitään tekstimuutoksia ilman erillistä pyyntöä.
+- **Inventaario:** `inventory`-objektia (`coin`, `coinCount`, `hamburgerCount`) ei muokata ilman erillistä pyyntöä. Inventaario on lukittu.
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
 
