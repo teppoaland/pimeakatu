@@ -12,7 +12,10 @@
 | Lamppujen potkiminen | ✅ Valmis | 5 lamppua sytytettävissä |
 | Ovista sisään astuminen | ✅ Valmis | 5 aktiivista ovea |
 | Kolikon kerääminen | ✅ v3.57 | Kolikkolaskuri + 20s respawn (testaus), HUD-näyttö |
-| Pokaaliovi (talo 8) | ✅ v3.57 | Aukeaa kaikilla 3 avaimella TAI 3 kolikolla, vie pokaalihuoneeseen |
+| Hampurilaiset (lives) | ✅ v3.68 | Alussa 5, max 10, vähenee 1/60s. 0 → game over reset |
+| BAR-talon ovi + kyltti | ✅ v3.68 | Talo 8: [ BAR ] kyltti, ovi aina auki |
+| BAR-huone | ✅ v3.68 | drawBarRoom(): iso hampurilainen pöydällä, osto kolikoilla |
+| Pokaaliovi (talo 7) | ✅ v3.57 | Aukeaa kaikilla 3 avaimella TAI 3 kolikolla, vie pokaalihuoneeseen |
 | Mobiiliohjaimet | ✅ Valmis | v1.2: JS force-show + D-pad + ⚡-nappi |
 | CRT-retro-teema | ✅ Valmis | Scanline-efekti, vihreä fontti |
 | Ääniefektit | ✅ Valmis | Potku (0.24) + kävely (0.12 lowpass-kahina) |

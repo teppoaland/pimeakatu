@@ -6,7 +6,7 @@
 
 ## 📍 Nyt
 
-**v3.67** | 16.9.2026 | Bugikorjauksia: musiikin soittosykli korjattu (onGesture ei enää katkaise hiljaisuutta, phantom-ajastimet siivottu). Kävely- ja potkuäänet korjattu (AudioContext suspend -bugi, lisätty gesture-kuuntelijat + running-guardit). Kolikolle vieno pling-ääni (sine 1200+1800Hz, gain 0.038). Pilvien miniminopeus nostettu 2 px/s (oli 1).
+**v3.68** | 17.9.2026 | Uusi ominaisuus: Hampurilaiset (lives) + BAR-rakennus. HUD-palkkiin lisätty 🍔-ikonit (alussa 5, max 10, vähenee 1/60s). Kun hampurilaiset loppuvat → game over (täysi reset). Viimeinen talo (talo 8) muutettu BAR:ksi: ovi aina auki, [ BAR ] -kyltti, sisällä iso hampurilainen pöydällä, kolikoilla ostetaan hampurilaisia (kaikki kolikot → max 10 🍔). Space/napautus ostaa ja poistuu.
 
 ## 🔒 Lukitut osa-alueet
 
