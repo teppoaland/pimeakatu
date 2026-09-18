@@ -2536,6 +2536,25 @@ const Street = (() => {
             ctx.stroke();
         }
 
+        // Ohjeteksti raameissa (varoitus hampurilaisten kulutuksesta)
+        const hintLines = [
+            'SEURAA HAMPURILAISTEN KULUTUSTA!',
+            'MUISTA SYÖDÄ!',
+            'MUUTEN VOI PELATESSA MENNÄ HENKI!'
+        ];
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 13px "Courier New", monospace';
+        const hintBoxW = 380, hintBoxH = 76, hintBoxX = 400, hintBoxTop = 92;
+        ctx.fillStyle = 'rgba(15, 8, 4, 0.9)';
+        ctx.strokeStyle = '#ffcc44';
+        ctx.lineWidth = 2;
+        ctx.fillRect(hintBoxX - hintBoxW / 2, hintBoxTop, hintBoxW, hintBoxH);
+        ctx.strokeRect(hintBoxX - hintBoxW / 2, hintBoxTop, hintBoxW, hintBoxH);
+        for (let hi = 0; hi < hintLines.length; hi++) {
+            ctx.fillStyle = (hi === 2) ? '#ff6644' : '#ffdd88';
+            ctx.fillText(hintLines[hi], hintBoxX, hintBoxTop + 23 + hi * 19);
+        }
+
         // Info-tekstit
         ctx.fillStyle = '#eeddcc';
         ctx.font = '14px "Courier New", monospace';
