@@ -2543,14 +2543,14 @@ const Street = (() => {
             'MUUTEN VOI PELATESSA MENNÄ HENKI KIRJAIMELLISESTI!'
         ];
         ctx.textAlign = 'center';
-        ctx.font = 'bold 13px "Courier New", monospace';
+        ctx.font = 'bold 11px "Courier New", monospace';
         let maxHintW = 0;
         for (let m = 0; m < hintLines.length; m++) {
             const w = ctx.measureText(hintLines[m]).width;
             if (w > maxHintW) maxHintW = w;
         }
         const hintBoxW = Math.ceil(maxHintW + 48);
-        const hintBoxH = 76, hintBoxX = 400, hintBoxTop = 92;
+        const hintBoxH = 68, hintBoxX = 400, hintBoxTop = 92;
         ctx.fillStyle = 'rgba(15, 8, 4, 0.9)';
         ctx.strokeStyle = '#ffcc44';
         ctx.lineWidth = 2;
@@ -2558,7 +2558,7 @@ const Street = (() => {
         ctx.strokeRect(hintBoxX - hintBoxW / 2, hintBoxTop, hintBoxW, hintBoxH);
         for (let hi = 0; hi < hintLines.length; hi++) {
             ctx.fillStyle = (hi === 2) ? '#ff6644' : '#ffdd88';
-            ctx.fillText(hintLines[hi], hintBoxX, hintBoxTop + 23 + hi * 19);
+            ctx.fillText(hintLines[hi], hintBoxX, hintBoxTop + 22 + hi * 17);
         }
 
         // Info-tekstit
