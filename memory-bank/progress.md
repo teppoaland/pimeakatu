@@ -16,6 +16,7 @@
 | Sähkökaappi (1. puun vieressä) | ✅ v3.90 – harmaa laatikko + vilkkuva keltainen valo; sähköisku vain seinää vasten (pää kaapin yläreunan yläpuolella), ei alhaalta, ei tekstiä |
 | Ajoneuvojen moottoriäänet (panoroiva surina) | ✅ v3.81 – mopo korkea, autot/ambulanssi matala, stereo-pannaus |
 | Mobiiliohjaimet | ✅ |
+| Mobiilikamera (vaakascrollaus pystymoodissa) | ✅ v3.91 – kosketuslaitteella zoom (täyttää korkeuden) + `camX` seuraa pelaajaa; PC: koko katu ennallaan |
 
 ## ⛏️ Dig Game (digGame1/) | 💎 Boulder Dash (digGame2/)
 

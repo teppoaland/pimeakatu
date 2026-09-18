@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v3.90** | 18.9.2026 | Sähkökaappi 1. puun (x 175) viereisen talon (`buildings[2]`) vasemmalla seinällä (x 200). Harmaa ikkunan kokoinen (10×18) laatikko + ylhäällä vilkkuva keltainen varoitusvalo. Osuminen antaa sähköiskun (tajunta pois + hampurilaisen menetys + `playZap`-ääni + taakse 30 px). Osuma VAIN seinää vasten: vaakasuunnassa laatikon sisällä JA pää kaapin yläreunan yläpuolella (`player.y < cab.y`) → ei osumaa alhaalta, ovi jää potkittavaksi. Ei ilmoitustekstiä.
+**v3.91** | 18.9.2026 | Mobiilikamera katunäkymään. Kosketuslaitteella (`isTouchDevice`) pystymoodissa zoomataan täyttämään käytettävissä oleva korkeus (`viewW` < 800, `VIEWW_MIN=260`, `CONTROL_RESERVE=185` D-padille), ja `camX` seuraa pelaajaa vaakasuunnassa (`updateCamera()`, lerp `CAMERA_LERP=0.18`). `render()` piirtää `ctx.translate(-Math.round(camX),0)` ja clearataan `viewW`-levyiseksi; huoneet (dark/bar) keskitetään `camX=(WORLD_W-viewW)/2`. `resize()`: PC `viewW=WORLD_W` (koko katu kuten ennen), mobiili laskee `viewW`/`scale` korkeuden mukaan, vaakamoodissa `viewW`=800. `style.css`: mobiili `#game-area { justify-content: flex-start }` → canvas HUD:n alle, aita ohjainten yläpuolelle.
 
 ## 🔒 Lukitut osa-alueet
 
