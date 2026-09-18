@@ -7,6 +7,7 @@
 const StreetAudio = (() => {
     let ctx = null;
     let masterGain = null;
+    let synthGain = null;    // syntikan oma väylä – mykistetään MP3:n ajaksi
     let drumGain = null;
     let bassGain = null;
     let guitarGain = null;
@@ -69,21 +70,25 @@ const StreetAudio = (() => {
             masterGain.gain.value = 0.05025;
             masterGain.connect(ctx.destination);
 
+            synthGain = ctx.createGain();
+            synthGain.gain.value = 1;
+            synthGain.connect(masterGain);
+
             drumGain = ctx.createGain();
             drumGain.gain.value = 0.715;
-            drumGain.connect(masterGain);
+            drumGain.connect(synthGain);
 
             bassGain = ctx.createGain();
             bassGain.gain.value = 0.65;
-            bassGain.connect(masterGain);
+            bassGain.connect(synthGain);
 
             guitarGain = ctx.createGain();
             guitarGain.gain.value = 0.494;
-            guitarGain.connect(masterGain);
+            guitarGain.connect(synthGain);
 
             leadGain = ctx.createGain();
             leadGain.gain.value = 0.429;
-            leadGain.connect(masterGain);
+            leadGain.connect(synthGain);
 
             loadMusic();
         } catch (e) {}
@@ -147,6 +152,9 @@ const StreetAudio = (() => {
         if (!musicEl.paused) return;
         musicPlayed = 0;
         started = true;
+        // Pysäytä syntikka heti, ettei se soi MP3:n päällä
+        if (loopId) { clearInterval(loopId); loopId = null; }
+        if (synthGain) synthGain.gain.value = 0;
         try { musicEl.currentTime = 0; } catch (e) {}
         const p = musicEl.play();
         if (p && typeof p.catch === 'function') {
@@ -442,6 +450,7 @@ const StreetAudio = (() => {
     function startSynth() {
         if (!ctx) return;
         started = true;
+        if (synthGain) synthGain.gain.value = 1; // syntikka kuuluviin
         melodyReverse = Math.random() < 0.5;
         BPM = BPM_MIN + Math.random() * (BPM_MAX - BPM_MIN);
         BEAT = 60 / BPM; S16 = BEAT / 4; S8 = BEAT / 2; BAR = BEAT * 4;

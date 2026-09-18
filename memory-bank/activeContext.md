@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v3.84** | 18.9.2026 | Korjattu MP3-taustamusiikki mobiilissa (Android Chrome + IG-WebView). Vika: `musicReady=true` asetettiin optimistisesti heti `<audio>`-elementin luonnissa, ja yksikin hylätty `musicEl.play()` (autoplay `NotAllowedError`) asetti `musicReady=false` **pysyvästi** → syntikkafallback soi ikuisesti, oikeaa MP3:a ei kuulunut. Korjaus `audio.js`:ssa: (1) `musicReady` asetetaan vasta `canplay`/`canplaythrough`-tapahtumassa, (2) hylätty play() asettaa vain `musicBlocked=true` (ei pysyvää poistoa) ja siirtyy syntikkaan, (3) `onGesture` (touchstart/mousedown/keydown) tyhjentää `musicBlocked`-lipun ja yrittää MP3:a uudelleen käyttäjän eleessä, (4) syntikka eriytetty `startSynth()`-apufunktioksi.
+**v3.85** | 18.9.2026 | Jatkofiksi mobiiliäänelle: MP3 ja syntikka soivat hetken päällekkäin, koska syntikan jo ajoitetut nuotit (≈10 s eteenpäin) jatkoivat soimista MP3:n alettua — `clearInterval` ei peru jo ajoitettuja oskillaattorinuotteja. Korjaus: lisätty oma `synthGain`-välivahvistin (drum/bass/guitar/lead → `synthGain` → `masterGain`), ja `startMusicLoop()` mykistää `synthGain.gain=0` (heti hiljaa) + tyhjentää `loopId`:n; `startSynth()` palauttaa `synthGain.gain=1`. Kuolinääni (gongi) kulkee yhä suoraan `masterGain`iin, joten se ei mykisty.
 
 ## 🔒 Lukitut osa-alueet
 
