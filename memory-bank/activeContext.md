@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v3.85** | 18.9.2026 | Jatkofiksi mobiiliäänelle: MP3 ja syntikka soivat hetken päällekkäin, koska syntikan jo ajoitetut nuotit (≈10 s eteenpäin) jatkoivat soimista MP3:n alettua — `clearInterval` ei peru jo ajoitettuja oskillaattorinuotteja. Korjaus: lisätty oma `synthGain`-välivahvistin (drum/bass/guitar/lead → `synthGain` → `masterGain`), ja `startMusicLoop()` mykistää `synthGain.gain=0` (heti hiljaa) + tyhjentää `loopId`:n; `startSynth()` palauttaa `synthGain.gain=1`. Kuolinääni (gongi) kulkee yhä suoraan `masterGain`iin, joten se ei mykisty.
+**v3.90** | 18.9.2026 | Sähkökaappi 1. puun (x 175) viereisen talon (`buildings[2]`) vasemmalla seinällä (x 200). Harmaa ikkunan kokoinen (10×18) laatikko + ylhäällä vilkkuva keltainen varoitusvalo. Osuminen antaa sähköiskun (tajunta pois + hampurilaisen menetys + `playZap`-ääni + taakse 30 px). Osuma VAIN seinää vasten: vaakasuunnassa laatikon sisällä JA pää kaapin yläreunan yläpuolella (`player.y < cab.y`) → ei osumaa alhaalta, ovi jää potkittavaksi. Ei ilmoitustekstiä.
 
 ## 🔒 Lukitut osa-alueet
 

@@ -93,7 +93,26 @@ const Street = (() => {
 
 /* ── Kolikko ─────────────────────────────────────── */
     const coin = { x: 590, y: 325, collected: false, sparkle: 0, despawnTimer: 0, despawnCooldown: 0 };
-    function randomCoinX() { return 50 + Math.random() * 680; }  // 50–730
+    // Kolikko ilmestyy sinne, missä pelaajan jalat voivat liikkua:
+    //   x: 0..(WORLD_W - player.w), y: GROUND_Y..(WORLD_H - 50 + player.h)
+    const COIN_X_MIN = 0;
+    const COIN_X_MAX = WORLD_W - player.w;          // 780
+    const COIN_Y_MIN = GROUND_Y;                    // 310 – jalat maan tasolla
+    const COIN_Y_MAX = (WORLD_H - 50) + player.h;   // 380 – jalat alimmillaan (aidan takana)
+    function randomCoinX() { return COIN_X_MIN + Math.random() * (COIN_X_MAX - COIN_X_MIN); }
+    function randomCoinY() { return COIN_Y_MIN + Math.random() * (COIN_Y_MAX - COIN_Y_MIN); }
+
+    /* ── Sähkökaappi (1. puun vieressä, kerrostalon vas. seinä) ── */
+    // 1. puu (trees[0], x 175) on talojen 1–2 välissä. Sen oikealla puolella
+    // olevan talon (buildings[2], x 200–250) vasen seinä on x 200.
+    // Kaappi on ikkunan kokoinen (10×18), harmaa, yläosassa vilkkuva keltainen valo.
+    // Osuminen antaa sähköiskun: tajunta pois + hampurilaisen menetys (kuten kukkaruukku/auto).
+    const electricCabinet = {
+        x: 200,              // vasen seinä
+        w: 10,
+        h: 18,
+        y: GROUND_Y - 22     // pohja 306 (katukiveyksen yläreuna)
+    };
 
     /* ── Avain (Dig Gamesta) ───────────────────────── */
     let digKeyCollected = false;
@@ -254,6 +273,37 @@ const Street = (() => {
             });
         } catch(e) {}
     }
+    /* ── Sähköiskun ääni ───────────────────────────── */
+    function playZap() {
+        try {
+            initAudio();
+            if (!audioCtx || audioCtx.state !== 'running') return;
+            const now = audioCtx.currentTime;
+            // Surina: kohina + nopea neliöaalto-sweep alas
+            const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.18), audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.04));
+            }
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            const ngain = audioCtx.createGain();
+            ngain.gain.setValueAtTime(0.5, now);
+            ngain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            src.connect(ngain).connect(audioCtx.destination);
+            src.start(now); src.stop(now + 0.18);
+
+            const osc = audioCtx.createOscillator();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(120, now);
+            osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+            const ogain = audioCtx.createGain();
+            ogain.gain.setValueAtTime(0.12, now);
+            ogain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.connect(ogain).connect(audioCtx.destination);
+            osc.start(now); osc.stop(now + 0.15);
+        } catch(e) {}
+    }
 
     /* ── Ajoneuvon moottoriääni ────────────────────── */
     function startVehicleEngine(v) {
@@ -357,7 +407,7 @@ const Street = (() => {
         hamburgerCount = state.inventory.hamburgerCount || 5;
         hamburgerTimer = 2400;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
-        else { coin.x = randomCoinX(); coin.y = 325; }
+        else { coin.x = randomCoinX(); coin.y = randomCoinY(); }
         digKeyCollected = state.digKeyCollected || false;
         boulderKeyCollected = state.boulderKeyCollected || false;
         bmKeyCollected = state.bmKeyCollected || false;
@@ -628,7 +678,7 @@ const Street = (() => {
             coinRespawnTimer -= dt;
             if (coinRespawnTimer <= 0) {
                 coin.collected = false;
-                coin.x = randomCoinX(); coin.y = 325;
+                coin.x = randomCoinX(); coin.y = randomCoinY();
                 coin.despawnTimer = 600;  // 10s katoamisajastin
                 coinRespawnTimer = 0;
             }
@@ -648,8 +698,35 @@ const Street = (() => {
         if (!coin.collected && coin.despawnCooldown > 0) {
             coin.despawnCooldown -= dt;
             if (coin.despawnCooldown <= 0) {
-                coin.x = randomCoinX(); coin.y = 325;
+                coin.x = randomCoinX(); coin.y = randomCoinY();
                 coin.despawnTimer = 600;  // uusi 10s
+            }
+        }
+
+        // ── Sähkökaappi: sähköisku ─────────────────
+        if (!player.knockedDown) {
+            const cab = electricCabinet;
+            // Vaakasuunnassa laatikon sisällä, pystysuunnassa pää kaapin
+            // yläreunan yläpuolella (seinää vasten) → ei osumaa alhaalta.
+            if (player.x < cab.x + cab.w && player.x + player.w > cab.x &&
+                player.y < cab.y && player.y + player.h > cab.y) {
+                player.knockedDown = true;
+                player.knockdownTimer = 600;
+                player.kicking = false;
+                player.kickFrame = 0;
+                // Sähköisku viskaa pelaajan taaksepäin (estää heti uudelleen osumisen)
+                const ccx = cab.x + cab.w / 2;
+                const pushDir = (player.x + player.w / 2) < ccx ? -1 : 1;
+                player.x = Math.max(0, Math.min(WORLD_W - player.w, player.x + pushDir * 30));
+                spawnParticles(ccx, cab.y + cab.h / 2, '#ffe066', 16);
+                playZap();
+                hamburgerCount--;
+                state.inventory.hamburgerCount = hamburgerCount;
+                GameState.save(state);
+                updateHUD();
+                if (hamburgerCount <= 0) {
+                    killPlayer();
+                }
             }
         }
 
@@ -1113,7 +1190,7 @@ const Street = (() => {
         hamburgerCount = state.inventory.hamburgerCount || 5;
         hamburgerTimer = 2400;
         if (coin.collected) { coin.x = -100; coin.y = -100; }
-        else { coin.x = randomCoinX(); coin.y = 325; }
+        else { coin.x = randomCoinX(); coin.y = randomCoinY(); }
         digKeyCollected = state.digKeyCollected || false;
         boulderKeyCollected = state.boulderKeyCollected || false;
         bmKeyCollected = state.bmKeyCollected || false;
@@ -1512,6 +1589,9 @@ const Street = (() => {
         drawBuildings();
         drawGround();
 
+        // Sähkökaappi (1. puun vieressä)
+        drawElectricCabinet();
+
         // Mustat lehdettömät puut (raoissa)
         drawTrees();
         // Pienet ruohotupsut puiden juurella
@@ -1762,6 +1842,48 @@ const Street = (() => {
             }
             // Yläreuna / lippa – tyyli arvottu per talo
             drawCornice(b, bodyC);
+        }
+    }
+
+    /* ── Sähkökaappi (1. puun vieressä, kerrostalon vas. seinä) ── */
+    function drawElectricCabinet() {
+        const c = electricCabinet;
+        const cx = c.x, cy = c.y, cw = c.w, ch = c.h;
+        const centerX = cx + cw / 2;
+
+        // Runko (harmaa metalli) – pelkkä laatikko
+        ctx.fillStyle = '#55555c';
+        ctx.fillRect(cx, cy, cw, ch);
+        ctx.fillStyle = '#6c6c74';
+        ctx.fillRect(cx + 1, cy + 1, cw - 2, 2);
+        ctx.strokeStyle = '#2b2b31';
+        ctx.strokeRect(cx + 0.5, cy + 0.5, cw - 1, ch - 1);
+
+        // Etuluukku
+        ctx.fillStyle = '#48484f';
+        ctx.fillRect(cx + 2, cy + 5, cw - 4, ch - 7);
+        ctx.fillStyle = '#3d3d43';
+        ctx.fillRect(cx + 2, cy + 5, cw - 4, 1);
+
+        // Vilkkuva keltainen varoitusvalo yläosassa
+        const on = Math.sin(Date.now() / 260) > 0;
+        if (on) {
+            ctx.fillStyle = '#ffd700';
+            ctx.beginPath();
+            ctx.arc(centerX, cy - 2, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            const glow = ctx.createRadialGradient(centerX, cy - 2, 0.5, centerX, cy - 2, 7);
+            glow.addColorStop(0, 'rgba(255,215,0,0.6)');
+            glow.addColorStop(1, 'rgba(255,215,0,0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(centerX, cy - 2, 7, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = '#4a4410';
+            ctx.beginPath();
+            ctx.arc(centerX, cy - 2, 2.5, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
 
