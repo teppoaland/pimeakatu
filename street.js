@@ -2540,11 +2540,17 @@ const Street = (() => {
         const hintLines = [
             'SEURAA HAMPURILAISTEN KULUTUSTA!',
             'MUISTA SYÖDÄ!',
-            'MUUTEN VOI PELATESSA MENNÄ HENKI!'
+            'MUUTEN VOI PELATESSA MENNÄ HENKI KIRJAIMELLISESTI!'
         ];
         ctx.textAlign = 'center';
         ctx.font = 'bold 13px "Courier New", monospace';
-        const hintBoxW = 380, hintBoxH = 76, hintBoxX = 400, hintBoxTop = 92;
+        let maxHintW = 0;
+        for (let m = 0; m < hintLines.length; m++) {
+            const w = ctx.measureText(hintLines[m]).width;
+            if (w > maxHintW) maxHintW = w;
+        }
+        const hintBoxW = Math.ceil(maxHintW + 48);
+        const hintBoxH = 76, hintBoxX = 400, hintBoxTop = 92;
         ctx.fillStyle = 'rgba(15, 8, 4, 0.9)';
         ctx.strokeStyle = '#ffcc44';
         ctx.lineWidth = 2;
