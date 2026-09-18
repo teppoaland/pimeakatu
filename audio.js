@@ -15,6 +15,12 @@ const StreetAudio = (() => {
     let started = false;
     let melodyReverse = false;
 
+    // ── MP3-looppi (aito äänite) ──────────────────────
+    let musicEl = null;       // <audio>-elementti, soi suoraan (ei Web Audio -reititystä)
+    let musicReady = false;   // onko elementti luotu onnistuneesti
+    let musicPlayed = 0;      // montako looppia soitettu tässä syklissä
+    let gapTimer = null;      // 3s tauko looppien välissä
+
     const BPM_MIN = 110;
     const BPM_MAX = 142;
     let BPM = 138;
@@ -77,10 +83,77 @@ const StreetAudio = (() => {
             leadGain = ctx.createGain();
             leadGain.gain.value = 0.429;
             leadGain.connect(masterGain);
+
+            loadMusic();
         } catch (e) {}
     }
 
     function ok() { init(); return ctx && masterGain; }
+
+    /* ═══════════════════════════════════════════════════
+       MP3-LOOPPI: aito äänite <audio>-elementillä
+       Soi suoraan (ei Web Audio -reititystä), joten toimii
+       sekä http:// että file://-protokollalla.
+       ═══════════════════════════════════════════════════ */
+    function loadMusic() {
+        if (musicReady || !ctx) return;
+        try {
+            musicEl = new Audio('running.mp3');
+            musicEl.loop = false;
+            musicEl.preload = 'auto';
+            musicEl.volume = 0.05; // vastaa aiempaa masterGain-tasoa (0.05025)
+            musicEl.addEventListener('loadedmetadata', () => {
+                if (musicEl.duration && isFinite(musicEl.duration)) {
+                    // Soita 2 looppia, 3s tauko niiden välissä
+                    PLAY_DURATION = Math.round(musicEl.duration * 2 * 1000) + 3000;
+                }
+            });
+            // Looppi päättyy → 3s tauko, sitten toinen soitto
+            musicEl.addEventListener('ended', () => {
+                musicPlayed++;
+                if (musicPlayed < 2 && phase === 'playing') {
+                    gapTimer = setTimeout(() => {
+                        gapTimer = null;
+                        if (phase === 'playing' && musicEl) {
+                            try { musicEl.currentTime = 0; } catch (e) {}
+                            const p2 = musicEl.play();
+                            if (p2 && typeof p2.catch === 'function') { p2.catch(() => {}); }
+                        }
+                    }, 3000);
+                }
+            });
+            musicReady = true;
+            // Jos proseduraalinen soi paraikaa, vaihda musiikkiin lennossa
+            if (phase === 'playing' && started) {
+                if (loopId) { clearInterval(loopId); loopId = null; }
+                startMusicLoop();
+            }
+        } catch (e) {
+            musicReady = false; // ei musiikkia – pysy proseduraalisessa
+        }
+    }
+
+    function startMusicLoop() {
+        if (!musicEl || !musicReady) return;
+        if (!musicEl.paused) return;
+        musicPlayed = 0;
+        try { musicEl.currentTime = 0; } catch (e) {}
+        const p = musicEl.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(() => {
+                // Autoplay estetty – palaa proseduraaliseen synteesiin
+                musicReady = false;
+            });
+        }
+    }
+
+    function stopMusicLoop() {
+        if (gapTimer) { clearTimeout(gapTimer); gapTimer = null; }
+        if (musicEl) {
+            try { musicEl.pause(); } catch (e) {}
+            try { musicEl.currentTime = 0; } catch (e) {}
+        }
+    }
 
     /* ═══════════════════════════════════════════════════
        RUMMUT: Kick, Snare, Hi-hat
@@ -337,7 +410,7 @@ const StreetAudio = (() => {
     // ── Syklin ajastimet: 30s soittoa, 30–90s taukoa ──
     let cycleTimer = null;       // setTimeout-tunniste
     let phase = 'silent';        // 'playing' | 'silent'
-    const PLAY_DURATION = 30000; // 30s soittoa
+    let PLAY_DURATION = 30000; // soittoaika (ms) – asetetaan 2× loopiksi kun musiikki latautuu
 
     function getSilenceDuration() {
         return 30000 + Math.random() * 60000; // 30–90s taukoa
@@ -349,6 +422,7 @@ const StreetAudio = (() => {
         phase = 'silent';
         if (loopId) { clearInterval(loopId); loopId = null; }
         started = false;
+        stopMusicLoop();
         const delay = getSilenceDuration();
         cycleTimer = setTimeout(playPhase, delay);
     }
@@ -357,16 +431,23 @@ const StreetAudio = (() => {
         if (!ctx) return;
         if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
         phase = 'playing';
-        melodyReverse = Math.random() < 0.5;
-        BPM = BPM_MIN + Math.random() * (BPM_MAX - BPM_MIN);
-        BEAT = 60 / BPM; S16 = BEAT / 4; S8 = BEAT / 2; BAR = BEAT * 4;
-        LOOP = BAR * LOOP_BARS;
-        if (!started) {
+        if (musicReady) {
+            // Aito MP3-looppi
             started = true;
-            scheduleAll(ctx.currentTime + 0.05);
-            loopId = setInterval(() => {
+            startMusicLoop();
+        } else {
+            // Fallback: proseduraalinen synteesi
+            melodyReverse = Math.random() < 0.5;
+            BPM = BPM_MIN + Math.random() * (BPM_MAX - BPM_MIN);
+            BEAT = 60 / BPM; S16 = BEAT / 4; S8 = BEAT / 2; BAR = BEAT * 4;
+            LOOP = BAR * LOOP_BARS;
+            if (!started) {
+                started = true;
                 scheduleAll(ctx.currentTime + 0.05);
-            }, LOOP * 1000);
+                loopId = setInterval(() => {
+                    scheduleAll(ctx.currentTime + 0.05);
+                }, LOOP * 1000);
+            }
         }
         cycleTimer = setTimeout(silencePhase, PLAY_DURATION);
     }
@@ -456,6 +537,7 @@ const StreetAudio = (() => {
         if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
         started = false;
         phase = 'silent';
+        stopMusicLoop();
     }
 
     function getCtx() { init(); return ctx; }

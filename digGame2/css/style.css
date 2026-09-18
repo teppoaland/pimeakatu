@@ -249,6 +249,23 @@ canvas {
         font-size: 0.8rem;
         gap: 10px;
     }
+    /* Overlay/intro-tekstit tiivistetty 25 % mobiilissa */
+    #overlay-content {
+        max-width: 300px;
+        padding: 22px 30px;
+    }
+    #overlay-title {
+        font-size: 1.5rem;
+        margin-bottom: 11px;
+    }
+    #overlay-message {
+        font-size: 0.82rem;
+        margin-bottom: 15px;
+    }
+    #overlay-button {
+        padding: 9px 30px;
+        font-size: 0.9rem;
+    }
 }
 
 @media (min-width: 769px) {
