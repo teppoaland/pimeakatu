@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v3.91** | 18.9.2026 | Mobiilikamera katunäkymään. Kosketuslaitteella (`isTouchDevice`) pystymoodissa zoomataan täyttämään käytettävissä oleva korkeus (`viewW` < 800, `VIEWW_MIN=260`, `CONTROL_RESERVE=185` D-padille), ja `camX` seuraa pelaajaa vaakasuunnassa (`updateCamera()`, lerp `CAMERA_LERP=0.18`). `render()` piirtää `ctx.translate(-Math.round(camX),0)` ja clearataan `viewW`-levyiseksi; huoneet (dark/bar) keskitetään `camX=(WORLD_W-viewW)/2`. `resize()`: PC `viewW=WORLD_W` (koko katu kuten ennen), mobiili laskee `viewW`/`scale` korkeuden mukaan, vaakamoodissa `viewW`=800. `style.css`: mobiili `#game-area { justify-content: flex-start }` → canvas HUD:n alle, aita ohjainten yläpuolelle.
+**v3.92** | 18.9.2026 | BAR-kyltin (talo 8, oven yläpuolella, `drawDoor`) vilkunta voimistettu: valoisuus 50±38 (12–88 %) ja nopeampi sykli (350 ms), hehku (`shadowBlur`) pulssi `6 + |sin|·16`. Nyt selkeä neon-vilkku, ei jää huomaamatta.
 
 ## 🔒 Lukitut osa-alueet
 
