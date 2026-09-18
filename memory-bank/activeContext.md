@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v3.83** | 18.9.2026 | Puiden juurelle lisätty pienet huojuvat ruohotupsut (1/4 koko, 3 kpl per puu) random kohtaan raoissa. Refaktoroitu `drawGrassTufts` → `drawTuft(tx,ty,blades,phase,scale,t)` + `drawGrassTufts` (scale 1) + `drawTreeGrassTufts` (scale 0.25). Tupsut piirretään heti puiden jälkeen (tausta).
+**v3.84** | 18.9.2026 | Korjattu MP3-taustamusiikki mobiilissa (Android Chrome + IG-WebView). Vika: `musicReady=true` asetettiin optimistisesti heti `<audio>`-elementin luonnissa, ja yksikin hylätty `musicEl.play()` (autoplay `NotAllowedError`) asetti `musicReady=false` **pysyvästi** → syntikkafallback soi ikuisesti, oikeaa MP3:a ei kuulunut. Korjaus `audio.js`:ssa: (1) `musicReady` asetetaan vasta `canplay`/`canplaythrough`-tapahtumassa, (2) hylätty play() asettaa vain `musicBlocked=true` (ei pysyvää poistoa) ja siirtyy syntikkaan, (3) `onGesture` (touchstart/mousedown/keydown) tyhjentää `musicBlocked`-lipun ja yrittää MP3:a uudelleen käyttäjän eleessä, (4) syntikka eriytetty `startSynth()`-apufunktioksi.
 
 ## 🔒 Lukitut osa-alueet
 
