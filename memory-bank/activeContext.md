@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v3.92** | 18.9.2026 | BAR-kyltin (talo 8, oven yläpuolella, `drawDoor`) vilkunta voimistettu: valoisuus 50±38 (12–88 %) ja nopeampi sykli (350 ms), hehku (`shadowBlur`) pulssi `6 + |sin|·16`. Nyt selkeä neon-vilkku, ei jää huomaamatta.
+**v3.93** | 18.9.2026 | Potkaisemalla taloa (talo 0 ikkunat päällä + pientalot valo päällä) pudonneen kukkaruukun sijaan tulee nyt 1/5-todennäköisyydellä kolikko. Kolikon pudottua on 30s cooldown (1800 frameä), jonka aikana potku pudottaa vain kukkaruukun – estää kolikoiden farmaamisen potkimalla+ väistelyllä. Uusi `kickCoin`-objekti putoaa ikkunasta (`spawnKickDrop`), laskeutuu maahan (`GROUND_Y+10`) ja on kerättävissä; 10s ttl jos jää keräämättä. Versio index.html:ssä: v3.93.
 
 ## 🔒 Lukitut osa-alueet
 

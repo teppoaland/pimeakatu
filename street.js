@@ -129,6 +129,8 @@ const Street = (() => {
     let firstHouseKickTarget = 0;    // random 3-6, arvotaan ekan potkun yhteydessä
     let firstHouseWindowTimer = 0;   // 20s laskuri, nollautuu joka potkusta
     let flowerPot = null;            // { x, y, vx, vy, active, rotation }
+    let kickCoin = null;             // { x, y, vy, landed, ttl } – kolikko potkusta
+    let kickCoinCooldown = 0;        // 30s tauko ennen kuin uusi kolikko voi pudota potkusta
     let playerDead = false;          // kuolemasekvenssi käynnissä
     let deathTimer = 0;              // laskuri ennen reloadia (frameä)
     let deathAlpha = 0;              // mustan overlayn alpha (0→1 pimennyksen aikana)
@@ -159,6 +161,20 @@ const Street = (() => {
         spawnParticles(dc.x, dc.y, '#ff6644', 8);
         const windowY = GROUND_Y - bldg.h + 40;
         flowerPot = { x: dc.x, y: windowY, vx: 0, vy: 0, rotation: 0, active: true };
+    }
+
+    /* ── Potkun pudotus: kukkaruukku tai kolikko (1/5) ── */
+    function spawnKickDrop(bldg) {
+        const dc = doorCenter(bldg);
+        const windowY = GROUND_Y - bldg.h + 40;
+        // 1/5 kolikko – mutta vain jos cooldown on ohi (estää kolikoiden farmaamisen)
+        if (kickCoinCooldown <= 0 && Math.random() < 0.2) {
+            spawnParticles(dc.x, windowY, '#ffd700', 8);
+            kickCoin = { x: dc.x, y: windowY, vy: 0, landed: false, ttl: 600 };
+            kickCoinCooldown = 1800;  // 30s @ 60fps
+        } else {
+            spawnFlowerPot(bldg);
+        }
     }
 
     /* ── Pelaajan kuolema (hampurilaiset loppu) ────── */
@@ -827,6 +843,38 @@ const Street = (() => {
             }
         }
 
+        // ── Potkusta pudonneen kolikon fysiikka ──────
+        if (kickCoinCooldown > 0) kickCoinCooldown -= dt;
+        if (kickCoin) {
+            if (!kickCoin.landed) {
+                kickCoin.vy += 0.12 * dt;
+                kickCoin.y += kickCoin.vy * dt;
+                if (kickCoin.y >= GROUND_Y + 10) {
+                    kickCoin.y = GROUND_Y + 10;
+                    kickCoin.landed = true;
+                    spawnParticles(kickCoin.x, kickCoin.y, '#ffd700', 6);
+                }
+            } else {
+                kickCoin.ttl -= dt;
+                if (kickCoin.ttl <= 0) kickCoin = null;
+            }
+            if (kickCoin) {
+                const kpx = kickCoin.x, kpy = kickCoin.y;
+                const ppx = player.x + player.w / 2, ppy = player.y + player.h / 2;
+                if (Math.sqrt((kpx - ppx) * (kpx - ppx) + (kpy - ppy) * (kpy - ppy)) < 30) {
+                    coinCount++;
+                    state.inventory.coin = true;
+                    state.inventory.coinCount = coinCount;
+                    GameState.save(state);
+                    playCoin();
+                    showNotification('💰 Löysit kolikon! (' + coinCount + ' kpl)');
+                    spawnParticles(kpx, kpy, '#ffd700', 12);
+                    updateHUD();
+                    kickCoin = null;
+                }
+            }
+        }
+
         // ── Katueläin ────────────────────────────────
         if (!groundAnimal) {
             animalSpawnTimer -= dt;
@@ -1037,7 +1085,7 @@ const Street = (() => {
             playKick();
             player.kicking = true;
             player.kickFrame = 0;
-            if (firstHouseWindowsLit && !flowerPot) { spawnFlowerPot(buildings[0]); return; }
+            if (firstHouseWindowsLit && !flowerPot && !kickCoin) { spawnKickDrop(buildings[0]); return; }
             if (firstHouseKickTarget === 0) {
                 firstHouseKickTarget = 3 + Math.floor(Math.random() * 4); // 3-6
             }
@@ -1060,7 +1108,7 @@ const Street = (() => {
             if (Math.sqrt(dx*dx + dy*dy) < DOOR_RADIUS) {
                 playKick(); player.kicking = true; player.kickFrame = 0;
                 const sh = smallHouseLights[i];
-                if (sh.lit && !flowerPot) { spawnFlowerPot(buildings[i]); }
+                if (sh.lit && !flowerPot && !kickCoin) { spawnKickDrop(buildings[i]); }
                 else { sh.lit = true; sh.timer = 1200; spawnParticles(dc.x, dc.y, '#ffdd88', 6); }
                 return;
             }
@@ -1629,6 +1677,9 @@ const Street = (() => {
 
         // Kukkaruukku
         if (flowerPot && flowerPot.active) drawFlowerPot();
+
+        // Potkusta pudonnut kolikko
+        if (kickCoin) drawKickCoin();
 
         // Katueläin
         if (groundAnimal) drawAnimal();
@@ -2790,6 +2841,27 @@ const Street = (() => {
         ctx.fillStyle = '#2d8a2d'; ctx.beginPath(); ctx.ellipse(2,-7,4,2.5,0.3,0,Math.PI*2); ctx.fill();
         ctx.beginPath(); ctx.ellipse(-3,-6,3,2,-0.4,0,Math.PI*2); ctx.fill();
         ctx.restore();
+    }
+
+    /* ── Potkusta pudonnut kolikko ────────────────── */
+    function drawKickCoin() {
+        const kx = kickCoin.x, ky = kickCoin.y;
+        const spin = kickCoin.landed ? 0 : Math.sin(Date.now() / 55) * 0.5;
+        // Hehku
+        const g = ctx.createRadialGradient(kx, ky, 1, kx, ky, 6);
+        g.addColorStop(0, 'rgba(255,215,0,0.6)');
+        g.addColorStop(1, 'rgba(255,215,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(kx, ky, 6, 0, Math.PI * 2); ctx.fill();
+        // Kolikon pinta
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath(); ctx.ellipse(kx, ky, 5 + spin, 2, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#cc9900'; ctx.lineWidth = 0.5; ctx.stroke();
+        ctx.fillStyle = '#aa7700';
+        ctx.font = 'bold 4px monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('$', kx, ky + 1);
+        ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
     }
 
     /* ── Katueläin ───────────────────────────────── */
