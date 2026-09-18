@@ -2737,12 +2737,13 @@ const Street = (() => {
             ctx.fillRect(dx - 4, dy - 32, DOOR_W + 8, 16);
             ctx.fillStyle = '#8B4513';
             ctx.fillRect(dx - 2, dy - 30, DOOR_W + 4, 12);
-            const barPhase = Date.now() / 500;
-            const barHue = 46 + Math.sin(barPhase * 1.7) * 8;
-            const barLight = 48 + Math.sin(barPhase) * 10;
+            const barPhase = Date.now() / 350;
+            const blink = Math.sin(barPhase);
+            const barHue = 46 + blink * 6;
+            const barLight = 50 + blink * 38;              // 12–88 % – selkeä vilkku
             ctx.fillStyle = 'hsl(' + barHue + ', 100%, ' + barLight + '%)';
             ctx.shadowColor = ctx.fillStyle;
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 6 + Math.abs(blink) * 16;     // hehku voimistuu kirkkaana
             ctx.font = 'bold 9px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.fillText('  BAR  ', dc.x, dy - 20);
