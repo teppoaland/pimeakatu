@@ -19,7 +19,7 @@ const Street = (() => {
         kicking: false, kickFrame: 0,
         knockedDown: false, knockdownTimer: 0
     };
-    const PLAYER_SPEED = 2.5;
+    const PLAYER_SPEED = 1.225;   // hidastettu 30% (oli 1.75) – kävely hitaampi kuin autot
     const GRAVITY = 0.4;
     const JUMP_VEL = -7;
     const KICK_DURATION = 10; // frameä @ ~60fps ≈ 170ms
@@ -79,6 +79,18 @@ const Street = (() => {
     const DOOR_W = 26;
     const DOOR_H = 32;
     const DOOR_RADIUS = 19;
+
+    /* ── Mustat lehdettömät puut (isoimmat raot) ── */
+    // Isoimmat raot: talo 1–2 (x 150–200) ja talo 3–4 (x 330–380).
+    // 1. puu = 1/3 viereisestä matalasta talosta (buildings[2].h = 140), pienennetty 30%
+    // 2. puu = 2/3 ensimmäisen puun alkuperäisestä korkeudesta (ei pienennystä)
+    const TREE1_H = buildings[2].h / 3 * 0.7;
+    const TREE2_H = buildings[2].h / 3 * 2 / 3;
+    const trees = [
+        { x: 175, h: TREE1_H },   // rako talojen 1–2 välissä
+        { x: 355, h: TREE2_H }    // rako talojen 3–4 välissä
+    ];
+
 /* ── Kolikko ─────────────────────────────────────── */
     const coin = { x: 590, y: 325, collected: false, sparkle: 0, despawnTimer: 0, despawnCooldown: 0 };
     function randomCoinX() { return 50 + Math.random() * 680; }  // 50–730
@@ -132,6 +144,9 @@ const Street = (() => {
         player.knockdownTimer = 9999; // pysyy maassa koko sekvenssin ajan
         player.vx = 0;
         player.kicking = false;
+        for (let li = 0; li < vehicles.length; li++) {
+            if (vehicles[li] && vehicles[li].engine) stopVehicleEngine(vehicles[li].engine);
+        }
         StreetAudio.stop();        // pysäytä taustamusiikki
         StreetAudio.playDeathGong(); // gongi kumahtaa
     }
@@ -238,6 +253,74 @@ const Street = (() => {
                 osc.start(now); osc.stop(now + 0.08);
             });
         } catch(e) {}
+    }
+
+    /* ── Ajoneuvon moottoriääni ────────────────────── */
+    function startVehicleEngine(v) {
+        try {
+            initAudio();
+            if (!audioCtx || audioCtx.state !== 'running') return null;
+            const now = audioCtx.currentTime;
+            let baseFreq, gainVal, lfoRate, lowpassFreq;
+            if (v.type === 'motorcycle') {
+                baseFreq = 185; gainVal = 0.025; lfoRate = 15; lowpassFreq = 2200;
+            } else if (v.type === 'ambulance') {
+                baseFreq = 55; gainVal = 0.08; lfoRate = 6; lowpassFreq = 420;
+            } else { // car
+                baseFreq = 82; gainVal = 0.065; lfoRate = 9; lowpassFreq = 640;
+            }
+            // Pääoskillaattori – moottorin perusjyrinä
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.value = baseFreq;
+            // LFO: taajuusmodulaatio → suriseva "zzz"/"ZZZzzz"-jyrinä
+            const lfo = audioCtx.createOscillator();
+            lfo.type = 'triangle';
+            lfo.frequency.value = lfoRate;
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = baseFreq * 0.22;
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            // Alipäästösuodatin pehmentää sahahampaan
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = lowpassFreq;
+            // Äänenvoimakkuus (pehmeä fade-in)
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.linearRampToValueAtTime(gainVal, now + 0.5);
+            // Stereopanorointi – ääni seuraa auton x-sijaintia
+            const panner = (typeof audioCtx.createStereoPanner === 'function') ? audioCtx.createStereoPanner() : null;
+            osc.connect(filter);
+            filter.connect(gain);
+            if (panner) { gain.connect(panner); panner.connect(audioCtx.destination); }
+            else { gain.connect(audioCtx.destination); }
+            osc.start(now);
+            lfo.start(now);
+            const engine = { osc, lfo, gain, panner };
+            updateVehicleEngine(engine, v);
+            return engine;
+        } catch (e) { return null; }
+    }
+
+    function updateVehicleEngine(engine, v) {
+        if (!engine || !audioCtx || !engine.panner) return;
+        try {
+            const pan = Math.max(-1, Math.min(1, (v.x / WORLD_W) * 2 - 1));
+            engine.panner.pan.setTargetAtTime(pan, audioCtx.currentTime, 0.05);
+        } catch (e) {}
+    }
+
+    function stopVehicleEngine(engine) {
+        if (!engine || !audioCtx) return;
+        try {
+            const now = audioCtx.currentTime;
+            engine.gain.gain.cancelScheduledValues(now);
+            engine.gain.gain.setValueAtTime(Math.max(engine.gain.gain.value, 0.0001), now);
+            engine.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+            engine.osc.stop(now + 0.4);
+            engine.lfo.stop(now + 0.4);
+        } catch (e) {}
     }
 
     // Apufunktio: oven keskipiste
@@ -695,7 +778,7 @@ const Street = (() => {
                     } else {
                         type = 'ambulance'; w = 80; h = 34; speed = 1.8 + Math.random() * 1.2;
                     }
-                    vehicles[li] = {
+                    const vehicle = {
                         type,
                         x: dir > 0 ? -w : WORLD_W + w,
                         y: lane.y,
@@ -704,12 +787,16 @@ const Street = (() => {
                         direction: dir,
                         hasHeadlight: type !== 'motorcycle' || Math.random() < 0.5
                     };
+                    vehicle.engine = startVehicleEngine(vehicle);
+                    vehicles[li] = vehicle;
                     spawnTimers[li] = 1200 + Math.random() * 1200; // 20–40s
                 }
             } else {
                 const v = vehicles[li];
                 v.x += v.vx * dt;
+                updateVehicleEngine(v.engine, v);
                 if ((v.direction > 0 && v.x > WORLD_W + v.w + 10) || (v.direction < 0 && v.x < -v.w - 10)) {
+                    stopVehicleEngine(v.engine);
                     vehicles[li] = null;
                 }
             }
@@ -1188,6 +1275,7 @@ const Street = (() => {
             copingStones: [],     // Reunakivet
             pavingStones: [],     // Kiveysrivit
             grassTufts: [],
+            treeGrassTufts: [],  // Pienet ruohotupsut puiden juurella (1/4 koko)
             manholes: [],
             beetle: null,
             newspaper: null,
@@ -1227,6 +1315,20 @@ const Street = (() => {
         }
         // Lajittele vasemmalta oikealle
         foreground.grassTufts.sort((a, b) => a.x - b.x);
+
+        // Pienet ruohotupsut (1/4 koko) puiden juurella – random paikka raossa
+        // Puut: talot 1–2 (x 150–200) ja talot 3–4 (x 330–380), raon leveys ~50px
+        for (const tr of trees) {
+            for (let i = 0; i < 3; i++) {
+                foreground.treeGrassTufts.push({
+                    x: tr.x - 25 + Math.random() * 50,
+                    y: GROUND_Y - 5 + Math.random() * 5,   // puun juurella
+                    blades: 3 + Math.floor(Math.random() * 3),  // 3-5 kortta
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        foreground.treeGrassTufts.sort((a, b) => a.x - b.x);
 
         // Viemärinkannet (2 kpl)
         foreground.manholes.push({
@@ -1409,6 +1511,11 @@ const Street = (() => {
 
         drawBuildings();
         drawGround();
+
+        // Mustat lehdettömät puut (raoissa)
+        drawTrees();
+        // Pienet ruohotupsut puiden juurella
+        if (foreground) { drawTreeGrassTufts(); }
 
         // Lamput
         for (const lamp of lamps) drawLampPost(lamp);
@@ -1720,6 +1827,66 @@ const Street = (() => {
         }
     }
 
+    /* ── Musta lehdetön puu (siluetti taivasta vasten) ── */
+    function drawBareTree(cx, baseY, h) {
+        ctx.fillStyle = '#000';
+        ctx.strokeStyle = '#000';
+        ctx.lineCap = 'round';
+
+        const trunkH = h * 0.45;
+        const trunkW = Math.max(2, h * 0.16);
+
+        // Runko (tyvestä leveämpi, latvaa kohti kapeampi)
+        ctx.beginPath();
+        ctx.moveTo(cx - trunkW * 0.5, baseY);
+        ctx.lineTo(cx + trunkW * 0.5, baseY);
+        ctx.lineTo(cx + trunkW * 0.18, baseY - trunkH);
+        ctx.lineTo(cx - trunkW * 0.18, baseY - trunkH);
+        ctx.closePath();
+        ctx.fill();
+
+        // Deterministinen 2D-kohina (sama tulos joka ruudulla → ei välkyntää)
+        function noise2(x, y) {
+            const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+            return s - Math.floor(s); // [0,1)
+        }
+
+        // Haarat – orgaaninen, epäsymmetrinen rekursio (deterministinen kohina)
+        function branch(x, y, ang, len, w, depth) {
+            if (len < 1.5 || w < 0.5 || depth > 7) return;
+            const x2 = x + Math.cos(ang) * len;
+            const y2 = y + Math.sin(ang) * len;
+            ctx.lineWidth = w;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            // Epäsymmetrinen haarautuminen: kulmat, pituudet ja leveydet vaihtelevat
+            const n1 = noise2(x2, y2);
+            const n2 = noise2(y2 + 3.1, x2 - 2.7);
+            const spread = 0.3 + n1 * 0.45;            // 0.3–0.75 rad
+            const bend = (n2 - 0.5) * 0.6;             // koko latvan taivutussuunta
+            const lenL = len * (0.6 + n1 * 0.25);      // 0.6–0.85
+            const lenR = len * (0.6 + n2 * 0.25);
+            const w2 = w * 0.62;
+            branch(x2, y2, ang - spread + bend, lenL, w2, depth + 1);
+            branch(x2, y2, ang + spread * (0.7 + n2 * 0.6) + bend, lenR, w2 * (0.9 + n1 * 0.2), depth + 1);
+        }
+
+        const topY = baseY - trunkH;
+        branch(cx, topY, -Math.PI / 2, h * 0.52, trunkW * 0.4, 0);
+        branch(cx, topY, -Math.PI / 2 - 0.85, h * 0.42, trunkW * 0.28, 0);
+        branch(cx, topY, -Math.PI / 2 + 0.7, h * 0.46, trunkW * 0.26, 0);
+
+        // Palauta oletus, ettei pyöreä viivapää vuoda muihin piirroksiin
+        ctx.lineCap = 'butt';
+    }
+
+    function drawTrees() {
+        for (const t of trees) drawBareTree(t.x, GROUND_Y - 5, t.h);
+    }
+
     function drawGround() {
         // Taustapohja
         ctx.fillStyle = '#1a1a1a';
@@ -1817,28 +1984,38 @@ const Street = (() => {
         ctx.restore();
     }
 
+    function drawTuft(tx, ty, blades, phase, scale, t) {
+        const sway = Math.sin(t + phase) * 2 * scale;
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(tx, ty + 3 * scale, 5 * scale, 2 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        for (let b = 0; b < blades; b++) {
+            const bx = tx + (-3 + b * 2.5) * scale;
+            const bh = (7 + (b % 3) * 4) * scale;
+            const bend = sway * (0.6 + b * 0.15);
+            ctx.strokeStyle = b % 2 === 0 ? '#3a4a2a' : '#4a5a30';
+            ctx.lineWidth = 1.2 * scale;
+            ctx.beginPath();
+            ctx.moveTo(bx, ty);
+            ctx.quadraticCurveTo(bx + bend * 0.5, ty - bh * 0.5, bx + bend, ty - bh);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
     function drawGrassTufts() {
         const t = Date.now() * 0.003;
         for (const tuft of foreground.grassTufts) {
-            const tx = tuft.x, ty = tuft.y;
-            const sway = Math.sin(t + tuft.phase) * 2;
-            ctx.save();
-            ctx.fillStyle = 'rgba(0,0,0,0.25)';
-            ctx.beginPath();
-            ctx.ellipse(tx, ty + 3, 5, 2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            for (let b = 0; b < tuft.blades; b++) {
-                const bx = tx - 3 + b * 2.5;
-                const bh = 7 + (b % 3) * 4;
-                const bend = sway * (0.6 + b * 0.15);
-                ctx.strokeStyle = b % 2 === 0 ? '#3a4a2a' : '#4a5a30';
-                ctx.lineWidth = 1.2;
-                ctx.beginPath();
-                ctx.moveTo(bx, ty);
-                ctx.quadraticCurveTo(bx + bend * 0.5, ty - bh * 0.5, bx + bend, ty - bh);
-                ctx.stroke();
-            }
-            ctx.restore();
+            drawTuft(tuft.x, tuft.y, tuft.blades, tuft.phase, 1, t);
+        }
+    }
+
+    function drawTreeGrassTufts() {
+        const t = Date.now() * 0.003;
+        for (const tuft of foreground.treeGrassTufts) {
+            drawTuft(tuft.x, tuft.y, tuft.blades, tuft.phase, 0.25, t);
         }
     }
 

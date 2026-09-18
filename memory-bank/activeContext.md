@@ -4,9 +4,15 @@
 
 ---
 
+## 📌 Kommunikaatiosääntö (KÄYTTÄJÄN PYYNTÖ)
+
+> **"Lue membank"** → lue muistipankki hiljaa itseäsi varten. **ÄLÄ anna yhteenvetoa.** Muistipankki on Clinea varten, ei käyttäjälle raportoitavaksi. Käyttäjä on pyytänyt tätä useamman kerran.
+
+---
+
 ## 📍 Nyt
 
-**v3.79** | 17.9.2026 | Pääportaali: Törmäyksistä seuraamus – kukkapurkki tai auto vie yhden hampurilaisen (liven). Musiikin volyymi -25%.
+**v3.83** | 18.9.2026 | Puiden juurelle lisätty pienet huojuvat ruohotupsut (1/4 koko, 3 kpl per puu) random kohtaan raoissa. Refaktoroitu `drawGrassTufts` → `drawTuft(tx,ty,blades,phase,scale,t)` + `drawGrassTufts` (scale 1) + `drawTreeGrassTufts` (scale 0.25). Tupsut piirretään heti puiden jälkeen (tausta).
 
 ## 🔒 Lukitut osa-alueet
 
