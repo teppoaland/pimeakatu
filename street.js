@@ -136,6 +136,13 @@ const Street = (() => {
     let groundAnimal = null;         // { type, x, y, vx, direction, hopY, hopVel, animTimer, pauseTimer }
     let animalSpawnTimer = 900;      // 15s välein
     let isTouchDevice = false;
+
+    /* ── Kamera (mobiili: vaakasuuntainen seuranta) ── */
+    let viewW = WORLD_W;          // näkyvä maailmanleveys (PC: koko katu)
+    let camX = 0;                 // kameraoffsetti vaakasuunnassa (0 = ei siirtoa)
+    const CAMERA_LERP = 0.18;     // seurannan pehmeys (0–1)
+    const VIEWW_MIN = 260;        // mobiilizoomauksen minimi-leveys (ei liian äärimmäinen)
+
     // Kaksisuuntainen liikenne: kaksi ajorataa (kaistaa)
     // 0 = alempi (lahempana kameraa), vasemmalta oikealle
     // 1 = ylempi (kauempana), oikealta vasemmalle
@@ -534,6 +541,14 @@ const Street = (() => {
 /* ═══════════════════════════════════════════════════
        PÄIVITYS
        ═══════════════════════════════════════════════════ */
+    /* ── Kamera: seuraa pelaajaa vaakasuunnassa (mobiili) ── */
+    function updateCamera() {
+        if (viewW >= WORLD_W) { camX = 0; return; }
+        const target = Math.max(0, Math.min(WORLD_W - viewW, player.x + player.w / 2 - viewW / 2));
+        camX += (target - camX) * CAMERA_LERP;
+        if (Math.abs(target - camX) < 0.5) camX = target;
+    }
+
     function update(dt) {
         // ── Kuolemasekvenssi ─────────────────────────
         if (playerDead) {
@@ -626,6 +641,8 @@ const Street = (() => {
         }
 
         player.x = Math.max(0, Math.min(WORLD_W - player.w, player.x));
+
+        updateCamera();
 
         const onGround = true;  // pelaaja on aina pinnalla (ei hyppyjä)
 
@@ -1515,11 +1532,15 @@ const Street = (() => {
        PIIRTO – tausta, talot, maa
        ═══════════════════════════════════════════════════ */
     function render() {
-        ctx.clearRect(0, 0, WORLD_W, WORLD_H);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, viewW, WORLD_H);
 
-        if (darkRoom) { drawDarkRoom(); return; }
+        if (darkRoom) { camX = (WORLD_W - viewW) / 2; ctx.save(); ctx.translate(-Math.round(camX), 0); drawDarkRoom(); ctx.restore(); return; }
 
-        if (barRoom) { drawBarRoom(); return; }
+        if (barRoom) { camX = (WORLD_W - viewW) / 2; ctx.save(); ctx.translate(-Math.round(camX), 0); drawBarRoom(); ctx.restore(); return; }
+
+        ctx.save();
+        ctx.translate(-Math.round(camX), 0);
 
         // Taivas
         const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
@@ -1637,6 +1658,8 @@ const Street = (() => {
             ctx.fillStyle = 'rgba(0,0,0,' + deathAlpha + ')';
             ctx.fillRect(0, 0, WORLD_W, WORLD_H);
         }
+
+        ctx.restore();
     }
 
     /* ── Rauhalliset ikkunavalot (0-5 kpl, 1-10min paloaika) ── */
@@ -3008,14 +3031,42 @@ const Street = (() => {
     function resize() {
         const wrapper = document.getElementById('game-wrapper');
         if (!wrapper) return;
+
+        const hud = document.getElementById('hud-bar');
+        const hudH = hud ? hud.offsetHeight + 8 : 0;   // HUD + pieni väli
         const maxW = wrapper.clientWidth - 16;
-        // Vain HUD (~50px), ohjaimet overlayna → ei vie tilaa
-        const maxH = wrapper.clientHeight - 60;
-        const scale = Math.min(maxW / WORLD_W, maxH / WORLD_H);
-        canvas.width = WORLD_W;
+
+        if (!isTouchDevice) {
+            // PC: koko katu näkyvissä (ei kameraa, ei scrollausta)
+            viewW = WORLD_W;
+            camX = 0;
+            const maxH = wrapper.clientHeight - hudH;
+            const scale = Math.min(maxW / WORLD_W, maxH / WORLD_H);
+            canvas.width = WORLD_W;
+            canvas.height = WORLD_H;
+            canvas.style.width = Math.floor(WORLD_W * scale) + 'px';
+            canvas.style.height = Math.floor(WORLD_H * scale) + 'px';
+            return;
+        }
+
+        // Mobiili: vaakakamera. Vaakamoodissa koko katu mahtuu (ei scrollausta);
+        // pystymoodissa zoomataan täyttämään korkeus ja kamera seuraa pelaajaa.
+        const isLandscape = window.innerWidth > window.innerHeight;
+        const CONTROL_RESERVE = isLandscape ? 0 : 185;   // D-padin korkeus + marginaali
+        const availH = Math.max(200, wrapper.clientHeight - hudH - CONTROL_RESERVE);
+
+        // Tavoite: täytä käytettävissä oleva korkeus (maksimaalinen vertikaalitila)
+        const scaleH = availH / WORLD_H;
+        viewW = Math.max(VIEWW_MIN, Math.min(WORLD_W, maxW / scaleH));
+        // Varmista ettei canvas ylitä näytön leveyttä
+        const scale = Math.min(scaleH, maxW / viewW);
+
+        canvas.width = Math.round(viewW);
         canvas.height = WORLD_H;
-        canvas.style.width = Math.floor(WORLD_W * scale) + 'px';
+        canvas.style.width = Math.floor(viewW * scale) + 'px';
         canvas.style.height = Math.floor(WORLD_H * scale) + 'px';
+        // Clampaa kamera uuteen viewW:hen (älä näytä maailman ulkopuolelle)
+        camX = Math.max(0, Math.min(WORLD_W - viewW, camX));
     }
 
     return { init, resize, closeGame };
