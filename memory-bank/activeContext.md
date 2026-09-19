@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v4.0** | 19.9.2026 | Pääportaalin teräsaidan alavaakarauta (alajuoksu) sai vaihtelua street.js drawIronFence: pystysuuntainen pyöreä gradientti (yläkiilto #3a3a3a, keskiosa #2e2e2e, alavarjo #1a1a1a) + miltei mustat niitit (#0b0b0b/#171717) joka pystypiikin kohdalle. Lisäksi digGame2 (Boulder Dash) alkudialogi korjattu vaakanäytölle: #overlay-content sai max-height/overflow-y + @media (max-height: 500px) pienentää otsikon ("💎 Aloittelijan luola") 1.05rem, viestin 0.72rem ja paddingin, jotta ylä-/alakehykset mahtuvat. Versio index.html:ssä: v4.0.
+**v4.2** | 19.9.2026 | Pääportaalin ikkunat korjattu street.js drawBuildings: ikkunoita ei enää piirretä oven taakse. Lasketaan oven "ei-ikkunaa" -alue (b.x+b.w/2 - DOOR_W/2 -2, GROUND_Y-DOOR_H-2, leveys DOOR_W+4) ja ohitetaan (continue) ikkuna jos wx+10 > dLeft && wx < dRight && wy+14 > dTop. Koskee kapeita taloja, joissa ikkuna jäi puoliksi oven taakse. Versio index.html:ssä: v4.2.
 
 ## 🔒 Lukitut osa-alueet
 

@@ -21,6 +21,8 @@
 | Lampun visuaalinen viimeistely | ✅ v3.96 – varren pyöreä gradientti + jalusta katukivetyksen rasterina, pystyraita vaihtelee oikealla/vasemmalla lampuittain |
 | Teräsaidan alavaakarauta (vaihtelu) | ✅ v4.0 – pystysuuntainen pyöreä gradientti + niitit joka pystypiikin kohdalle, aiemmin tasainen #2e2e2e |
 | Boulder Dash alkudialogi (vaakakuva) | ✅ v4.0 – #overlay-content max-height/overflow-y + @media (max-height: 500px) pienentää otsikon/tekstit, jotta ylä-/alakehykset mahtuvat |
+| BAR-kyltti (talo 8) laskettu alemmas | ✅ v4.1 – kyltin alareuna dy-10 (3px ovivalon yläpuolella, 10px oven yläpuolella) |
+| Ikkunat eivät jää oven taakse | ✅ v4.2 – drawBuildings: oven "ei-ikkunaa" -alue (DOOR_W+4 x DOOR_H+2, +2px reunus), ikkuna ohitetaan jos se leikkaa oven alueen |
 
 ## ⛏️ Dig Game (digGame1/) | 💎 Boulder Dash (digGame2/)
 

@@ -65,10 +65,9 @@ class Game {
 
         if (!skipIntro) {
             this.showOverlay('⛏️ Dig Game',
-                'Kulje maailman halki vasemmalta oikealle!\n' +
-                'Kävele maan pinnalla tai kaivaudu maan alle.\n\n' +
-                'Puhelimella parhaan pelikokemuksen saamiseksi\n' +
-                'käännä 📱 puhelin pystyasentoon.\n\n' +
+                'Kulje maailman halki!\n' +
+                'Kävele maan pinnalla tai kaivaudu maahan.\n\n' +
+                'Puhelimella pelatessa käännä 📱 puhelin pystyasentoon.\n\n' +
                 'Etsi avain maailman itäpäästä. GO!',
                 'Aloita');
         }
