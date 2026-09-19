@@ -14,7 +14,7 @@ const Street = (() => {
     /* ── Pelaaja ─────────────────────────────────────── */
     const player = {
         x: 40, y: GROUND_Y - 20, w: 20, h: 30,
-        vx: 0, vy: 0, facing: 1, walking: false,
+        vx: 0, vy: 0, facing: 1, lookY: 0, walking: false,
         walkFrame: 0, walkTimer: 0,
         kicking: false, kickFrame: 0,
         knockedDown: false, knockdownTimer: 0
@@ -23,6 +23,7 @@ const Street = (() => {
     const GRAVITY = 0.4;
     const JUMP_VEL = -7;
     const KICK_DURATION = 10; // frameä @ ~60fps ≈ 170ms
+    const HIT_PAUSE = 2;      // hit pause -pysähdys osumasta (~33 ms) – vain potkun osumille
 
     /* ── Syötteet ────────────────────────────────────── */
     const keys = {};
@@ -138,6 +139,8 @@ const Street = (() => {
     let groundAnimal = null;         // { type, x, y, vx, direction, hopY, hopVel, animTimer, pauseTimer }
     let animalSpawnTimer = 900;      // 15s välein
     let isTouchDevice = false;
+    let animClock = 0;                // animaatiokello (~frameä): hengitys + silmän vilkahdus
+    let hitPauseTimer = 0;            // hit pause -laskuri: maailma jäätyy osumasta (frameä)
 
     /* ── Kamera (mobiili: vaakasuuntainen seuranta) ── */
     let viewW = WORLD_W;          // näkyvä maailmanleveys (PC: koko katu)
@@ -410,6 +413,8 @@ const Street = (() => {
     function init(canvasEl) {
         canvas = canvasEl;
         ctx = canvas.getContext('2d');
+        // Pikseliterävyys: ei pehmennystä skaalattaessa (sprite-piirto)
+        ctx.imageSmoothingEnabled = false;
         randomizeBuildingColors();  // arvo taloille uudet sävyt joka kerta
         state = GameState.load();
         for (let i = 0; i < lamps.length; i++) {
@@ -571,6 +576,12 @@ const Street = (() => {
     }
 
     function update(dt) {
+        // ── Hit pause: maailma jäätyy 2 frameä osumasta (render jatkaa) ──
+        if (hitPauseTimer > 0) { hitPauseTimer -= dt; return; }
+
+        // Animaatiokello (hengitys, silmän vilkahdus)
+        animClock += dt;
+
         // ── Kuolemasekvenssi ─────────────────────────
         if (playerDead) {
             deathTimer -= dt;
@@ -639,6 +650,7 @@ const Street = (() => {
         if (keys['ArrowDown'] || keys['s'] || keys['S'])   moveY = 1;
         player.y += moveY * PLAYER_SPEED * dt;
         player.y = Math.max(PLAYER_Y_MIN, Math.min(PLAYER_Y_MAX, player.y));
+        player.lookY = moveY;   // katseen suunta piirtoa varten (−1 ylös, +1 alas)
         player.vy = 0;
 
         player.x += player.vx * dt;
@@ -1090,6 +1102,7 @@ const Street = (() => {
             playKick();
             player.kicking = true;
             player.kickFrame = 0;
+            hitPauseTimer = HIT_PAUSE;   // tuntuva osuma
             if (firstHouseWindowsLit && !flowerPot && !kickCoin) { spawnKickDrop(buildings[0]); return; }
             if (firstHouseKickTarget === 0) {
                 firstHouseKickTarget = 3 + Math.floor(Math.random() * 4); // 3-6
@@ -1112,6 +1125,7 @@ const Street = (() => {
             const dx = px - dc.x, dy = py - dc.y;
             if (Math.sqrt(dx*dx + dy*dy) < DOOR_RADIUS) {
                 playKick(); player.kicking = true; player.kickFrame = 0;
+                hitPauseTimer = HIT_PAUSE;   // tuntuva osuma
                 const sh = smallHouseLights[i];
                 if (sh.lit && !flowerPot && !kickCoin) { spawnKickDrop(buildings[i]); }
                 else { sh.lit = true; sh.timer = 1200; spawnParticles(dc.x, dc.y, '#ffdd88', 6); }
@@ -1138,6 +1152,7 @@ const Street = (() => {
                 state.litLamps[i] = lamps[i].lit;
                 // Laske potkut
                 lamps[i].kickCount = (lamps[i].kickCount || 0) + 1;
+                hitPauseTimer = HIT_PAUSE;   // tuntuva osuma (myös ylikuumeneminen)
 
                 if (lamps[i].kickCount >= 5) {
 // Salainen lamppu: 5 potkua → avaa kaikki ovet (vain viimeinen lamppu)
@@ -2671,7 +2686,7 @@ const Street = (() => {
 
         // Ohjeteksti raameissa (varoitus hampurilaisten kulutuksesta)
         const hintLines = [
-            'SEURAA HAMPURILAISTEN KULUTUSTA!',
+            'SEURAA HAMPURILAISTEN KULUTUSTA',
             'MUISTA SYÖDÄ VILLE!',
             'Tv. Äiti'
         ];
@@ -2700,9 +2715,9 @@ const Street = (() => {
         ctx.textAlign = 'center';
         var canBuy = Math.min(coinCount, 10 - hamburgerCount);
         if (coinCount > 0 && hamburgerCount < 10) {
-            ctx.fillText('🍔 ' + coinCount + ' kolikolla → +' + canBuy + ' hampurilaista!', 400, 185);
+            ctx.fillText('🍔 ' + coinCount + ' kolikolla saat ' + canBuy + ' hampurilaista!', 400, 185);
         } else if (hamburgerCount >= 10) {
-            ctx.fillText('🍔 Hampurilaiset täynnä (max 10).', 400, 185);
+            ctx.fillText('🍔 Hampurilaiskiintiö täynnä Osta jotain muuta!.', 400, 185);
         } else {
             ctx.fillText('🍔 Ei kolikoita. Hommaa massia!', 400, 185);
         }
@@ -3250,37 +3265,112 @@ const Street = (() => {
         }
 
         ctx.save();
+        // Maakosketusvarjo – ankkuroi hahmon maahan (symmetrinen, piirretään ennen peilausta)
+        const feetX = px + pw / 2, feetY = py + ph - 1;
+        const shadowW = player.walking ? 11 : 10;
+        ctx.fillStyle = 'rgba(0,0,0,0.30)';
+        ctx.beginPath(); ctx.ellipse(feetX, feetY, shadowW, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.beginPath(); ctx.ellipse(feetX, feetY, shadowW - 4, 1.8, 0, 0, Math.PI * 2); ctx.fill();
         if (player.facing === -1) {
             ctx.translate(px+pw/2, 0);
             ctx.scale(-1, 1);
             ctx.translate(-(px+pw/2), 0);
         }
-        // Kävelyn kevennys – vartalo pomppii hieman
-        const bobY = player.walking ? (player.walkFrame % 2) * 1 : 0;
-        // Vartalo
+        // Kävelyn kevennys + paikallaan hengitys (ylävartalo 1 px, ~2,4 s sykli)
+        const breathe = (!player.walking && !player.kicking)
+            ? (Math.floor(animClock / 36) % 4 >= 2 ? 1 : 0) : 0;
+        const bobY = breathe + (player.walking ? (player.walkFrame % 2) * 1 : 0);
+        // Potkun aikana ylävartalo nojaa: ennakossa taakse, osumassa eteen
+        const kickKp = player.kicking ? (player.kickFrame / KICK_DURATION) : 0;
+        const kickLean = player.kicking
+            ? (kickKp < 0.2 ? -1 : Math.round(Math.sin(((kickKp - 0.2) / 0.8) * Math.PI)))
+            : 0;
+        ctx.save();
+        ctx.translate(kickLean, 0);   // koko ylävartalo nojaa potkun tahdissa
+        // Vartalo (paita) – kylkivarjostus tuo pyöreyttä
         ctx.fillStyle = '#3366cc';
         ctx.fillRect(px+4, py+10 + bobY, pw-8, ph-18);
-        // Kädet – heiluvat kävelyn tahdissa
-        const armSwing = player.walking ? ((player.walkFrame === 1) ? -3 : (player.walkFrame === 3) ? 3 : 0) : 0;
+        // Selän varjokaista (takaosa) + etureunan valokaista
+        ctx.fillStyle = '#2b57ab';
+        ctx.fillRect(px+4, py+10 + bobY, 2, ph-18);
+        ctx.fillStyle = '#4a7de0';
+        ctx.fillRect(px+pw-5, py+10 + bobY, 1, ph-18);
+        // Leuan varjo + niskavarjo paidan yläosassa (kaulan illuusio)
+        // Pään ympyrä peittää paidan yläreunan → varjo vasta pään alareunan tasolle
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.fillRect(px+5, py+12 + bobY, pw-10, 2);
+        // Vyötärön raja (erottaa paidan housuista)
+        ctx.fillStyle = 'rgba(0,0,0,0.20)';
+        ctx.fillRect(px+4, py+21 + bobY, pw-8, 1);
+        // Kädet – lepoasennossa, seuraavat vain vartalon bobY:tä (ei heiluntaa)
+        const backArmX  = px + 3,      backArmY  = py + 12 + bobY;
+        const frontArmX = px + pw - 6, frontArmY = backArmY;
         ctx.fillStyle = '#3355aa';
-        ctx.fillRect(px+3, py+12 + bobY + armSwing, 3, 8);
-        ctx.fillRect(px+pw-6, py+12 + bobY - armSwing, 3, 8);
+        ctx.fillRect(backArmX, backArmY, 3, 8);
+        ctx.fillRect(frontArmX, frontArmY, 3, 8);
+        // Hihansuut + kädet (iho) hihan päissä
+        ctx.fillStyle = '#254a9c';
+        ctx.fillRect(backArmX, backArmY + 7, 3, 1);
+        ctx.fillRect(frontArmX, frontArmY + 7, 3, 1);
+        ctx.fillStyle = '#ffcc99';
+        ctx.fillRect(backArmX, backArmY + 8, 3, 2);
+        ctx.fillRect(frontArmX, frontArmY + 8, 3, 2);
+        ctx.fillStyle = '#e8b487';
+        ctx.fillRect(backArmX, backArmY + 9, 3, 1);
+        ctx.fillRect(frontArmX, frontArmY + 9, 3, 1);
         // Pää
         ctx.fillStyle = '#ffcc99';
         ctx.beginPath(); ctx.arc(px+pw/2, py+6 + bobY, 7, 0, Math.PI*2); ctx.fill();
+        // Hiukset (otsatukka)
         ctx.fillStyle = '#553300';
         ctx.beginPath(); ctx.arc(px+pw/2, py+3 + bobY, 7, Math.PI, 0); ctx.fill();
+        // Kasvojen takaosan varjo + lipan varjo (syvyys)
+        ctx.fillStyle = 'rgba(0,0,0,0.10)';
+        ctx.fillRect(px+4, py+6 + bobY, 2, 4);
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.fillRect(px+5, py+5 + bobY, 11, 1);
+        // Silmä (kulkusuunnan puoleinen) – vilkahtaa ~100 ms / 3,6 s (kello)
+        const eyeY = py+7 + bobY + (player.lookY || 0);
+        const blink = (Math.floor(animClock) % 216) >= 210;
+        ctx.fillStyle = '#2b2118';
+        if (blink) ctx.fillRect(px+13, eyeY + 1, 2, 1);
+        else       ctx.fillRect(px+13, eyeY, 2, 2);
         // Lippis – lippa kulkusuuntaan
         ctx.fillStyle = '#3366cc';
         ctx.fillRect(px+pw/2 - 6, py, 14, 5);
         ctx.fillStyle = '#224488';
         ctx.fillRect(px+pw/2 + 2, py + 1, 7, 3);   // lippa sirompi (12→7)
         ctx.fillRect(px+pw/2 + 4, py + 4, 6, 1);
-        // Jalat – kävelyanimaatio
-        ctx.fillStyle = '#224488';
+        // Dynaaminen valo: lähin palava lamppu antaa ohuen lämpimän reunavalon
+        // (lasketaan lokaalikoordinaateissa → kääntyy peilauksen mukana)
+        let rimA = 0, rimSide = 0;
+        for (const lamp of lamps) {
+            if (!lamp.lit) continue;
+            const d = Math.abs(lamp.x - (px + pw / 2));
+            if (d < 70) {
+                const a = (1 - d / 70) * 0.35;
+                if (a > rimA) { rimA = a; rimSide = (lamp.x > px + pw / 2) ? 1 : -1; }
+            }
+        }
+        if (rimA > 0.04) {
+            const localSide = rimSide * player.facing;
+            const torsoX = localSide > 0 ? px + pw - 5 : px + 4;
+            const headX  = localSide > 0 ? px + 16 : px + 4;
+            ctx.fillStyle = 'rgba(255,221,136,' + rimA.toFixed(3) + ')';
+            ctx.fillRect(torsoX, py + 10 + bobY, 1, ph - 19);
+            ctx.fillRect(headX, py + 7 + bobY, 1, 3);
+        }
+        ctx.restore();   // potkun nojaus päättyy
+        // Jalat – housut (tumma laivastonsininen erottuu paidasta)
+        ctx.fillStyle = '#16265c';
         if (player.kicking) {
             const kp = player.kickFrame / KICK_DURATION; // 0..1
-            const swing = Math.sin(kp * Math.PI);         // 0→1→0
+            // Ennakointi: 20 % ajasta jalka vedetään taakse, sitten heilahdus 0→1→0
+            const ANTICIP = 0.2;
+            const swing = kp < ANTICIP
+                ? -0.35 * (kp / ANTICIP)
+                : Math.sin(((kp - ANTICIP) / (1 - ANTICIP)) * Math.PI);
             // Tukijalka
             ctx.fillRect(px + 3, py + ph - 8, 4, 8);
             // Potkiva jalka – pyörähtää eteen
@@ -3289,11 +3379,13 @@ const Street = (() => {
             ctx.rotate(-swing * 1.1);
             ctx.fillRect(0, -2, 4, 14);
             ctx.restore();
-            // Kenkä potkivassa jalassa
+            // Kenkä potkivassa jalassa (+ valojuova)
             const shoeX = px + pw - 8 + swing * 20;
             const shoeY = py + ph - 6 - swing * 12;
-            ctx.fillStyle = '#331100';
+            ctx.fillStyle = '#221008';
             ctx.fillRect(shoeX - 3, shoeY + 2, 8, 3);
+            ctx.fillStyle = '#3a2a1c';
+            ctx.fillRect(shoeX - 3, shoeY + 2, 8, 1);
         } else {
             // Kävelyanimaatio: jalat heiluvat walkFramen mukaan (0-3)
             const wf = player.walking ? player.walkFrame : 0;
@@ -3304,10 +3396,13 @@ const Street = (() => {
             ctx.fillRect(px + 5 + leftOffset, py + ph - 8, 4, 8 + Math.abs(leftOffset) * 0.5);
             // Oikea jalka
             ctx.fillRect(px + pw - 9 + rightOffset, py + ph - 8, 4, 8 + Math.abs(rightOffset) * 0.5);
-            // Kengät
-            ctx.fillStyle = '#331100';
+            // Kengät (+ valojuova)
+            ctx.fillStyle = '#221008';
             ctx.fillRect(px + 4 + leftOffset, py + ph - 2 + Math.abs(leftOffset) * 0.5, 6, 2);
             ctx.fillRect(px + pw - 10 + rightOffset, py + ph - 2 + Math.abs(rightOffset) * 0.5, 6, 2);
+            ctx.fillStyle = '#3a2a1c';
+            ctx.fillRect(px + 4 + leftOffset, py + ph - 2 + Math.abs(leftOffset) * 0.5, 6, 1);
+            ctx.fillRect(px + pw - 10 + rightOffset, py + ph - 2 + Math.abs(rightOffset) * 0.5, 6, 1);
         }
         ctx.restore();
     }
