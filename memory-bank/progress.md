@@ -35,6 +35,7 @@
 | Käsien heilunta ja viuhka-VFX pois | ✅ v4.05 – molemmat koettiin liioitteluiksi: kädet `px+3` / `px+pw-6` lepoasennossa (vain `bobY`), potkusta poistettu kaari-VFX. Ennakointi, nojaus, hit pause ja reunavalo ennallaan |
 | Hit pause osumista | ✅ v4.04 – `HIT_PAUSE = 2`, `hitPauseTimer` pysäyttää `update()`:n alussa (render jatkaa); talon 0 ovi, pienet talot ja lamput (myös ylikuumeneminen). Ei ovista sisään kävelyssä eikä törmäyksissä |
 | Dynaaminen lampunvalo hahmolle | ✅ v4.04 – lähin palava lamppu < 70 px → `rgba(255,221,136, 0.35·(1−d/70))` 1 px reunavalo vartalon (11 px) ja pään (3 px) valonpuoleiselle reunalle; lokaalikoordinaatit → kääntyy peilauksen mukana |
+| Kaukaisen kaupungin siluetti (parallaksi 0.4×) | ✅ v4.06 – haaleat sinertävät taustatalot (50 % koossa, `BACKDROP_SCALE 0.5`) lähitalojen/puiden takana (tähtien/taivaan päällä); 4 kattomallia + reunalista, tumma ikkunaristikko 5×7 + himmeä lämmin ikkuna joka 3. taloon, ilmaperspektiivihuntu; generointi kerran init():ssä, tyvi kiveyksen alla |
 
 
 ## ⛏️ Dig Game (digGame1/) | 💎 Boulder Dash (digGame2/)

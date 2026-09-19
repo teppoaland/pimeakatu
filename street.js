@@ -148,6 +148,22 @@ const Street = (() => {
     const CAMERA_LERP = 0.18;     // seurannan pehmeys (0–1)
     const VIEWW_MIN = 260;        // mobiilizoomauksen minimi-leveys (ei liian äärimmäinen)
 
+    /* ── Kaukaisen kaupungin siluetti (parallaksitausta) ── */
+    // Haalea sinertävä skyline lähitalojen ja puiden takana (peittää tähdet).
+    // BACKDROP_PARALLAX = kuinka suuren osan kameran liikkeestä tausta "jättää väliin".
+    const BACKDROP_PARALLAX = 0.4;       // tausta liikkuu 40 % kameran nopeudesta
+    const BACKDROP_BASE_Y  = GROUND_Y + 4; // tyvi jää aina kiveyksen alle (ei 1px rakoa)
+    const BACKDROP_PALETTE = ['#141a2c', '#171e33', '#1b2338', '#1f2942'];
+    const BACKDROP_SCALE   = 0.5;        // taustatalot 50 % koossa – hillitty, kaukainen
+    // Ikkunaristikko skaalattu 50 %: 10×14 → 5×7, välit 9/14 → 5/7, offset 8/10 → 4/5
+    const BACKDROP_WIN_W  = Math.max(4, Math.round(10 * BACKDROP_SCALE));   // 5
+    const BACKDROP_WIN_H  = Math.max(5, Math.round(14 * BACKDROP_SCALE));   // 7
+    const BACKDROP_WIN_DX = Math.max(3, Math.round(9 * BACKDROP_SCALE));    // 5
+    const BACKDROP_WIN_DY = Math.max(4, Math.round(14 * BACKDROP_SCALE));   // 7
+    const BACKDROP_WIN_OX = Math.max(2, Math.round(8 * BACKDROP_SCALE));    // 4
+    const BACKDROP_WIN_OY = Math.max(3, Math.round(10 * BACKDROP_SCALE));   // 5
+    let backdrop = null;                 // { blocks: [...] } – generoidaan kerran init():ssä
+
     // Kaksisuuntainen liikenne: kaksi ajorataa (kaistaa)
     // 0 = alempi (lahempana kameraa), vasemmalta oikealle
     // 1 = ylempi (kauempana), oikealta vasemmalle
@@ -449,6 +465,7 @@ const Street = (() => {
             });
         }
         initClouds();
+        initBackdrop();
         initForeground();
         setupInput();
         resize();
@@ -1438,6 +1455,38 @@ const Street = (() => {
         }
     }
 
+    /* ── Kaukaisen kaupungin siluetti – kertagenerointi (ei randomia per frame) ── */
+    function initBackdrop() {
+        backdrop = { blocks: [] };
+        let x = 0;
+        let blockIdx = 0;
+        while (x < WORLD_W) {
+            const w = Math.round((28 + Math.floor(Math.random() * 43)) * BACKDROP_SCALE);   // 14–35
+            const h = Math.round((100 + Math.floor(Math.random() * 131)) * BACKDROP_SCALE); // 50–115
+            const b = {
+                x, w, h,
+                color: BACKDROP_PALETTE[Math.floor(Math.random() * BACKDROP_PALETTE.length)],
+                roof: Math.floor(Math.random() * 4),                  // 0 tasakatto, 1 porrastus, 2 harja, 3 laite
+                band: Math.random() < 0.5,
+                winCols: Math.max(1, Math.floor((w - BACKDROP_WIN_OX * 2) / BACKDROP_WIN_DX)),
+                winRows: Math.max(1, Math.floor((h - BACKDROP_WIN_OY * 2) / BACKDROP_WIN_DY)),
+                device: Math.floor(Math.random() * 3),                // kattolaite (roof === 3)
+                deviceX: 0.2 + Math.random() * 0.6,                   // kattolaitteen paikka (osuus leveydestä)
+                lit: null
+            };
+            // Joka 3. talo saa yhden himmeän lämpimän ikkunan (eloa, ei sekoitu pelattaviin)
+            if (blockIdx % 3 === 0) {
+                b.lit = {
+                    c: Math.floor(Math.random() * b.winCols),
+                    r: Math.floor(Math.random() * b.winRows)
+                };
+            }
+            blockIdx++;
+            backdrop.blocks.push(b);
+            x += w;   // talot kiinni toisissaan → yhtenäinen skyline
+        }
+    }
+
     /* ── Etualan elementit (kiveys, ruohot, viemärit, kuoriainen) ── */
     function initForeground() {
         foreground = {
@@ -1682,6 +1731,8 @@ const Street = (() => {
             ctx.beginPath(); ctx.arc(satellite.x, satellite.y, 1.5, 0, Math.PI*2); ctx.fill();
         }
 
+        // Kaukainen kaupunkisiluetti (parallaksi 0.4×) – tähtien/taivaan päällä, talojen takana
+        drawBackdrop(camX * (1 - BACKDROP_PARALLAX));
         drawBuildings();
         drawGround();
 
@@ -1952,6 +2003,97 @@ const Street = (() => {
             }
             // Yläreuna / lippa – tyyli arvottu per talo
             drawCornice(b, bodyC);
+        }
+    }
+
+    /* ── Kaukaisen kaupungin siluetti – piirto ── */
+    // bgShift = kameran "jälkeenjäävä" siirto kerrokselle (render antaa camX*(1-0.4)).
+    function drawBackdrop(bgShift) {
+        if (!backdrop) return;
+        ctx.save();
+        ctx.translate(Math.round(bgShift), 0);
+        for (const b of backdrop.blocks) drawBackdropBlock(b);
+        // Ilmaperspektiivi: ohut sinertävä huntu horisontin yläpuolella häivyttää siluetin kärkiä
+        const haze = ctx.createLinearGradient(0, GROUND_Y - 120, 0, GROUND_Y);
+        haze.addColorStop(0, 'rgba(120,140,190,0)');
+        haze.addColorStop(1, 'rgba(120,140,190,0.05)');
+        ctx.fillStyle = haze;
+        ctx.fillRect(0, GROUND_Y - 120, WORLD_W, 120);
+        ctx.restore();
+    }
+
+    function drawBackdropBlock(b) {
+        const topY = BACKDROP_BASE_Y - b.h;
+        // Runko – litteä haalea sävy (ei gradienttia: kaukainen kohde)
+        ctx.fillStyle = b.color;
+        ctx.fillRect(b.x, topY, b.w, b.h);
+
+        // Ikkunaristikko – runkoa tummempi, ilman reunoja ja glow'ta (skaalattu 50 %)
+        ctx.fillStyle = '#0f1424';
+        for (let r = 0; r < b.winRows; r++) {
+            for (let c = 0; c < b.winCols; c++) {
+                const wx = b.x + BACKDROP_WIN_OX + c * BACKDROP_WIN_DX;
+                const wy = topY + BACKDROP_WIN_OY + r * BACKDROP_WIN_DY;
+                if (wx + BACKDROP_WIN_W > b.x + b.w - BACKDROP_WIN_OX) continue;    // ei reunan yli
+                if (wy + BACKDROP_WIN_H > BACKDROP_BASE_Y - BACKDROP_WIN_OY) continue;
+                ctx.fillRect(wx, wy, BACKDROP_WIN_W, BACKDROP_WIN_H);
+            }
+        }
+
+        // Yksi himmeä lämmin ikkuna (jos lohkolle arvottu)
+        if (b.lit) {
+            const wx = b.x + BACKDROP_WIN_OX + b.lit.c * BACKDROP_WIN_DX;
+            const wy = topY + BACKDROP_WIN_OY + b.lit.r * BACKDROP_WIN_DY;
+            ctx.fillStyle = 'rgba(255,214,150,0.10)';
+            ctx.fillRect(wx, wy, BACKDROP_WIN_W, BACKDROP_WIN_H);
+        }
+
+        // Katto – 4 mallia (skaalattu 50 %)
+        const topC = lightenHex(b.color, 0x08);
+        switch (b.roof) {
+            case 0: // tasakatto + parapet
+                ctx.fillStyle = topC;
+                ctx.fillRect(b.x - 1, topY - 2, b.w + 2, 2);
+                break;
+            case 1: // porrastettu (2 askelmaa)
+                ctx.fillStyle = topC;
+                ctx.fillRect(b.x + Math.floor(b.w * 0.3), topY - 2, Math.ceil(b.w * 0.4), 2);
+                ctx.fillStyle = topC;
+                ctx.fillRect(b.x - 1, topY - 4, b.w + 2, 2);
+                break;
+            case 2: // harjakatto (vinot laidat)
+                ctx.fillStyle = topC;
+                ctx.beginPath();
+                ctx.moveTo(b.x - 1, topY);
+                ctx.lineTo(b.x + b.w / 2, topY - 4);
+                ctx.lineTo(b.x + b.w + 1, topY);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            case 3: { // kattolaite (vesitorni / antenni / hormi) – paikka kiinteä initistä
+                const dx = b.x + Math.round(b.w * b.deviceX);
+                if (b.device === 0) {
+                    // vesitorni: ohut jalka + säiliö
+                    ctx.fillStyle = topC;
+                    ctx.fillRect(dx - 1, topY - 5, 2, 5);
+                    ctx.fillRect(dx - 3, topY - 8, 6, 3);
+                } else if (b.device === 1) {
+                    // antenni: ohut pystysauva
+                    ctx.fillStyle = topC;
+                    ctx.fillRect(dx, topY - 6, 1, 6);
+                } else {
+                    // hormi
+                    ctx.fillStyle = topC;
+                    ctx.fillRect(dx - 2, topY - 4, 4, 4);
+                }
+                break;
+            }
+        }
+
+        // Reunalista (band) – ohut vaaleampi viiva rungon yläosassa
+        if (b.band) {
+            ctx.fillStyle = lightenHex(b.color, 0x06);
+            ctx.fillRect(b.x, topY + 3, b.w, 1);
         }
     }
 
