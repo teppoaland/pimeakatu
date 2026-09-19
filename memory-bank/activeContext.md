@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v4.3** | 19.9.2026 | Pääportaaliin lisätty BAR-viittakyltti (street.js drawBarSign): pieni, matala, nuolen muotoinen puinen kyltti I====> (häntä-I + varsi + oikealle osoittava kärki), jonka varren sisällä lukee "BAR". Sijainti: ensimmäisessä puunraossa (x≈153, talojen 1–2 välissä), matalalla (GROUND_Y-10), piirretään drawTrees-kutsun jälkeen. Osoittaa oikealle kohti BAR-talo 8:aa. Versio index.html:ssä: v4.3.
+**v4.5** | 19.9.2026 | Pääportaalin BAR-viittakyltin teksti pienennetty (street.js drawBarSign): pikseliskaala 2 → 1 (BAR-sana puolet pienempi). drawPixelTextin startX/startY pyöristetään kokonaisluvuiksi, jotta reunat pysyvät terävinä myös pienemmällä koolla. Versio index.html:ssä: v4.5.
 
 ## 🔒 Lukitut osa-alueet
 
