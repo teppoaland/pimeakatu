@@ -162,6 +162,7 @@ const Street = (() => {
     const AVENGER_TELEGRAPH = 21;      // ~350ms oviaukon varoitus ennen ulostuloa
     const AVENGER_HIT_R     = 18;      // osumasäde (px)
     const AVENGER_STUN      = 600;     // 10s tainnutus (sama kuin ruukulla/autolla)
+    const AVENGER_FREEZE    = 180;     // 3s jäädytys (hit-stop) kontaktista ennen kosahtamista
     let avenger = null;              // { x, y, w, h, bldgIdx, facing, phase, timer, walkTimer, scale }
     let avengerCooldown = 0;         // tauko ennen kuin uusi oviukko voi tulla
     let playerDead = false;          // kuolemasekvenssi käynnissä
@@ -246,7 +247,7 @@ const Street = (() => {
         }
     }
 
-    /* ── Oviukon päivitys: emerge → chase → osuma → return ──
+    /* ── Oviukon päivitys: emerge → chase → hold (3 s) → kosahtaminen → return ──
        Kutsutaan sekä normaalivirrasta että tainnutus-haarasta, jotta paluu
        ovelle jatkuu myös silloin kun pelaaja makaa maassa.
        Ei näkymätöntä osumaa iframe-pelin aikana (loop() ei pysähdy overlayn ajaksi). */
@@ -274,15 +275,25 @@ const Street = (() => {
             a.walkTimer += dt;
             const d = Math.sqrt((pcx - acx) * (pcx - acx) + (pcy - acy) * (pcy - acy));
             if (d < AVENGER_HIT_R) {
-                if (!player.knockedDown) { knockPlayerDown(); }   // osuma vain kerran
+                // Kontakti: koko maailma jäätyy 3 s (hit-stop) → dramaattinen isku
                 spawnParticles(pcx, pcy, '#ffaa44', 12);
                 playKnock();
-                a.phase = 'return';
+                a.phase = 'hold';
+                hitPauseTimer = AVENGER_FREEZE;
             }
             return;
         }
 
-        // 3) Paluu: kävelee takaisin kynnykselle ja katoaa ovesta
+        // 3) Jäädytys (3 s): maailma seisoo – vasta lopuksi pelaaja kosahtaa kasaan
+        if (a.phase === 'hold') {
+            if (!player.knockedDown) { knockPlayerDown(); }   // tainnutus + 1 🍔 (vain kerran)
+            spawnParticles(pcx, pcy, '#ff6644', 18);
+            playKnock();
+            a.phase = 'return';
+            return;
+        }
+
+        // 4) Paluu: kävelee takaisin kynnykselle ja katoaa ovesta
         const homeX = doorCenter(buildings[a.bldgIdx]).x - a.w / 2;
         const homeY = GROUND_Y - a.h;
         a.x += Math.sign(homeX - a.x) * AVENGER_SPEED * dt;
@@ -2044,6 +2055,10 @@ const Street = (() => {
 
         ctx.save();
         ctx.translate(-Math.round(camX), 0);
+        // Oviukon isku: 1–2 px tärinä jäädytyksen aikana (hitPauseTimer toimii kellona)
+        if (avenger && avenger.phase === 'hold' && hitPauseTimer > 0) {
+            ctx.translate(Math.round(Math.sin(hitPauseTimer * 0.9) * 1.6), 0);
+        }
 
         // Taivas
         const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
@@ -2166,6 +2181,34 @@ const Street = (() => {
             ctx.fillRect(p.x-2, p.y-2, 4, 4);
         }
         ctx.globalAlpha = 1;
+
+        // ── Oviukon isku: jäädytyksen vinjetti + iskuvälähdys + tähdet ──
+        if (avenger && avenger.phase === 'hold') {
+            const hk = 1 - Math.max(0, Math.min(1, hitPauseTimer / AVENGER_FREEZE));   // 0 → 1
+            // Iskuvälähdys heti kontaktissa
+            if (hk < 0.10) {
+                ctx.fillStyle = 'rgba(255,235,205,' + (0.45 * (1 - hk / 0.10)).toFixed(3) + ')';
+                ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+            }
+            // Tummenevat reunat (vinjetti) koko 3 s jäädytyksen ajan
+            const vg = ctx.createRadialGradient(WORLD_W / 2, 190, 70, WORLD_W / 2, 190, 430);
+            vg.addColorStop(0, 'rgba(0,0,0,0)');
+            vg.addColorStop(1, 'rgba(0,0,0,' + (0.6 * Math.min(1, hk * 1.6)).toFixed(3) + ')');
+            ctx.fillStyle = vg;
+            ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+            // Tähdet alkavat kiertää pään ympäri jo ennen kosahtamista
+            const sx0 = player.x + player.w / 2, sy0 = player.y + 6;
+            const st = (AVENGER_FREEZE - Math.max(0, hitPauseTimer)) * 0.07;
+            ctx.strokeStyle = '#ffdd44'; ctx.lineWidth = 1;
+            for (let si = 0; si < 3; si++) {
+                const ang = st + si * 2.1;
+                const ax2 = sx0 + Math.cos(ang) * 14, ay2 = sy0 + Math.sin(ang) * 8;
+                ctx.beginPath();
+                ctx.moveTo(ax2 - 2, ay2 - 2); ctx.lineTo(ax2 + 2, ay2 + 2);
+                ctx.moveTo(ax2 + 2, ay2 - 2); ctx.lineTo(ax2 - 2, ay2 + 2);
+                ctx.stroke();
+            }
+        }
 
         // ── Kuoleman pimennys ─────────────────────────
         if (playerDead) {
@@ -4060,6 +4103,13 @@ const Street = (() => {
         // Silmä (kulkusuunnan puoleinen)
         ctx.fillStyle = '#2b2118';
         ctx.fillRect(px + 13, top + 7 + bobY, 2, 2);
+        // Jäädytyksen aikana käsi ojennettuna kohti pelaajaa (isku kiinni)
+        if (a.phase === 'hold') {
+            ctx.fillStyle = '#7a2020';
+            ctx.fillRect(frontArmX + 3, armY + 1, 7, 3);
+            ctx.fillStyle = '#ffcc99';
+            ctx.fillRect(frontArmX + 10, armY + 1, 3, 3);
+        }
         // Lippis (tunnisteväri)
         ctx.fillStyle = '#a03030';
         ctx.fillRect(px + pw / 2 - 6, top, 14, 5);
