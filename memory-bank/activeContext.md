@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v3.93** | 18.9.2026 | Potkaisemalla taloa (talo 0 ikkunat päällä + pientalot valo päällä) pudonneen kukkaruukun sijaan tulee nyt 1/5-todennäköisyydellä kolikko. Kolikon pudottua on 30s cooldown (1800 frameä), jonka aikana potku pudottaa vain kukkaruukun – estää kolikoiden farmaamisen potkimalla+ väistelyllä. Uusi `kickCoin`-objekti putoaa ikkunasta (`spawnKickDrop`), laskeutuu maahan (`GROUND_Y+10`) ja on kerättävissä; 10s ttl jos jää keräämättä. Versio index.html:ssä: v3.93.
+**v4.0** | 19.9.2026 | Pääportaalin teräsaidan alavaakarauta (alajuoksu) sai vaihtelua street.js drawIronFence: pystysuuntainen pyöreä gradientti (yläkiilto #3a3a3a, keskiosa #2e2e2e, alavarjo #1a1a1a) + miltei mustat niitit (#0b0b0b/#171717) joka pystypiikin kohdalle. Lisäksi digGame2 (Boulder Dash) alkudialogi korjattu vaakanäytölle: #overlay-content sai max-height/overflow-y + @media (max-height: 500px) pienentää otsikon ("💎 Aloittelijan luola") 1.05rem, viestin 0.72rem ja paddingin, jotta ylä-/alakehykset mahtuvat. Versio index.html:ssä: v4.0.
 
 ## 🔒 Lukitut osa-alueet
 

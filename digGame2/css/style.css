@@ -183,6 +183,9 @@ canvas {
     text-align: center;
     max-width: 400px;
     width: 90%;
+    max-height: 90vh;
+    max-height: 90dvh;
+    overflow-y: auto;
     animation: popIn 0.3s ease-out;
 }
 
@@ -271,5 +274,27 @@ canvas {
 @media (min-width: 769px) {
     #touch-controls {
         display: none !important;
+    }
+}
+
+/* ── Vaakakuva (matala näyttö, esim. puhelin landscape) ──
+   Pienennetään otsikko/tekstit/button, jotta koko dialogi
+   (ylä- ja alakehykset) mahtuu matalaan näkymään. */
+@media (max-height: 500px) {
+    #overlay-content {
+        padding: 14px 22px;
+        max-width: 340px;
+    }
+    #overlay-title {
+        font-size: 1.05rem;
+        margin-bottom: 7px;
+    }
+    #overlay-message {
+        font-size: 0.72rem;
+        margin-bottom: 11px;
+    }
+    #overlay-button {
+        padding: 8px 26px;
+        font-size: 0.85rem;
     }
 }
