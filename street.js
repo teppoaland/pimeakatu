@@ -121,6 +121,9 @@ const Street = (() => {
     let bmKeyCollected = false;
     let darkRoom = false;
     let barRoom = false;
+    let barBuyQty = 0;             // BAR: tämän vierailun ostetut (▼ peruu vain nämä)
+    let barBuyHeldUp = false;      // ▲ reunanilmaisu – ei toistoa pohjassa
+    let barBuyHeldDown = false;    // ▼ reunanilmaisu
     let coinCount = 0;
     let coinRespawnTimer = 0;
     let hamburgerCount = 5;
@@ -616,18 +619,42 @@ const Street = (() => {
             return;
         }
 
-        // BAR room
+        // BAR room – ostomäärää säädetään nuolilla, poistuminen toimintonapista
+        //   ▲ / W = osta 1 hampurilainen (1 kolikko)      ▼ / S = peru viimeisin osto
+        //   (o) / Space / Enter = poistu
         if (barRoom) {
-            if (actionJustPressed && hamburgerCount < 10 && coinCount > 0) {
-                const canBuy = Math.min(coinCount, 10 - hamburgerCount);
-                hamburgerCount += canBuy;
-                coinCount -= canBuy;
+            const buyUp = !!(keys['ArrowUp'] || keys['w'] || keys['W']);
+            const buyDown = !!(keys['ArrowDown'] || keys['s'] || keys['S']);
+
+            if (buyUp && !barBuyHeldUp && coinCount > 0 && hamburgerCount < 10) {
+                hamburgerCount++;
+                coinCount--;
+                barBuyQty++;
                 state.inventory.hamburgerCount = hamburgerCount;
                 state.inventory.coinCount = coinCount;
                 GameState.save(state);
                 updateHUD();
+                playCoin();
             }
-            if (actionJustPressed) { barRoom = false; }
+            if (buyDown && !barBuyHeldDown && barBuyQty > 0) {
+                hamburgerCount--;
+                coinCount++;
+                barBuyQty--;
+                state.inventory.hamburgerCount = hamburgerCount;
+                state.inventory.coinCount = coinCount;
+                GameState.save(state);
+                updateHUD();
+                playCoin();
+            }
+            barBuyHeldUp = buyUp;
+            barBuyHeldDown = buyDown;
+
+            if (actionJustPressed) {
+                barRoom = false;
+                barBuyQty = 0;
+                barBuyHeldUp = false;
+                barBuyHeldDown = false;
+            }
             actionJustPressed = false;
             return;
         }
@@ -1091,6 +1118,9 @@ const Street = (() => {
                 // BAR – aina auki (talo 8, lamp[4])
                 if (i === 4) {
                     barRoom = true;
+                    barBuyQty = 0;
+                    barBuyHeldUp = false;
+                    barBuyHeldDown = false;
                     return;
                 }
                 if (lamp.lit) {
@@ -2924,25 +2954,23 @@ const Street = (() => {
             ctx.fillText(hintLines[hi], hintBoxX, hintBoxTop + 22 + hi * 17);
         }
 
-        // Info-tekstit
+        // Info-tekstit – ostomäärä = tämän vierailun ostot (▼ pienentää sitä)
         ctx.fillStyle = '#eeddcc';
         ctx.font = '14px "Courier New", monospace';
         ctx.textAlign = 'center';
-        var canBuy = Math.min(coinCount, 10 - hamburgerCount);
-        if (coinCount > 0 && hamburgerCount < 10) {
-            ctx.fillText('Ostit ' + canBuy + 'x🍔 hampurilaista!', 400, 185);
+        if (barBuyQty > 0) {
+            ctx.fillText('Ostit ' + barBuyQty + 'x🍔 hampurilaista!', 400, 185);
         } else if (hamburgerCount >= 10) {
             ctx.fillText('🍔 Hampurilaiskiintiö täynnä Osta jotain muuta!.', 400, 185);
-        } else {
+        } else if (coinCount <= 0) {
             ctx.fillText('🍔 Ei kolikoita. Hommaa massia!', 400, 185);
         }
 
-        // Poistumisvihje
+        // Ohjevihje: ▲ osta / ▼ peru / (o) poistu
         var pulse = Math.sin(Date.now() / 800) * 0.3 + 0.7;
         ctx.fillStyle = 'rgba(255,255,255,' + pulse + ')';
         ctx.font = '10px Arial, sans-serif';
-        ctx.fillText('Paina Space ostaaksesi / poistuaksesi', 400, 370);
-        ctx.fillText('Mobiilissa: paina nappia', 400, 387);
+        ctx.fillText('▲ = osta 1 🍔   ▼ = peru 1   POISTU: (o) / Space', 400, 370);
         ctx.textAlign = 'start';
     }
 
