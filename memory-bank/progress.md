@@ -42,6 +42,23 @@
 | Pimeiden ikkunoiden syvennys (3 rivin talot) | ✅ v4.10 – kehyksen poiston jälkeen ikkunat katosivat seinään; nyt `flatWindows` → täyttö `#05050d` + 1 px tumma ylävarjo `rgba(0,0,0,0.35)` + 1 px vaalea alaparre `lightenHex(bodyC, 0x06)` (`wy+14`) = ikkuna näyttää upotukselta. Muut talot ennallaan (`#0a0a15` + kehys). Valaistuihin ikkunoihin ei koskettu; potku sytyttää näiden kolmen talon kaikki 6 ikkunaa (`smallHouseLights`) |
 
 
+## 🍒 Hedelmäpeli (fruitgame/) – Vaihe 1 + debug 19.9.2026
+
+| Ominaisuus | Tila |
+|-----------|------|
+| 3 rullaa / 1 voittolinja, 5 käsipiirrettyä symbolia (canvas 640×400) | ✅ Vaihe 1 |
+| Rullanauha 20 merkkiä, painot 7/5/4/2/2, tulos arvotaan etukäteen (animaatio esittää) | ✅ |
+| Maksut 💎35 🍔20 🔔12 🍋7 🍒4 + pari = panos takaisin, panos 1 kolikko | ✅ 125/125 yhdistelmää validoitu |
+| RTP 78,49 % (simuloitu 78,5–78,8 %) | ✅ 1 M simulaatio + analyyttinen tarkistus |
+| HUD (kolikot/panos/voitto/pyöräykset), napit, näppäimet, kosketus | ✅ |
+| postMessage-protokolla: `fruitSync` / `fruitBet` / `fruitWin` / `RETURN_TO_STREET` | ✅ validoitu headless (iframe-tila) |
+| **Pelin käynnistys (`DOMContentLoaded` → `new FruitGame()`)** | ✅ **korjattu debugissa 19.9.2026** (puuttui kokonaan) |
+| **Canvas 1:1-skaalaus (`box-sizing: content-box`)** | ✅ **korjattu debugissa 19.9.2026** (3 px kehys kutisti piirtoalueen) |
+| **Talon ilmainen pyöräytys (1 / 120 s, farmaus esto)** | ✅ **v4.11** – voiton saa pitää, ilmainen ei veloita, jäädytys pelin omassa localStorage-avaimessa |
+| **Kytkentä katuun (Vaihe 2: talo 7 / buildings[6])** | ✅ **v4.11** – ovi aina auki, `fruitSync` + `fruitBet`/`fruitWin` + saldo-echo, validoitu `street-fruit-test.cjs`:llä |
+| Dokumentaatio | ✅ `docs/fruit-game-memo.md` (säännöt, protokolla, kytkentä, testit) |
+| Testipenkki | `%TEMP%\ftest.cjs` (peli) + `%TEMP%\street-fruit-test.cjs` (katu-integraatio), ei repossa |
+
 ## ⛏️ Dig Game (digGame1/) | 💎 Boulder Dash (digGame2/)
 
 | Ominaisuus | Tila |

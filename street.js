@@ -1074,6 +1074,14 @@ const Street = (() => {
         const px = player.x + player.w / 2;
         const py = player.y + player.h / 2;
 
+        // 0. HEDELMÄPELI (talo 7, buildings[6], x 560–610) – aina auki, ei lamppua eikä avainta
+        const fruitDoor = doorCenter(buildings[6]);
+        const fdx = px - fruitDoor.x, fdy = py - fruitDoor.y;
+        if (Math.sqrt(fdx * fdx + fdy * fdy) < DOOR_RADIUS) {
+            enterGame('fruitgame/game_main.html');
+            return;
+        }
+
         // 1. OVET ENSIN – ei potkua, kävellään suoraan sisään
         for (let i = 0; i < lamps.length; i++) {
             const lamp = lamps[i];
@@ -1209,6 +1217,15 @@ const Street = (() => {
         }
     }
 
+    /* Lähettää kadun kolikkosaldon hedelmäpeliin (postMessage) */
+    function sendFruitBalance() {
+        const overlay = document.getElementById('game-iframe-overlay');
+        const iframe = overlay ? overlay.querySelector('iframe') : null;
+        if (iframe && iframe.contentWindow) {
+            try { iframe.contentWindow.postMessage({ type: 'fruitSync', coins: coinCount }, '*'); } catch (e) {}
+        }
+    }
+
     function enterGame(url) {
         // Tallenna pelaajan sijainti ennen peliin menoa
         savedPlayerX = player.x;
@@ -1224,6 +1241,8 @@ const Street = (() => {
         // StreetAudio.stop(); – musiikki jatkaa soimista pelien aikana (sykli hoitaa tauot)
         iframe.onload = () => {
             try { iframe.contentWindow.focus(); } catch(e) {}
+            // Hedelmäpeli: lähetä kadun kolikkosaldo peliin
+            if (url && url.indexOf('fruitgame') !== -1) sendFruitBalance();
         };
         iframe.src = url;
         window._streetReturn = (e) => {
@@ -1248,6 +1267,22 @@ const Street = (() => {
                 state.inventory.coinCount = coinCount;
                 GameState.save(state);
                 updateHUD();
+            }
+            // Hedelmäpeli: panos (−1 kolikko / pyöräytys)
+            if (e.data && e.data.type === 'fruitBet') {
+                coinCount = Math.max(0, coinCount - 1);
+                state.inventory.coinCount = coinCount;
+                GameState.save(state);
+                updateHUD();
+                sendFruitBalance();
+            }
+            // Hedelmäpeli: voitot (+n kolikkoa)
+            if (e.data && e.data.type === 'fruitWin' && typeof e.data.coins === 'number') {
+                coinCount += Math.max(0, Math.floor(e.data.coins));
+                state.inventory.coinCount = coinCount;
+                GameState.save(state);
+                updateHUD();
+                sendFruitBalance();
             }
         };
         window.addEventListener('message', window._streetReturn);
