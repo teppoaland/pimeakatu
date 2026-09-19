@@ -64,6 +64,7 @@
 ## ⚠️ Huomiot
 
 - **Pääportaali:** `position: absolute`, `opacity: 0.65`, landscape overlay, D-pad + ⚡
+- **Sähkökaapit:** laskettu 2px (pohja `GROUND_Y-2`), pienennetty 20 % (8×14), vilkkuva valo puolet hitaampi (`/520`).
 - **Notifikaatiot:** Vain ovi/kolikko, `showNotification(text, durationMs = 2500)` → lukuaika 2.5s + fade 0.5s. Aloitusohje (showSpawnHint) 4500 ms (v4.00). Muiden popuppien aikoja ei pidennetä.
 - **Blue Mäx:** ✅ v3.10 – Musta ⅓-leveä mittari-HUD (polttoainepalkki + pommit + elämät + korkeus), ei pisteitä. Kentän ulkopuolella alt≤1 → STALL-kuolema. Ohjaus pois ST.TO:n ajalta. Viholliset 100% teholla. Polttoaineen loputtua syöksy + wrap-around, 3-kerroksinen räjähdys, mobiili-HUD overlayna. B=pommi, G=KK, L=laskeudu. Ilmapallo 8 taloa + 60s. Tankkaus. Kaikki talot bonus +5000.
 - **Boulder Dash:** Debugissa avain heti | **Dig Game:** Buildaus poistettu, `game_main.html` käytössä suoraan

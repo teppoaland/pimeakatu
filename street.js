@@ -108,11 +108,11 @@ const Street = (() => {
     // puolella olevan talon (buildings[2], x 200–250) vasen seinä on x 200.
     // 2. kaappi: talo 7 (buildings[6], x 560–610, matala h 145) – sama ilmentymä
     // kopiona, vasen seinä x 560 (2px rako oveen, ikkunat kaapin yläpuolella).
-    // Kaappi on ikkunan kokoinen (10×18), harmaa, yläosassa vilkkuva keltainen valo.
+    // Kaappi on ikkunan kokoinen (8×14), harmaa, yläosassa vilkkuva keltainen valo.
     // Osuminen antaa sähköiskun: tajunta pois + hampurilaisen menetys (kuten kukkaruukku/auto).
     const electricCabinets = [
-        { x: 200, w: 10, h: 18, y: GROUND_Y - 22 },   // talo 3 – vasen seinä (pohja 306)
-        { x: 560, w: 10, h: 18, y: GROUND_Y - 22 }    // talo 7 – vasen seinä (matala talo)
+        { x: 200, w: 8, h: 14, y: GROUND_Y - 16 },   // talo 3 – vasen seinä (pohja GROUND_Y-2)
+        { x: 560, w: 8, h: 14, y: GROUND_Y - 16 }    // talo 7 – vasen seinä (matala talo)
     ];
 
     /* ── Avain (Dig Gamesta) ───────────────────────── */
@@ -2140,7 +2140,7 @@ const Street = (() => {
             ctx.fillRect(cx + 2, cy + 5, cw - 4, 1);
 
             // Vilkkuva keltainen varoitusvalo yläosassa
-            const on = Math.sin(Date.now() / 260) > 0;
+            const on = Math.sin(Date.now() / 520) > 0;
             if (on) {
                 ctx.fillStyle = '#ffd700';
                 ctx.beginPath();
@@ -2879,7 +2879,7 @@ const Street = (() => {
         ctx.textAlign = 'center';
         var canBuy = Math.min(coinCount, 10 - hamburgerCount);
         if (coinCount > 0 && hamburgerCount < 10) {
-            ctx.fillText('🍔 ' + coinCount + ' kolikolla saat ' + canBuy + ' hampurilaista!', 400, 185);
+            ctx.fillText('Ostit ' + canBuy + 'x🍔 hampurilaista!', 400, 185);
         } else if (hamburgerCount >= 10) {
             ctx.fillText('🍔 Hampurilaiskiintiö täynnä Osta jotain muuta!.', 400, 185);
         } else {
