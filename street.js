@@ -87,8 +87,8 @@ const Street = (() => {
     const TREE1_H = buildings[2].h / 3 * 0.7;
     const TREE2_H = buildings[2].h / 3 * 2 / 3;
     const trees = [
-        { x: 175, h: TREE1_H },   // rako talojen 1–2 välissä
-        { x: 355, h: TREE2_H }    // rako talojen 3–4 välissä
+        { x: 175, h: TREE1_H, phase: Math.random() * Math.PI * 2 },   // rako talojen 1–2 välissä
+        { x: 355, h: TREE2_H, phase: Math.random() * Math.PI * 2 }    // rako talojen 3–4 välissä
     ];
 
 /* ── Kolikko ─────────────────────────────────────── */
@@ -2046,7 +2046,15 @@ const Street = (() => {
     }
 
     /* ── Musta lehdetön puu (siluetti taivasta vasten) ── */
-    function drawBareTree(cx, baseY, h) {
+    // swayX = latvan vaakasiirto tuulen mukana (px). Tyvi pysyy maassa kiinni,
+    // siirto kasvaa korkeuden mukaan → puu taipuu, ei kaadu jäykkänä.
+    function drawBareTree(cx, baseY, h, swayX) {
+        if (!swayX) swayX = 0;
+        // Korkeuden mukaan kasvava taipuma (0 tyvessä, täysi latvassa)
+        const offAt = (y) => {
+            const rel = Math.max(0, Math.min(1, (baseY - y) / h));
+            return swayX * rel * Math.sqrt(rel);   // rel^1.5 – pehmeä taipuma
+        };
         ctx.fillStyle = '#000';
         ctx.strokeStyle = '#000';
         ctx.lineCap = 'round';
@@ -2054,12 +2062,12 @@ const Street = (() => {
         const trunkH = h * 0.45;
         const trunkW = Math.max(2, h * 0.16);
 
-        // Runko (tyvestä leveämpi, latvaa kohti kapeampi)
+        // Runko (tyvestä leveämpi, latvaa kohti kapeampi) – tyvi ankkuroitu
         ctx.beginPath();
         ctx.moveTo(cx - trunkW * 0.5, baseY);
         ctx.lineTo(cx + trunkW * 0.5, baseY);
-        ctx.lineTo(cx + trunkW * 0.18, baseY - trunkH);
-        ctx.lineTo(cx - trunkW * 0.18, baseY - trunkH);
+        ctx.lineTo(cx + trunkW * 0.18 + offAt(baseY - trunkH), baseY - trunkH);
+        ctx.lineTo(cx - trunkW * 0.18 + offAt(baseY - trunkH), baseY - trunkH);
         ctx.closePath();
         ctx.fill();
 
@@ -2070,14 +2078,16 @@ const Street = (() => {
         }
 
         // Haarat – orgaaninen, epäsymmetrinen rekursio (deterministinen kohina)
+        // Piirrossa pisteet siirretään tuulen taipuman mukaan: alku- ja loppupiste
+        // saavat saman siirron kuin y-koordinaatti → haarat pysyvät kiinni toisissaan.
         function branch(x, y, ang, len, w, depth) {
             if (len < 1.5 || w < 0.5 || depth > 7) return;
             const x2 = x + Math.cos(ang) * len;
             const y2 = y + Math.sin(ang) * len;
             ctx.lineWidth = w;
             ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x2, y2);
+            ctx.moveTo(x + offAt(y), y);
+            ctx.lineTo(x2 + offAt(y2), y2);
             ctx.stroke();
 
             // Epäsymmetrinen haarautuminen: kulmat, pituudet ja leveydet vaihtelevat
@@ -2102,7 +2112,17 @@ const Street = (() => {
     }
 
     function drawTrees() {
-        for (const t of trees) drawBareTree(t.x, GROUND_Y - 5, t.h);
+        // Tuuli: pilvet kulkevat windDir/windSpeed-arvolla (initClouds) → puut
+        // nojaavat samaan suuntaan ja huojuvat tuulen voiman mukaan.
+        const t = Date.now() * 0.001;                       // sekunnit
+        for (const tr of trees) {
+            const phase = tr.phase || 0;
+            const gust = 0.65 + 0.35 * Math.sin(t * 0.37 + phase);        // hidas puuska
+            const osc = Math.sin(t * (1.0 + windSpeed * 0.10) + phase);   // huojunta
+            const amp = (0.65 + windSpeed * 0.25) * gust;                 // latvan amplitudi (px)
+            const lean = windDir * amp * 0.5;                             // lepoasento tuulen suuntaan
+            drawBareTree(tr.x, GROUND_Y - 5, tr.h, lean + osc * amp);
+        }
     }
 
     /* Terävä pikselifontti (3x5 glyphit) – ei anti-aliasointia, pysyy terävänä skaalauksessa */

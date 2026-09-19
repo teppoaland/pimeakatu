@@ -12,6 +12,8 @@
 
 ## 📍 Nyt
 
+**v4.02** | 19.9.2026 | Puut huojuvat tuulessa: `drawBareTree(cx, baseY, h, swayX)` – tyvi ankkuroitu maahan, siirto kasvaa korkeuden mukaan (`rel^1.5`), joten puu taipuu eikä kaadu jäykkänä. `drawTrees()` laskee huojunnan pilvien tuulesta (`windDir`/`windSpeed`): hidas puuska (periodi ~17s) + huojunta (1.2–1.5 rad/s), amplitudi latvassa 0.6–2.8 px (kova tuuli huojuttaa enemmän), lepoasento tuulen suuntaan. Puille omat `phase`-arvot → eivät huoju synkassa. Siluetin muoto ennallaan (vain x-siirto) → ei välkyntää. Versio v4.01 → v4.02.
+
 **v4.01** | 19.9.2026 | Sähkökaappi: toinen identtinen ilmentymä talon 7 (buildings[6], x 560–610, matala h 145) vasemmalle seinälle x 560 (2px rako oveen, ikkunat kaapin yläpuolella – sama suhde kuin talossa 3). `electricCabinet` → `electricCabinets`-taulukko (2 kpl); törmäysloopissa `for (const cab of electricCabinets)` + `if (player.knockedDown) break;` (logiikka muuten identtinen); drawElectricCabinet piirtää molemmat samalla koodilla (vilkkuva valo synkassa). Versio v4.00 → v4.01.
 
 **v4.00** | 19.9.2026 | Aloituspopupin (showSpawnHint: 'Liiku kadulla, potki kaikkea…') näyttöaika +2s → 4500 ms. showNotification sai valinnaisen 2. parametrin `durationMs` (oletus 2500 ms) → kaikki muut popupit (kolikko, avaimet, ovet, varoitus) ennallaan 2.5 s + fade 0.5 s. Vain showSpawnHint kutsuu arvolla 4500.
