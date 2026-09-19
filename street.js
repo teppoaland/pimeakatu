@@ -1946,11 +1946,32 @@ const Street = (() => {
         };
     }
 
+    // Apufunktio: ikkunarivien määrä talolle (sama logiikka kuin drawBuildingsin ikkunasilmukka)
+    function buildingWindowRows(b) {
+        return Math.ceil((b.h - 60) / 32);
+    }
+
+    // Syvyysefekti: matalampi talo = kauempana = pienempi
+    // 5 riviä = 100 %, 4 riviä = 95 %, 3 riviä = 90 %
+    function buildingScale(b) {
+        const rows = buildingWindowRows(b);
+        if (rows >= 5) return 1.00;
+        if (rows === 4) return 0.95;
+        return 0.90;
+    }
+
     function drawBuildings() {
         for (const b of buildings) {
             const idx = buildings.indexOf(b);
             // Runko – käytä talon omaa yönsävyä, fallback jos puuttuu
             const bodyC = b.bodyColor || '#1a1a2e';
+            // Syvyysefekti: skaalaa talo pohjan keskipisteen ympäri (ovet pysyvät paikoillaan)
+            const s = buildingScale(b);
+            const cx = b.x + b.w / 2;
+            ctx.save();
+            ctx.translate(cx, GROUND_Y);
+            ctx.scale(s, s);
+            ctx.translate(-cx, -GROUND_Y);
             ctx.fillStyle = bodyC;
             ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
             // Ikkunat
@@ -2003,6 +2024,7 @@ const Street = (() => {
             }
             // Yläreuna / lippa – tyyli arvottu per talo
             drawCornice(b, bodyC);
+            ctx.restore();
         }
     }
 
@@ -3043,6 +3065,13 @@ const Street = (() => {
         const isActive = isBar ? true : (ownerLamp && ownerLamp.lit);
         const doorType = bldg.doorType || 0;
 
+        // Syvyysefekti: ovi skaalautuu talon etäisyyden mukaan (pohjan keskipisteen ympäri)
+        const s = buildingScale(bldg);
+        ctx.save();
+        ctx.translate(dc.x, GROUND_Y);
+        ctx.scale(s, s);
+        ctx.translate(-dc.x, -GROUND_Y);
+
         // Ovikaari / syvennys (kaikille yhteinen)
         ctx.fillStyle = '#0a0a15';
         ctx.fillRect(dx - 2, dy - 2, DOOR_W + 4, DOOR_H + 2);
@@ -3170,6 +3199,8 @@ const Street = (() => {
             ctx.shadowBlur = 0;
             ctx.textAlign = 'start';
         }
+
+        ctx.restore();
     }
 
     function drawHandle(hx, hy, isActive) {
