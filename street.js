@@ -2124,7 +2124,7 @@ const Street = (() => {
         const sx = 143;               // siirretty vasemmalle (hiukan vasemman talon päälle)
         const cy = GROUND_Y - 10;     // matala keskikorkeus
         const tailW = 3;              // I-häntä
-        const shaftLen = 22;          // varsi
+        const shaftLen = 22;          // varsi (palautettu alkuperäiseen pituuteen)
         const headLen = 9;            // nuolenkärki
         const halfH = 5;              // varren puolikorkeus
 
@@ -2132,12 +2132,12 @@ const Street = (() => {
         const legW = 2;
         const legTop = cy + halfH;             // laudan alareuna
         const legH = GROUND_Y - legTop;        // maahan asti
-        ctx.fillStyle = '#4a2c10';
+        ctx.fillStyle = '#1F1614';
         ctx.fillRect(sx + tailW + 2, legTop, legW, legH);
         ctx.fillRect(sx + tailW + shaftLen - legW - 2, legTop, legW, legH);
 
-        // Kyltin runko (tummanruskea puinen nuoli I====>)
-        ctx.fillStyle = '#6b2d0a';
+        // Kyltin runko – pimeä puinen nuoli I====> (lähes musta siluetti)
+        ctx.fillStyle = '#1F1614';
         // Häntä (I)
         ctx.fillRect(sx, cy - halfH, tailW, halfH * 2);
         // Varsi (====)
@@ -2150,13 +2150,23 @@ const Street = (() => {
         ctx.closePath();
         ctx.fill();
 
-        // Reunus
-        ctx.strokeStyle = '#3a1a08';
+        // Hienovarainen reunus – vain aavistus määrittelyä pimeässä siluetissa
+        ctx.strokeStyle = '#0c0908';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // BAR-teksti – terävä pikselifontti varren sisällä (pienennetty)
-        drawPixelText('BAR', sx + tailW + shaftLen / 2, cy, 1, '#ffd700');
+        // Neon-teksti 'BAR>' – '>' muodostaa nuolen neonvärisenä (keskitetään kyltille)
+        const tcx = sx + (tailW + shaftLen + headLen) / 2;
+        const tcy = cy;
+        ctx.save();
+        ctx.font = '9px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#FF0055';   // Hohteen väri (hieman tummempi punapinkki kuin itse teksti)
+        ctx.shadowBlur = 10;           // Kuinka kauas hohde leviää
+        ctx.fillStyle = '#FF66A3';     // Itse tekstin (kirjainten) ydin, hieman kirkkaampi/vaaleampi
+        ctx.fillText('BAR>', tcx, tcy);
+        ctx.restore();
     }
 
 
