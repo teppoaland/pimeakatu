@@ -13,6 +13,7 @@
 | Ajoneuvot, eläimet, sääefektit | ✅ |
 | Mustat lehdettömät puut (isoimmat raot) | ✅ v3.82 – 2 kpl, siluetti, eri korkeus |
 | Pienet ruohotupsut puiden juurella (1/4 koko) | ✅ v3.83 – 3 kpl per puu, random paikka raossa, huojuvat |
+| Puut huojuvat tuulessa | ✅ v4.02 – drawBareTree sai swayX-parametrin (tyvi ankkuroitu, taipuma `rel^1.5`); drawTrees lukee pilvien windDir/windSpeed → hidas puuska + huojunta, latvan amplitudi 0.6–2.8 px, omat phase-arvot per puu |
 | Sähkökaappi (1. puun vieressä) | ✅ v3.90 – harmaa laatikko + vilkkuva keltainen valo; sähköisku vain seinää vasten (pää kaapin yläreunan yläpuolella), ei alhaalta, ei tekstiä |
 | Sähkökaappi 2 (talo 7, matala talo) | ✅ v4.01 – identtinen kopio talon 7 (buildings[6], x 560–610, h 145) vasemmalle seinälle x 560; `electricCabinets`-taulukko, törmäys + piirto loopilla. Sama suhde oveen (2px) ja ikkunoihin kuin talossa 3 |
 | Kolikko potkusta talosta (1/5, 30s cooldown) | ✅ v3.93 – kukkaruukun sijaan 1/5 kolikko, 30s cooldown estää farmaamisen |
