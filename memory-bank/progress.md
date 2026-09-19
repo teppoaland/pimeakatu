@@ -14,6 +14,7 @@
 | Mustat lehdettömät puut (isoimmat raot) | ✅ v3.82 – 2 kpl, siluetti, eri korkeus |
 | Pienet ruohotupsut puiden juurella (1/4 koko) | ✅ v3.83 – 3 kpl per puu, random paikka raossa, huojuvat |
 | Sähkökaappi (1. puun vieressä) | ✅ v3.90 – harmaa laatikko + vilkkuva keltainen valo; sähköisku vain seinää vasten (pää kaapin yläreunan yläpuolella), ei alhaalta, ei tekstiä |
+| Sähkökaappi 2 (talo 7, matala talo) | ✅ v4.01 – identtinen kopio talon 7 (buildings[6], x 560–610, h 145) vasemmalle seinälle x 560; `electricCabinets`-taulukko, törmäys + piirto loopilla. Sama suhde oveen (2px) ja ikkunoihin kuin talossa 3 |
 | Kolikko potkusta talosta (1/5, 30s cooldown) | ✅ v3.93 – kukkaruukun sijaan 1/5 kolikko, 30s cooldown estää farmaamisen |
 | Ajoneuvojen moottoriäänet (panoroiva surina) | ✅ v3.81 – mopo korkea, autot/ambulanssi matala, stereo-pannaus |
 | Mobiiliohjaimet | ✅ |
@@ -25,6 +26,7 @@
 | Ikkunat eivät jää oven taakse | ✅ v4.2 – drawBuildings: oven "ei-ikkunaa" -alue (DOOR_W+4 x DOOR_H+2, +2px reunus), ikkuna ohitetaan jos se leikkaa oven alueen |
 | BAR-viittakyltti puunraossa | ✅ v4.3 → v3.98 – pieni matala nuolikyltti I====> varren sisällä "BAR" (terävä pikselifontti), siirretty vasemmalle (x≈143) + jalat; v4.5 tekstin koko puolitettu (scale 2→1); v4.6 yöelämän neon-kyltti: puuosa lähes musta siluetti #1F1614; v4.7 teksti fillText-hehkuksi (shadowColor #FF0055, blur 10, ydin #FF66A3, 'Press Start 2P' 9px); v4.8 teksti 'BAR >' + varsi pidennetään measureText-mittauksella; v3.98 palautettu alkuperäiseen pituuteen + teksti 'BAR>' (ilman väliä) kokeiluun (versio pudotettu v4.9 → v3.98, jatkossa +0.01) |
 | Peliohjeet pois HUD:sta → popup 0-tilassa | ✅ v3.99 – updateHUD näyttää vain statuksen, ohje pop-upina (showSpawnHint) vain oletustilassa (ensimmäinen lataus / kuoleman reset), teksti + 'Ja muista Syödä!' |
+| Aloituspopupin näyttöaika +2s | ✅ v4.00 – showNotification(text, durationMs = 2500) parametroitu; showSpawnHint kutsuu 4500 ms. Muiden popuppien (kolikko/avain/ovi/varoitus) aika ennallaan |
 
 ## ⛏️ Dig Game (digGame1/) | 💎 Boulder Dash (digGame2/)
 

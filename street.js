@@ -102,17 +102,17 @@ const Street = (() => {
     function randomCoinX() { return COIN_X_MIN + Math.random() * (COIN_X_MAX - COIN_X_MIN); }
     function randomCoinY() { return COIN_Y_MIN + Math.random() * (COIN_Y_MAX - COIN_Y_MIN); }
 
-    /* ── Sähkökaappi (1. puun vieressä, kerrostalon vas. seinä) ── */
-    // 1. puu (trees[0], x 175) on talojen 1–2 välissä. Sen oikealla puolella
-    // olevan talon (buildings[2], x 200–250) vasen seinä on x 200.
+    /* ── Sähkökaapit (talojen kyljissä, kerrostalon vas. seinä) ── */
+    // 1. kaappi: 1. puu (trees[0], x 175) on talojen 1–2 välissä. Sen oikealla
+    // puolella olevan talon (buildings[2], x 200–250) vasen seinä on x 200.
+    // 2. kaappi: talo 7 (buildings[6], x 560–610, matala h 145) – sama ilmentymä
+    // kopiona, vasen seinä x 560 (2px rako oveen, ikkunat kaapin yläpuolella).
     // Kaappi on ikkunan kokoinen (10×18), harmaa, yläosassa vilkkuva keltainen valo.
     // Osuminen antaa sähköiskun: tajunta pois + hampurilaisen menetys (kuten kukkaruukku/auto).
-    const electricCabinet = {
-        x: 200,              // vasen seinä
-        w: 10,
-        h: 18,
-        y: GROUND_Y - 22     // pohja 306 (katukiveyksen yläreuna)
-    };
+    const electricCabinets = [
+        { x: 200, w: 10, h: 18, y: GROUND_Y - 22 },   // talo 3 – vasen seinä (pohja 306)
+        { x: 560, w: 10, h: 18, y: GROUND_Y - 22 }    // talo 7 – vasen seinä (matala talo)
+    ];
 
     /* ── Avain (Dig Gamesta) ───────────────────────── */
     let digKeyCollected = false;
@@ -741,9 +741,9 @@ const Street = (() => {
             }
         }
 
-        // ── Sähkökaappi: sähköisku ─────────────────
-        if (!player.knockedDown) {
-            const cab = electricCabinet;
+        // ── Sähkökaapit: sähköisku ─────────────────
+        for (const cab of electricCabinets) {
+            if (player.knockedDown) break;   // isku jo saatu – ei toista kaappia samalla kertaa
             // Vaakasuunnassa laatikon sisällä, pystysuunnassa pää kaapin
             // yläreunan yläpuolella (seinää vasten) → ei osumaa alhaalta.
             if (player.x < cab.x + cab.w && player.x + player.w > cab.x &&
@@ -1278,7 +1278,9 @@ const Street = (() => {
         actionJustPressed = false;
     }
 
-    function showNotification(text) {
+    // durationMs: lukuaika näytöllä. Oletus 2500 ms (kaikki muut popupit),
+    // vain aloitusohje käyttää pidempää aikaa (showSpawnHint).
+    function showNotification(text, durationMs = 2500) {
         const el = document.getElementById('notification');
         // Peruuta edellinen aikakatkaisu jos uusi teksti tulee
         if (el._timeout) clearTimeout(el._timeout);
@@ -1288,7 +1290,7 @@ const Street = (() => {
         el.style.opacity = '1';
         el.style.transition = 'none';
         el.style.animation = 'popIn 0.3s ease-out';
-        // 2.5s lukuaikaa, sitten fadeout 0.5s
+        // Lukuaika (oletus 2.5s), sitten fadeout 0.5s
         el._timeout = setTimeout(() => {
             el.style.transition = 'opacity 0.5s';
             el.style.opacity = '0';
@@ -1296,11 +1298,12 @@ const Street = (() => {
                 el.textContent = '';
                 el.style.animation = 'none';
             }, 500);
-        }, 2500);
+        }, durationMs);
     }
 
     function showSpawnHint() {
-        showNotification('Liiku kadulla, potki kaikkea, mutta omalla vastuulla. Saattaa asukkaat hermostua! Ja muista Syödä!');
+        // Aloitusohje: pitempi lukuaika (+2s) kuin muilla popupeilla
+        showNotification('Liiku kadulla, potki kaikkea, mutta omalla vastuulla. Saattaa asukkaat hermostua! Ja muista Syödä!', 4500);
     }
 
     function spawnParticles(x, y, color, count) {
@@ -1667,7 +1670,7 @@ const Street = (() => {
         drawBuildings();
         drawGround();
 
-        // Sähkökaappi (1. puun vieressä)
+        // Sähkökaapit (talojen kyljissä)
         drawElectricCabinet();
 
         // Mustat lehdettömät puut (raoissa)
@@ -1937,45 +1940,46 @@ const Street = (() => {
         }
     }
 
-    /* ── Sähkökaappi (1. puun vieressä, kerrostalon vas. seinä) ── */
+    /* ── Sähkökaapit (talojen kyljissä, kerrostalon vas. seinä) ── */
     function drawElectricCabinet() {
-        const c = electricCabinet;
-        const cx = c.x, cy = c.y, cw = c.w, ch = c.h;
-        const centerX = cx + cw / 2;
+        for (const c of electricCabinets) {
+            const cx = c.x, cy = c.y, cw = c.w, ch = c.h;
+            const centerX = cx + cw / 2;
 
-        // Runko (harmaa metalli) – pelkkä laatikko
-        ctx.fillStyle = '#55555c';
-        ctx.fillRect(cx, cy, cw, ch);
-        ctx.fillStyle = '#6c6c74';
-        ctx.fillRect(cx + 1, cy + 1, cw - 2, 2);
-        ctx.strokeStyle = '#2b2b31';
-        ctx.strokeRect(cx + 0.5, cy + 0.5, cw - 1, ch - 1);
+            // Runko (harmaa metalli) – pelkkä laatikko
+            ctx.fillStyle = '#55555c';
+            ctx.fillRect(cx, cy, cw, ch);
+            ctx.fillStyle = '#6c6c74';
+            ctx.fillRect(cx + 1, cy + 1, cw - 2, 2);
+            ctx.strokeStyle = '#2b2b31';
+            ctx.strokeRect(cx + 0.5, cy + 0.5, cw - 1, ch - 1);
 
-        // Etuluukku
-        ctx.fillStyle = '#48484f';
-        ctx.fillRect(cx + 2, cy + 5, cw - 4, ch - 7);
-        ctx.fillStyle = '#3d3d43';
-        ctx.fillRect(cx + 2, cy + 5, cw - 4, 1);
+            // Etuluukku
+            ctx.fillStyle = '#48484f';
+            ctx.fillRect(cx + 2, cy + 5, cw - 4, ch - 7);
+            ctx.fillStyle = '#3d3d43';
+            ctx.fillRect(cx + 2, cy + 5, cw - 4, 1);
 
-        // Vilkkuva keltainen varoitusvalo yläosassa
-        const on = Math.sin(Date.now() / 260) > 0;
-        if (on) {
-            ctx.fillStyle = '#ffd700';
-            ctx.beginPath();
-            ctx.arc(centerX, cy - 2, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-            const glow = ctx.createRadialGradient(centerX, cy - 2, 0.5, centerX, cy - 2, 7);
-            glow.addColorStop(0, 'rgba(255,215,0,0.6)');
-            glow.addColorStop(1, 'rgba(255,215,0,0)');
-            ctx.fillStyle = glow;
-            ctx.beginPath();
-            ctx.arc(centerX, cy - 2, 7, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            ctx.fillStyle = '#4a4410';
-            ctx.beginPath();
-            ctx.arc(centerX, cy - 2, 2.5, 0, Math.PI * 2);
-            ctx.fill();
+            // Vilkkuva keltainen varoitusvalo yläosassa
+            const on = Math.sin(Date.now() / 260) > 0;
+            if (on) {
+                ctx.fillStyle = '#ffd700';
+                ctx.beginPath();
+                ctx.arc(centerX, cy - 2, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                const glow = ctx.createRadialGradient(centerX, cy - 2, 0.5, centerX, cy - 2, 7);
+                glow.addColorStop(0, 'rgba(255,215,0,0.6)');
+                glow.addColorStop(1, 'rgba(255,215,0,0)');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(centerX, cy - 2, 7, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.fillStyle = '#4a4410';
+                ctx.beginPath();
+                ctx.arc(centerX, cy - 2, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
 
@@ -2680,7 +2684,7 @@ const Street = (() => {
         } else if (hamburgerCount >= 10) {
             ctx.fillText('🍔 Hampurilaiset täynnä (max 10).', 400, 185);
         } else {
-            ctx.fillText('🍔 Ei kolikoita. Kerää kolikoita kadulta tai peleistä!', 400, 185);
+            ctx.fillText('🍔 Ei kolikoita. Hommaa massia!', 400, 185);
         }
 
         // Poistumisvihje
