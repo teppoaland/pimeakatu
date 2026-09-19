@@ -1874,9 +1874,15 @@ const Street = (() => {
             ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
             // Ikkunat
             const houseLit = (idx === 0 && firstHouseWindowsLit) || (smallHouseLights[idx] && smallHouseLights[idx].lit);
+            // Oven "ei-ikkunaa" -alue (sis. +2px syvennysreunus) – ikkunoita ei piirretä oven taakse
+            const dLeft = b.x + b.w / 2 - DOOR_W / 2 - 2;
+            const dTop = GROUND_Y - DOOR_H - 2;
+            const dRight = dLeft + DOOR_W + 4;
             for (let wy = GROUND_Y - b.h + 25; wy < GROUND_Y - 35; wy += 32) {
                 for (let wx = b.x + 10; wx < b.x + b.w - 15; wx += 24) {
                     if (wx + 10 > b.x + b.w - 6) continue;
+                    // Ohita ikkuna joka jää oven (tai sen kehyksen) taakse
+                    if (wx + 10 > dLeft && wx < dRight && wy + 14 > dTop) continue;
                     if (houseLit) {
                         const ct = getWindowColorType(wx, wy, idx);
                         const wc = getWindowColors(ct, wx, wy);
@@ -2877,9 +2883,9 @@ const Street = (() => {
         // BAR-kyltti oven yllä (talo 8)
         if (isBar) {
             ctx.fillStyle = '#6b2d0a';
-            ctx.fillRect(dx - 4, dy - 32, DOOR_W + 8, 16);
+            ctx.fillRect(dx - 4, dy - 26, DOOR_W + 8, 16);
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(dx - 2, dy - 30, DOOR_W + 4, 12);
+            ctx.fillRect(dx - 2, dy - 24, DOOR_W + 4, 12);
             const barPhase = Date.now() / 350;
             const blink = Math.sin(barPhase);
             const barHue = 46 + blink * 6;
@@ -2889,7 +2895,7 @@ const Street = (() => {
             ctx.shadowBlur = 6 + Math.abs(blink) * 16;     // hehku voimistuu kirkkaana
             ctx.font = 'bold 9px "Courier New", monospace';
             ctx.textAlign = 'center';
-            ctx.fillText('  BAR  ', dc.x, dy - 20);
+            ctx.fillText('  BAR  ', dc.x, dy - 14);
             ctx.shadowBlur = 0;
             ctx.textAlign = 'start';
         }
