@@ -37,6 +37,7 @@
 | Dynaaminen lampunvalo hahmolle | ✅ v4.04 – lähin palava lamppu < 70 px → `rgba(255,221,136, 0.35·(1−d/70))` 1 px reunavalo vartalon (11 px) ja pään (3 px) valonpuoleiselle reunalle; lokaalikoordinaatit → kääntyy peilauksen mukana |
 | Kaukaisen kaupungin siluetti (parallaksi 0.4×) | ✅ v4.06 – haaleat sinertävät taustatalot (50 % koossa, `BACKDROP_SCALE 0.5`) lähitalojen/puiden takana (tähtien/taivaan päällä); 4 kattomallia + reunalista, tumma ikkunaristikko 5×7 + himmeä lämmin ikkuna joka 3. taloon, ilmaperspektiivihuntu; generointi kerran init():ssä, tyvi kiveyksen alla |
 | Talojen + ovien syvyys-skaalaus | ✅ v4.07 – `buildingWindowRows` + `buildingScale` (5 riviä 100 %, 4 riviä 95 %, 3 riviä 90 %); `drawBuildings` skaalaa talon ja `drawDoor` skaalaa oven pohjan keskipisteen ympäri; potku/törmäys (`DOOR_RADIUS`), lamput ja ikkunavalo-kirjanpito ennallaan |
+| Mopo + kuski (punainen runko, kerrostettu kuski) | ✅ v4.08 – harmaa laatikko korvattu punaisella rungolla (`#D32F2F`) + kuskilla, joka istuu penkillä kerrostettuna (runko → kuski → etukate/tanko); kuski pelaajan väreillä, silmä eteen, käsi tangolla, jalat astinlaudalla (pään tärinä poistettu luonnottomana) |
 
 
 ## ⛏️ Dig Game (digGame1/) | 💎 Boulder Dash (digGame2/)
