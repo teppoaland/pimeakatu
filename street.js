@@ -2254,11 +2254,24 @@ const Street = (() => {
             ctx.fillRect(startX + 2, f.topY + 2, endX - startX - 4, f.bottomRailY - f.topY + 2);
 
             // ── Vaakaraudat ──
-            // Alajuoksu (paksumpi)
-            ctx.fillStyle = '#222222';
+            // Alajuoksu (paksumpi) – pyöreä sylinteriefekti pystygradientilla
+            const railGrad = ctx.createLinearGradient(0, f.bottomRailY - 1, 0, f.bottomRailY + 6);
+            railGrad.addColorStop(0,   '#3a3a3a');   // yläkiilto
+            railGrad.addColorStop(0.5, '#2e2e2e');   // keskiosa
+            railGrad.addColorStop(1,   '#1a1a1a');   // alavarjo
+            ctx.fillStyle = railGrad;
             ctx.fillRect(startX, f.bottomRailY - 1, endX - startX, 7);
-            ctx.fillStyle = '#2e2e2e';
-            ctx.fillRect(startX + 1, f.bottomRailY, endX - startX - 2, 4);
+            // Niitit joka pystypiikin kohdalle (miltei musta, ei valopilkku)
+            for (const bx of bars) {
+                ctx.fillStyle = '#0b0b0b';
+                ctx.beginPath();
+                ctx.arc(bx + 1, f.bottomRailY + 2, 1.6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#171717';
+                ctx.beginPath();
+                ctx.arc(bx + 0.6, f.bottomRailY + 1.6, 0.7, 0, Math.PI * 2);
+                ctx.fill();
+            }
             // Yläjuoksu
             ctx.fillStyle = '#222222';
             ctx.fillRect(startX, f.topY + 12, endX - startX, 4);
@@ -2540,7 +2553,7 @@ const Street = (() => {
         const hintLines = [
             'SEURAA HAMPURILAISTEN KULUTUSTA!',
             'MUISTA SYÖDÄ!',
-            'MUUTEN VOI PELATESSA MENNÄ HENKI KIRJAIMELLISESTI!'
+            'Tv. Äiti'
         ];
         ctx.textAlign = 'center';
         ctx.font = 'bold 11px "Courier New", monospace';
@@ -2619,22 +2632,67 @@ const Street = (() => {
             ctx.beginPath(); ctx.arc(bx, bulbY + 10, 90, 0, Math.PI*2); ctx.fill();
         }
 
-        // Tolpan varsi (puinen/rautainen)
-        ctx.fillStyle = '#4a3820';
+        // Tolpan varsi (puinen/rautainen) – keskeltä vaalea, reunoilta tumma = pyöreä sylinteriefekti
+        const poleGrad = ctx.createLinearGradient(bx - 3, 0, bx + 3, 0);
+        poleGrad.addColorStop(0,   '#33230f');  // vasen reuna (tumma)
+        poleGrad.addColorStop(0.5, '#6f5230');  // keskusta (vaalea)
+        poleGrad.addColorStop(1,   '#241708');  // oikea reuna (tummin)
+        ctx.fillStyle = poleGrad;
         ctx.fillRect(bx - 3, poleTop, 6, by - poleTop);
 
-        // Tolpan jalusta (satunnainen harmaan patina)
-        ctx.fillStyle = lamp.baseShade || '#555';
-        ctx.fillRect(bx - 7, by - 6, 14, 6);
+        // Tolpan jalusta – katukivetyksen rasteri (vaihtelevat sävyt + saumat)
+        const baseL = parseInt((lamp.baseShade || 'hsl(0,0%,50%)').match(/(\d+)%/)[1], 10);
+        const baseX = bx - 7, baseY = by - 6, baseW = 14, baseH = 6;
+        // Saumatausta (mortar) – tumma, erottaa kivet
+        ctx.fillStyle = 'hsl(0,0%,' + Math.max(10, baseL - 24) + '%)';
+        ctx.fillRect(baseX, baseY, baseW, baseH);
+        // Kivet: kaksi limittäistä riviä, deterministinen sävyvaihtelu per lamppu
+        // Pystyraita (kivien välinen sauma) peilataan oikealle/vasemmalle per lamppu
+        let s = lamp.x * 7 + baseL;
+        const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+        const stoneW = 6, stoneH = 2, gap = 1;
+        const mirror = rnd() < 0.5;  // kaksi vaihtoehtoa: pystyraita oikealla tai vasemmalla
+        for (let row = 0; row < 2; row++) {
+            const y = baseY + row * (stoneH + gap);
+            const offset = row === 1 ? -Math.floor(stoneW / 2) : 0;
+            const stones = [];
+            for (let x = offset; x < baseW; x += stoneW + gap) {
+                const sx = Math.max(baseX, baseX + x);
+                const sw = Math.min(stoneW, baseX + baseW - sx);
+                if (sw > 0) stones.push([sx, sw]);
+            }
+            if (mirror) {
+                for (const st of stones) st[0] = baseX + baseW - (st[0] - baseX + st[1]);
+            }
+            for (const [sx, sw] of stones) {
+                const shade = baseL - 8 + rnd() * 28;  // vähän vaaleampaa kuin kuva
+                ctx.fillStyle = 'hsl(0,0%,' + Math.round(Math.min(82, Math.max(16, shade))) + '%)';
+                ctx.fillRect(sx, y, sw, stoneH);
+            }
+        }
+        // Yläreunan ohut valokorostus (bevel)
+        ctx.fillStyle = 'hsl(0,0%,' + Math.min(90, baseL + 30) + '%)';
+        ctx.fillRect(baseX, baseY, baseW, 1);
 
         // Poikkipalkki lampun alla
         ctx.fillStyle = '#4a3820';
         ctx.fillRect(bx - 10, poleTop - 4, 20, 4);
 
         // Lampun kupu
-        ctx.fillStyle = lamp.overheat
-            ? 'rgba(255,' + Math.round(60 + (Math.sin(Date.now() * 0.025) * 0.3 + 0.7) * 40) + ',10,0.8)'
-            : (lamp.lit ? '#ffffaa' : '#2a2a2a');
+        let cupFill;
+        if (lamp.overheat) {
+            cupFill = 'rgba(255,' + Math.round(60 + (Math.sin(Date.now() * 0.025) * 0.3 + 0.7) * 40) + ',10,0.8)';
+        } else if (lamp.lit) {
+            cupFill = '#ffffaa';
+        } else {
+            // Staattinen (ei pala): pyöreä dome – keskiö vaalea, laidat tummemmat
+            const cupGrad = ctx.createRadialGradient(bx, bulbY + 3, 1, bx, bulbY + 3, 10);
+            cupGrad.addColorStop(0,    '#3a3a3a');
+            cupGrad.addColorStop(0.55, '#262626');
+            cupGrad.addColorStop(1,    '#141414');
+            cupFill = cupGrad;
+        }
+        ctx.fillStyle = cupFill;
         ctx.beginPath();
         ctx.arc(bx, bulbY + 6, 9, Math.PI, 0);
         ctx.fill();
@@ -2643,9 +2701,18 @@ const Street = (() => {
         ctx.arc(bx, bulbY + 6, 9, Math.PI, 0);
         ctx.stroke();
 
-        // Kuvun "hattu" (patinoitu harmaa)
-        ctx.fillStyle = lamp.overheat ? '#662200' : (lamp.hatShade || '#555');
-        ctx.fillRect(bx - 9, bulbY - 3, 18, 4);
+        // Kuvun "hattu" (patinoitu harmaa) – pyöreä: keskiö vaalea, laidat tummemmat
+        if (lamp.overheat) {
+            ctx.fillStyle = '#662200';
+            ctx.fillRect(bx - 9, bulbY - 3, 18, 4);
+        } else {
+            const capGrad = ctx.createLinearGradient(bx - 9, 0, bx + 9, 0);
+            capGrad.addColorStop(0,   '#2f2f2f');
+            capGrad.addColorStop(0.5, '#5f5f5f');
+            capGrad.addColorStop(1,   '#2f2f2f');
+            ctx.fillStyle = capGrad;
+            ctx.fillRect(bx - 9, bulbY - 3, 18, 4);
+        }
 
         // Pieni valopilkku kuvun sisällä
         if (lamp.lit) {
