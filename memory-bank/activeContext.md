@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v4.2** | 19.9.2026 | Pääportaalin ikkunat korjattu street.js drawBuildings: ikkunoita ei enää piirretä oven taakse. Lasketaan oven "ei-ikkunaa" -alue (b.x+b.w/2 - DOOR_W/2 -2, GROUND_Y-DOOR_H-2, leveys DOOR_W+4) ja ohitetaan (continue) ikkuna jos wx+10 > dLeft && wx < dRight && wy+14 > dTop. Koskee kapeita taloja, joissa ikkuna jäi puoliksi oven taakse. Versio index.html:ssä: v4.2.
+**v4.3** | 19.9.2026 | Pääportaaliin lisätty BAR-viittakyltti (street.js drawBarSign): pieni, matala, nuolen muotoinen puinen kyltti I====> (häntä-I + varsi + oikealle osoittava kärki), jonka varren sisällä lukee "BAR". Sijainti: ensimmäisessä puunraossa (x≈153, talojen 1–2 välissä), matalalla (GROUND_Y-10), piirretään drawTrees-kutsun jälkeen. Osoittaa oikealle kohti BAR-talo 8:aa. Versio index.html:ssä: v4.3.
 
 ## 🔒 Lukitut osa-alueet
 

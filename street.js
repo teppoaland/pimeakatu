@@ -1666,6 +1666,9 @@ const Street = (() => {
         // Pienet ruohotupsut puiden juurella
         if (foreground) { drawTreeGrassTufts(); }
 
+        // BAR-viittakyltti (puunraossa, osoittaa oikealle)
+        drawBarSign();
+
         // Lamput
         for (const lamp of lamps) drawLampPost(lamp);
 
@@ -2088,6 +2091,45 @@ const Street = (() => {
     function drawTrees() {
         for (const t of trees) drawBareTree(t.x, GROUND_Y - 5, t.h);
     }
+
+    /* ── BAR-viittakyltti (puunraossa, osoittaa oikealle) ── */
+    function drawBarSign() {
+        const sx = 153;               // kyltin vasen reuna (I-hännän alku)
+        const cy = GROUND_Y - 10;     // matala keskikorkeus
+        const tailW = 3;              // I-häntä
+        const shaftLen = 22;          // varsi
+        const headLen = 9;            // nuolenkärki
+        const halfH = 5;              // varren puolikorkeus
+
+        // Kyltin runko (tummanruskea puinen nuoli I====>)
+        ctx.fillStyle = '#6b2d0a';
+        // Häntä (I)
+        ctx.fillRect(sx, cy - halfH, tailW, halfH * 2);
+        // Varsi (====)
+        ctx.fillRect(sx + tailW, cy - halfH, shaftLen, halfH * 2);
+        // Nuolenkärki (>)
+        ctx.beginPath();
+        ctx.moveTo(sx + tailW + shaftLen, cy - halfH - 2);
+        ctx.lineTo(sx + tailW + shaftLen + headLen, cy);
+        ctx.lineTo(sx + tailW + shaftLen, cy + halfH + 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Reunus
+        ctx.strokeStyle = '#3a1a08';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // BAR-teksti varren sisällä
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 7px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('BAR', sx + tailW + shaftLen / 2, cy + 0.5);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+    }
+
 
     function drawGround() {
         // Taustapohja
