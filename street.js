@@ -1967,6 +1967,9 @@ const Street = (() => {
             const bodyC = b.bodyColor || '#1a1a2e';
             // Syvyysefekti: skaalaa talo pohjan keskipisteen ympäri (ovet pysyvät paikoillaan)
             const s = buildingScale(b);
+            // Taaimmaiset talot (3 ikkunariviä, skaala 90 %): ei vaaleita ulkokehyksiä
+            // → ikkunat painuvat seinään ja näyttävät pienemmiltä (syvyysvaikutelma)
+            const flatWindows = buildingWindowRows(b) <= 3;
             const cx = b.x + b.w / 2;
             ctx.save();
             ctx.translate(cx, GROUND_Y);
@@ -1991,8 +1994,10 @@ const Street = (() => {
                         ctx.fillStyle = wc.fill;
                         ctx.fillRect(wx, wy, 10, 14);
                         if (shouldShowSilhouette(wx, wy, idx, ct)) drawSilhouette(wx, wy);
-                        ctx.strokeStyle = wc.stroke; ctx.lineWidth = 1;
-                        ctx.strokeRect(wx, wy, 10, 14);
+                        if (!flatWindows) {
+                            ctx.strokeStyle = wc.stroke; ctx.lineWidth = 1;
+                            ctx.strokeRect(wx, wy, 10, 14);
+                        }
                         const glow = ctx.createRadialGradient(wx+5, wy+7, 1, wx+5, wy+7, 12);
                         glow.addColorStop(0, wc.glow0);
                         glow.addColorStop(1, wc.glow1);
@@ -2006,18 +2011,29 @@ const Street = (() => {
                             ctx.fillStyle = wc.fill;
                             ctx.fillRect(wx, wy, 10, 14);
                             if (shouldShowSilhouette(wx, wy, idx, ct)) drawSilhouette(wx, wy);
-                            ctx.strokeStyle = wc.stroke; ctx.lineWidth = 1;
-                            ctx.strokeRect(wx, wy, 10, 14);
+                            if (!flatWindows) {
+                                ctx.strokeStyle = wc.stroke; ctx.lineWidth = 1;
+                                ctx.strokeRect(wx, wy, 10, 14);
+                            }
                             const glow = ctx.createRadialGradient(wx+5, wy+7, 1, wx+5, wy+7, 12);
                             glow.addColorStop(0, wc.glow0);
                             glow.addColorStop(1, wc.glow1);
                             ctx.fillStyle = glow;
                             ctx.fillRect(wx-6, wy-5, 22, 24);
                         } else {
-                            ctx.fillStyle = '#0a0a15';
+                            // 3 rivin talot (flatWindows): ei kehystä → ikkuna erottuu syvennyksenä.
+                            // Tummempi täyttö + 1 px tumma ylävarjo + 1 px vaalea alaparre = upotus seinässä.
+                            ctx.fillStyle = flatWindows ? '#05050d' : '#0a0a15';
                             ctx.fillRect(wx, wy, 10, 14);
-                            ctx.strokeStyle = '#2a2a3e'; ctx.lineWidth = 1;
-                            ctx.strokeRect(wx, wy, 10, 14);
+                            if (flatWindows) {
+                                ctx.fillStyle = 'rgba(0,0,0,0.35)';
+                                ctx.fillRect(wx, wy, 10, 1);
+                                ctx.fillStyle = lightenHex(bodyC, 0x06);
+                                ctx.fillRect(wx, wy + 14, 10, 1);
+                            } else {
+                                ctx.strokeStyle = '#2a2a3e'; ctx.lineWidth = 1;
+                                ctx.strokeRect(wx, wy, 10, 14);
+                            }
                         }
                     }
                 }
