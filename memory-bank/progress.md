@@ -23,7 +23,7 @@
 | Boulder Dash alkudialogi (vaakakuva) | ✅ v4.0 – #overlay-content max-height/overflow-y + @media (max-height: 500px) pienentää otsikon/tekstit, jotta ylä-/alakehykset mahtuvat |
 | BAR-kyltti (talo 8) laskettu alemmas | ✅ v4.1 – kyltin alareuna dy-10 (3px ovivalon yläpuolella, 10px oven yläpuolella) |
 | Ikkunat eivät jää oven taakse | ✅ v4.2 – drawBuildings: oven "ei-ikkunaa" -alue (DOOR_W+4 x DOOR_H+2, +2px reunus), ikkuna ohitetaan jos se leikkaa oven alueen |
-| BAR-viittakyltti puunraossa | ✅ v4.3 – pieni matala nuolikyltti I====> varren sisällä "BAR", osoittaa oikealle, sijainti ensimmäisessä puunraossa (x≈153) |
+| BAR-viittakyltti puunraossa | ✅ v4.3 → v4.5 – pieni matala nuolikyltti I====> varren sisällä "BAR" (terävä pikselifontti), siirretty vasemmalle (x≈143) + jalat; v4.5 tekstin koko puolitettu (scale 2→1) |
 
 ## ⛏️ Dig Game (digGame1/) | 💎 Boulder Dash (digGame2/)
 

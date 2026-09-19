@@ -2092,14 +2092,49 @@ const Street = (() => {
         for (const t of trees) drawBareTree(t.x, GROUND_Y - 5, t.h);
     }
 
+    /* Terävä pikselifontti (3x5 glyphit) – ei anti-aliasointia, pysyy terävänä skaalauksessa */
+    function drawPixelText(text, cx, cy, scale, color) {
+        const G = {
+            'B': [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
+            'A': [[0,1,0],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+            'R': [[1,1,1],[1,0,1],[1,1,1],[1,1,0],[1,0,1]],
+        };
+        const rows = 5, cols = 3;
+        const gw = cols * scale;
+        const gap = scale;
+        const totalW = text.length * gw + (text.length - 1) * gap;
+        // Pyöristä aloitus kokonaisluvuiksi → terävät reunat (ei anti-aliasointia)
+        const startX = Math.round(cx - totalW / 2);
+        const startY = Math.round(cy - (rows * scale) / 2);
+        ctx.fillStyle = color;
+        for (let li = 0; li < text.length; li++) {
+            const g = G[text[li]];
+            if (!g) continue;
+            const gx = startX + li * (gw + gap);
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (g[r][c]) ctx.fillRect(gx + c * scale, startY + r * scale, scale, scale);
+                }
+            }
+        }
+    }
+
     /* ── BAR-viittakyltti (puunraossa, osoittaa oikealle) ── */
     function drawBarSign() {
-        const sx = 153;               // kyltin vasen reuna (I-hännän alku)
+        const sx = 143;               // siirretty vasemmalle (hiukan vasemman talon päälle)
         const cy = GROUND_Y - 10;     // matala keskikorkeus
         const tailW = 3;              // I-häntä
         const shaftLen = 22;          // varsi
         const headLen = 9;            // nuolenkärki
         const halfH = 5;              // varren puolikorkeus
+
+        // Pieniä jalkoja – kyltti ei roiku ilmassa (laudan alta maahan)
+        const legW = 2;
+        const legTop = cy + halfH;             // laudan alareuna
+        const legH = GROUND_Y - legTop;        // maahan asti
+        ctx.fillStyle = '#4a2c10';
+        ctx.fillRect(sx + tailW + 2, legTop, legW, legH);
+        ctx.fillRect(sx + tailW + shaftLen - legW - 2, legTop, legW, legH);
 
         // Kyltin runko (tummanruskea puinen nuoli I====>)
         ctx.fillStyle = '#6b2d0a';
@@ -2120,14 +2155,8 @@ const Street = (() => {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // BAR-teksti varren sisällä
-        ctx.fillStyle = '#ffd700';
-        ctx.font = 'bold 7px "Courier New", monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('BAR', sx + tailW + shaftLen / 2, cy + 0.5);
-        ctx.textAlign = 'start';
-        ctx.textBaseline = 'alphabetic';
+        // BAR-teksti – terävä pikselifontti varren sisällä (pienennetty)
+        drawPixelText('BAR', sx + tailW + shaftLen / 2, cy, 1, '#ffd700');
     }
 
 
