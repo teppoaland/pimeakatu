@@ -81,6 +81,20 @@ const Street = (() => {
     const DOOR_H = 32;
     const DOOR_RADIUS = 19;
 
+    /* ── Ovien kynnysviuhka (yksi kivirivi heti kynnyksen vieressä) ── */
+    // Renkaat: d = syvyys, w = puolileveys renkaan ulkoreunalla, n = kiilakivien määrä
+    // HUOM: talot ovat kiinni kadun varressa → vain yksi rivi, ei saa valua autotielle.
+    const THRESH_RINGS = [
+        { d: 5, w: 16, n: 3 }
+    ];
+    const THRESH_TOP_Y = 7;          // rivin yläraja GROUND_Y:n alapuolella (kynnyslaatan alla)
+    const THRESH_DIP = 2;            // V-painuma keskellä (kiveys vajoaa ovea kohti)
+    const THRESH_DETAILS = true;     // kulumat, halkeamat, pikkukivet
+    const THRESH_LIGHT = true;       // oviaukon valo aktiivisille oville
+    const THRESH_LIGHT_HOUSE = '255,230,150';   // talojen lämmin valo
+    const THRESH_LIGHT_BAR = '255,102,163';     // BAR: neonpinkki (sopii kylttiin)
+    const KERB_GAP_EXTRA = 5;        // lasketun reunakiven lisäys oven leveyteen
+
     /* ── Mustat lehdettömät puut (isoimmat raot) ── */
     // Isoimmat raot: talo 1–2 (x 150–200) ja talo 3–4 (x 330–380).
     // 1. puu = 1/3 viereisestä matalasta talosta (buildings[2].h = 140), pienennetty 30%
@@ -1562,7 +1576,9 @@ const Street = (() => {
             manholes: [],
             beetle: null,
             newspaper: null,
-            ironFence: null      // Rauta-aita alalaidassa
+            ironFence: null,     // Rauta-aita alalaidassa
+            thresholds: [],      // Ovien kynnysviuhkat (esilaskettu geometria)
+            kerbGaps: []         // Oviaukkojen kohdat (laskettu reunakivi)
         };
 
         // Reunakivet (yläreuna)
@@ -1573,7 +1589,22 @@ const Street = (() => {
             sx += gap;
         }
 
-        // Kiveyspinta (4 riviä)
+        // Kiveyspinta (4 riviä) – saumavaihe ja sävy vaihtelevat taloittain,
+        // jotta sama kiveysruudukko ei jatku yhtenä "barina" laidasta laitaan.
+        const houseAt = (x) => {
+            for (let i = 0; i < buildings.length; i++) {
+                const b = buildings[i];
+                if (x >= b.x && x < b.x + b.w) return i;
+            }
+            return -1;   // talojen väli (rako)
+        };
+        const housePhase = [], houseDrift = [];
+        for (let i = 0; i < buildings.length; i++) {
+            let hs = i * 2089 + 7;
+            const hrnd = () => { hs = (hs * 9301 + 49297) % 233280; return hs / 233280; };
+            housePhase.push(Math.round(hrnd() * 6));       // 0–6 px saumavaihe per talo
+            houseDrift.push(Math.round(hrnd() * 2 - 1));   // −1 / 0 / +1 sävy per talo
+        }
         for (let row = 0; row < 4; row++) {
             const ry = GROUND_Y + 5 + row * 20;
             const colOff = row % 2 === 0 ? 0 : 11;
@@ -1581,8 +1612,11 @@ const Street = (() => {
             while (sx < WORLD_W) {
                 const sw = 16 + Math.floor(Math.random() * 12);
                 const sh = 16 + Math.floor(Math.random() * 5);
-                const shade = 10 + Math.floor(Math.random() * 8);
-                foreground.pavingStones.push({ x: sx, y: ry, w: sw, h: sh, shade: shade });
+                const hi = houseAt(sx);
+                const phase = hi >= 0 ? housePhase[hi] : 0;
+                const drift = hi >= 0 ? houseDrift[hi] : 0;
+                const shade = Math.max(10, Math.min(17, 10 + Math.floor(Math.random() * 8) + drift));
+                foreground.pavingStones.push({ x: sx + phase, y: ry, w: sw, h: sh, shade: shade });
                 sx += sw + Math.floor(Math.random() * 4);
             }
         }
@@ -1643,6 +1677,9 @@ const Street = (() => {
             angle: -0.05 + Math.random() * 0.1
         };
 
+        // Ovien kynnysviuhkat – tarvitsee viemärien paikat (detaljien väistö)
+        buildThresholds();
+
         // Rauta-aita – musta takorauta-aita kadun alalaitaan, keskellä aukko
         const FENCE_TOP = WORLD_H - 50;        // aidan yläreuna
         const FENCE_BOTTOM = WORLD_H;           // aidan alareuna (canvasin pohja)
@@ -1669,6 +1706,147 @@ const Street = (() => {
             gapEnd: GAP_END,
             segments: segments
         };
+    }
+
+    /* ── Ovien kynnysviuhka: esilaskettu geometria (kerran initissä) ──
+       Kiveys "kaatuu" kohti ovea: saumat osoittavat kynnykseen, renkaat
+       syvenevät ovesta poispäin ja keskusta painuu hieman (V-painuma).
+       Kiilat ryhmitellään sävyittäin → muutama fill per ovi per frame. */
+    function buildThresholds() {
+        if (!foreground) return;
+        foreground.thresholds = [];
+        foreground.kerbGaps = [];
+
+        const SAMPLE_U = [-1, -0.5, 0, 0.5, 1];   // jaetut rajapistenäytteet → ei rakoja renkaiden väliin
+        const nearManhole = (x, y, r) => {
+            for (const mh of foreground.manholes) {
+                const dx = mh.x - x, dy = mh.y - y;
+                if (dx * dx + dy * dy < r * r) return true;
+            }
+            return false;
+        };
+
+        for (let bi = 0; bi < buildings.length; bi++) {
+            const b = buildings[bi];
+            const cx = b.x + b.w / 2;                 // sama piste kuin oven keskipiste
+            const s = buildingScale(b);               // syvyys/leveys skaalautuvat kuten ovi
+            // Deterministinen random per talo (sama tekniikka kuin lampun jalustassa)
+            let seed = bi * 7919 + 13;
+            const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+
+            const gapHalf = (DOOR_W * s) / 2 + KERB_GAP_EXTRA;
+            const yTop = GROUND_Y + THRESH_TOP_Y;
+            const dipAt = (u) => THRESH_DIP * (1 - Math.abs(u)) * s;
+            const edgeX = (u, w) => cx + u * w * s;         // w = skaalaamaton puolileveys
+            const edgeY = (u, baseY) => baseY + dipAt(u);
+            const usWith = (uA, uB) => {                    // u-arvot välillä [uA,uB] (rajapistenäytteet mukaan)
+                const out = [uA];
+                for (const su of SAMPLE_U) if (su > uA + 1e-9 && su < uB - 1e-9) out.push(su);
+                out.push(uB);
+                return out;
+            };
+
+            const groups = new Map(), wear = new Map();
+            const add = (map, shade, poly) => {
+                const key = Math.max(0, Math.min(255, Math.round(shade)));
+                if (!map.has(key)) map.set(key, []);
+                map.get(key).push(poly);
+            };
+            const seams = [], hseams = [], ringYs = [];
+            const leftEdge = [edgeX(-1, DOOR_W / 2), yTop];
+            const rightEdge = [edgeX(1, DOOR_W / 2), yTop];
+            let wIn = DOOR_W / 2, y0 = yTop;
+            for (let r = 0; r < THRESH_RINGS.length; r++) {
+                const cfg = THRESH_RINGS[r];
+                const n = cfg.n, y1 = y0 + cfg.d * s;
+                ringYs.push([y0, y1]);
+                // Renkaan yläraja – sama pistejono kuin edellisen renkaan alaraja
+                const topHs = [];
+                for (const u of SAMPLE_U) topHs.push(edgeX(u, wIn), edgeY(u, y0));
+                hseams.push(topHs);
+                // Kiilakivet: saumat osoittavat kynnykseen
+                for (let i = 0; i < n; i++) {
+                    const uA = (i / n) * 2 - 1, uB = ((i + 1) / n) * 2 - 1;
+                    const poly = [];
+                    for (const u of usWith(uA, uB)) poly.push(edgeX(u, wIn), edgeY(u, y0));
+                    const botUs = usWith(uA, uB);
+                    for (let k = botUs.length - 1; k >= 0; k--) poly.push(edgeX(botUs[k], cfg.w), edgeY(botUs[k], y1));
+                    // Lähempänä ovea hieman vaaleampi (kuivempi sisäänkäynti)
+                    const shade = 12.5 + (THRESH_RINGS.length - r) * 0.6 + (rnd() * 3 - 1.5);
+                    add(groups, shade, poly);
+                    // Tallattu keskilinja (kuluminen) – piirretään peruskiilojen päälle
+                    if (i === Math.floor(n / 2) && rnd() < 0.8) add(wear, shade - 2.5, poly);
+                    if (i > 0) seams.push([edgeX(uA, wIn), edgeY(uA, y0), edgeX(uA, cfg.w), edgeY(uA, y1)]);
+                }
+                leftEdge.push(edgeX(-1, cfg.w), y1);
+                rightEdge.push(edgeX(1, cfg.w), y1);
+                wIn = cfg.w; y0 = y1;
+            }
+            // Viuhkan alaraja
+            const botHs = [];
+            for (const u of SAMPLE_U) botHs.push(edgeX(u, wIn), edgeY(u, y0));
+            hseams.push(botHs);
+
+            // Ulkoreuna: yläraja (V-painuma) → oikea vino sivu → alaraja → vasen vino sivu
+            const border = [];
+            for (const u of SAMPLE_U) border.push(edgeX(u, DOOR_W / 2), edgeY(u, yTop));
+            for (let k = 2; k < rightEdge.length; k += 2) border.push(rightEdge[k], rightEdge[k + 1]);
+            for (let k = botHs.length - 2; k >= 2; k -= 2) border.push(botHs[k], botHs[k + 1]);
+            for (let k = leftEdge.length - 2; k >= 2; k -= 2) border.push(leftEdge[k], leftEdge[k + 1]);
+            // Detaljit: halkeamat (saumaa pitkin) + pikkukivet
+            const cracks = [], pebbles = [];
+            if (THRESH_DETAILS) {
+                for (let c = 0; c < 2 && seams.length >= 2; c++) {
+                    const ln = seams[Math.floor(rnd() * seams.length)];
+                    const t0 = 0.3 + rnd() * 0.15, t1 = Math.min(1, t0 + 0.45 + rnd() * 0.2);
+                    cracks.push([ln[0] + (ln[2] - ln[0]) * t0, ln[1] + (ln[3] - ln[1]) * t0,
+                                 ln[0] + (ln[2] - ln[0]) * t1, ln[1] + (ln[3] - ln[1]) * t1]);
+                }
+                for (let p = 0; p < 2; p++) {
+                    const u = rnd() * 2 - 1;
+                    const rr = Math.floor(rnd() * THRESH_RINGS.length);
+                    const wA = rr === 0 ? DOOR_W / 2 : THRESH_RINGS[rr - 1].w;
+                    const wB = THRESH_RINGS[rr].w;
+                    const t = 0.15 + rnd() * 0.8;
+                    const px = edgeX(u, wA + (wB - wA) * t);
+                    const py = ringYs[rr][0] + (ringYs[rr][1] - ringYs[rr][0]) * t;
+                    if (nearManhole(px, py, 15)) continue;   // ei detaljeja viemärinkannen päälle
+                    pebbles.push([Math.round(px), Math.round(py), rnd() < 0.5 ? 1 : 2, 1,
+                                  rnd() < 0.5 ? '#3a3a3a' : '#2c2c2c']);
+                }
+            }
+
+            const toBuckets = (map) => {
+                const arr = [];
+                for (const [shade, polys] of map) {
+                    const hex = shade.toString(16).padStart(2, '0');
+                    arr.push({ fill: '#' + hex + hex + hex, polys: polys });
+                }
+                arr.sort((a, b) => a.fill < b.fill ? -1 : 1);
+                return arr;
+            };
+
+            const slabW = Math.round((DOOR_W + 2) * s);
+            const gapL = Math.round(cx - gapHalf), gapR = Math.round(cx + gapHalf);
+            foreground.thresholds.push({
+                bldgIdx: bi,
+                cx: cx,
+                gapL: gapL,
+                gapR: gapR,
+                groups: toBuckets(groups),
+                wear: toBuckets(wear),
+                seams: seams,
+                hseams: hseams,
+                border: border,
+                cracks: cracks,
+                pebbles: pebbles,
+                slab: { x: Math.round(cx - slabW / 2), y: GROUND_Y + 2, w: slabW, h: Math.max(4, Math.round(5 * s)) },
+                lightRGB: bi === 8 ? THRESH_LIGHT_BAR : THRESH_LIGHT_HOUSE,
+                depth: y0 - yTop
+            });
+            foreground.kerbGaps.push({ l: gapL, r: gapR });
+        }
+        foreground.kerbGaps.sort((a, b) => a.l - b.l);
     }
 
     function updateForeground(dt) {
@@ -2468,13 +2646,15 @@ const Street = (() => {
         ctx.fillStyle = '#1a1a1a';
         ctx.fillRect(0, GROUND_Y, WORLD_W, WORLD_H - GROUND_Y);
 
-        // Yläreunan katukiveys (reunakivet) – esigeneroiduista
+        // Yläreunan katukiveys (reunakivet) – oviaukon kohdalla katkaistu (laskettu reunakivi)
         const copingY = GROUND_Y - 4, copingH = 8;
         for (const cs of foreground.copingStones) {
-            ctx.fillStyle = '#2' + cs.shade + '2' + cs.shade + '2' + cs.shade;
-            ctx.fillRect(cs.x, copingY, cs.w, copingH);
-            ctx.fillStyle = '#161616';
-            ctx.fillRect(cs.x, copingY, cs.w, 1);
+            for (const seg of splitAtKerbGaps(cs.x, cs.x + cs.w)) {
+                ctx.fillStyle = '#2' + cs.shade + '2' + cs.shade + '2' + cs.shade;
+                ctx.fillRect(seg[0], copingY, seg[1] - seg[0], copingH);
+                ctx.fillStyle = '#161616';
+                ctx.fillRect(seg[0], copingY, seg[1] - seg[0], 1);
+            }
         }
 
         // Kiveyspinta – esigeneroiduista
@@ -2487,6 +2667,13 @@ const Street = (() => {
             ctx.fillRect(ps.x, ps.y + ps.h - 1, ps.w, 1);
         }
 
+        // Ala- ja yläreunaviivat (katkaistu oviaukon kohdalta – laskettu reunakivi)
+        drawStreetLine(GROUND_Y, 3, '#2a2a2a');
+        drawStreetLine(GROUND_Y - 2, 2, '#3a3a3a');
+
+        // Ovien kynnysviuhka + laskettu reunakivi + kynnyslaatta
+        if (foreground) { drawThresholdPaving(); }
+
         // Viemärinkannet
         if (foreground) { drawManholes(); }
 
@@ -2496,11 +2683,139 @@ const Street = (() => {
         // Kuoriainen
         if (foreground && foreground.beetle) { drawBeetle(); }
 
-        // Ala- ja yläreunaviivat
-        ctx.fillStyle = '#2a2a2a';
-        ctx.fillRect(0, GROUND_Y, WORLD_W, 3);
-        ctx.fillStyle = '#3a3a3a';
-        ctx.fillRect(0, GROUND_Y - 2, WORLD_W, 2);
+    }
+
+    /* Katkaisee vaakaviivan oviaukkojen kohdalta (laskettu reunakivi) */
+    function drawStreetLine(y, h, style) {
+        ctx.fillStyle = style;
+        const gaps = (foreground && foreground.kerbGaps) ? foreground.kerbGaps : [];
+        let x = 0;
+        for (const g of gaps) {
+            if (g.l > x) ctx.fillRect(x, y, g.l - x, h);
+            if (g.r > x) x = g.r;
+        }
+        if (x < WORLD_W) ctx.fillRect(x, y, WORLD_W - x, h);
+    }
+
+    /* Palauttaa [x0,x1]-palat, jotka jäävät oviaukkojen ulkopuolelle */
+    function splitAtKerbGaps(x0, x1) {
+        const gaps = (foreground && foreground.kerbGaps) ? foreground.kerbGaps : [];
+        let parts = [[x0, x1]];
+        for (const g of gaps) {
+            const next = [];
+            for (const seg of parts) {
+                if (g.r <= seg[0] || g.l >= seg[1]) { next.push(seg); continue; }
+                if (g.l > seg[0]) next.push([seg[0], g.l]);
+                if (g.r < seg[1]) next.push([g.r, seg[1]]);
+            }
+            parts = next;
+        }
+        return parts.filter(seg => seg[1] - seg[0] > 0.5);
+    }
+
+    /* ── Ovien kynnysviuhka + laskettu reunakivi + kynnyslaatta ──
+       Kiveys kaatuu/kallistuu ovea kohti: vinot saumat, V-painuma,
+       laskettu reunakivi katkaisee kadun viivat oviaukon kohdalta. */
+    function drawThresholdPaving() {
+        if (!foreground || !foreground.thresholds) return;
+        const fillPolys = (grp) => {
+            ctx.fillStyle = grp.fill;
+            ctx.beginPath();
+            for (const poly of grp.polys) {
+                ctx.moveTo(poly[0], poly[1]);
+                for (let i = 2; i < poly.length; i += 2) ctx.lineTo(poly[i], poly[i + 1]);
+                ctx.closePath();
+            }
+            ctx.fill();
+        };
+
+        for (const t of foreground.thresholds) {
+            // 1) Kiilakivet sävyryhmittäin (muutama fill per ovi)
+            for (const grp of t.groups) fillPolys(grp);
+
+            // 1b) Tallattu keskilinja (kuluminen) peruskiilojen päälle
+            for (const grp of t.wear) fillPolys(grp);
+
+            // 2) Oviaukon valo (vain aktiivisille oville – sama logiikka kuin drawDoor)
+            const isBar = t.bldgIdx === 8;
+            const ownerLamp = lamps.find(l => l.bldgIdx === t.bldgIdx);
+            const active = isBar || !!(ownerLamp && ownerLamp.lit);
+            if (THRESH_LIGHT && active) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(t.border[0], t.border[1]);
+                for (let i = 2; i < t.border.length; i += 2) ctx.lineTo(t.border[i], t.border[i + 1]);
+                ctx.closePath();
+                ctx.clip();
+                const r = t.depth + 12;
+                const lg = ctx.createRadialGradient(t.cx, GROUND_Y + 2, 2, t.cx, GROUND_Y + 2, r);
+                lg.addColorStop(0, 'rgba(' + t.lightRGB + ',0.16)');
+                lg.addColorStop(0.5, 'rgba(' + t.lightRGB + ',0.06)');
+                lg.addColorStop(1, 'rgba(' + t.lightRGB + ',0)');
+                ctx.fillStyle = lg;
+                ctx.fillRect(t.cx - r, GROUND_Y, r * 2, r);
+                ctx.restore();
+            }
+
+            // 3) Saumat (vinot) + renkaiden rajapisteet
+            ctx.strokeStyle = '#161616';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (const ln of t.seams) { ctx.moveTo(ln[0], ln[1]); ctx.lineTo(ln[2], ln[3]); }
+            for (const hs of t.hseams) {
+                ctx.moveTo(hs[0], hs[1]);
+                for (let i = 2; i < hs.length; i += 2) ctx.lineTo(hs[i], hs[i + 1]);
+            }
+            ctx.stroke();
+            // 4) Halkeamat + pikkukivet
+            if (THRESH_DETAILS) {
+                if (t.cracks.length) {
+                    ctx.strokeStyle = '#0d0d0d';
+                    ctx.beginPath();
+                    for (const ln of t.cracks) { ctx.moveTo(ln[0], ln[1]); ctx.lineTo(ln[2], ln[3]); }
+                    ctx.stroke();
+                }
+                for (const pb of t.pebbles) {
+                    ctx.fillStyle = pb[4];
+                    ctx.fillRect(pb[0], pb[1], pb[2], pb[3]);
+                }
+            }
+
+            // 5) Viuhkan ulkoreuna – erottaa viuhkan suorasta kiveyksestä
+            ctx.strokeStyle = '#0e0e0e';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(t.border[0], t.border[1]);
+            for (let i = 2; i < t.border.length; i += 2) ctx.lineTo(t.border[i], t.border[i + 1]);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.lineWidth = 1;
+
+            // 6) Laskettu reunakivi: kynnyslinja oven alle + viisteet katkon reunoille
+            const gw = t.gapR - t.gapL;
+            ctx.fillStyle = '#3a3a3a';
+            ctx.fillRect(t.gapL + 2, GROUND_Y, gw - 4, 1);          // kynnyslinjan yläreuna
+            ctx.fillStyle = '#1c1c1c';
+            ctx.fillRect(t.gapL, GROUND_Y + 1, gw, 1);              // varjoraot kynnyksen alle
+            ctx.fillStyle = '#343434';
+            ctx.fillRect(t.gapL, GROUND_Y - 3, 2, 4);               // viiste vasen (reunakivi kaatuu alas)
+            ctx.fillRect(t.gapR - 2, GROUND_Y - 3, 2, 4);           // viiste oikea
+            ctx.fillStyle = '#0b0b0b';
+            ctx.fillRect(t.gapL, GROUND_Y - 4, 1, 5);
+            ctx.fillRect(t.gapR - 1, GROUND_Y - 4, 1, 5);
+
+            // 7) Kynnyslaatta (ovi nousee kynnyksellä)
+            const sb = t.slab;
+            ctx.fillStyle = '#2f2f2f';
+            ctx.fillRect(sb.x, sb.y, sb.w, 1);
+            ctx.fillStyle = '#232323';
+            ctx.fillRect(sb.x, sb.y + 1, sb.w, sb.h - 2);
+            ctx.fillStyle = '#141414';
+            ctx.fillRect(sb.x, sb.y + sb.h - 1, sb.w, 1);
+            ctx.fillStyle = '#0e0e0e';
+            ctx.fillRect(sb.x - 1, sb.y, 1, sb.h);
+            ctx.fillRect(sb.x + sb.w, sb.y, 1, sb.h);
+        }
     }
 
     /* Etualan apufunktiot ─────────────────────────── */
