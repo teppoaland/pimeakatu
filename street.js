@@ -451,6 +451,11 @@ const Street = (() => {
         loop(lastTime);
         StreetAudio.init();
         updateHUD();
+
+        // Näytä ohjepopup vain tuoreessa/0-tilassa (ensimmäinen lataus tai kuoleman reset)
+        if (JSON.stringify(state) === JSON.stringify(GameState.defaultState)) {
+            showSpawnHint();
+        }
     }
 
     /* ═══════════════════════════════════════════════════
@@ -1294,6 +1299,10 @@ const Street = (() => {
         }, 2500);
     }
 
+    function showSpawnHint() {
+        showNotification('Liiku kadulla, potki kaikkea, mutta omalla vastuulla. Saattaa asukkaat hermostua! Ja muista Syödä!');
+    }
+
     function spawnParticles(x, y, color, count) {
         for (let i = 0; i < count; i++) {
             particles.push({
@@ -1327,7 +1336,7 @@ const Street = (() => {
             for (var bi = 0; bi < hamburgerCount; bi++) burgerStr += '🍔';
         }
         status += ' | ' + burgerStr;
-        if (hudBar) hudBar.innerHTML = 'Liiku kadulla, potki kaikkea, mutta omalla vastuulla. Saattaa asukkaat hermostua!<br><span style="display:block;text-align:center;margin-top:2px">' + status + '</span>';
+        if (hudBar) hudBar.innerHTML = '<span style="display:block;text-align:center;margin-top:2px">' + status + '</span>';
     }
 
     /* ── Pilvijärjestelmä (cirrus + hazy, kapea kaistale) ── */
@@ -2639,7 +2648,7 @@ const Street = (() => {
         // Ohjeteksti raameissa (varoitus hampurilaisten kulutuksesta)
         const hintLines = [
             'SEURAA HAMPURILAISTEN KULUTUSTA!',
-            'MUISTA SYÖDÄ!',
+            'MUISTA SYÖDÄ VILLE!',
             'Tv. Äiti'
         ];
         ctx.textAlign = 'center';

@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v3.98** | 19.9.2026 | Versionumero pudotettu v4.9 → v3.98 ja siirrytty takaisin sadasosakorotuksiin (+0.01) käyttäjän pyynnöstä (03-versioning.md päivitetty). BAR-viittakyltti palautettu alkuperäiseen pituuteen (street.js drawBarSign: shaftLen 22, ei measureText-pidennystä), teksti 'BAR>' (ilman väliä), '>' neonvärisenä, keskitetään koko kyltille. Neon: shadowColor #FF0055, blur 10, ydin #FF66A3, 'Press Start 2P' 9px. Versio index.html:ssä: v3.98.
+**v3.99** | 19.9.2026 | Peliohjeet poistettu HUD-palkista (street.js updateHUD + index.html #hud-bar tyhjä). Ohje näytetään nyt pop-upina (sama kuin kolikkoilmoitus, showNotification): showSpawnHint() kutsutaan init()ssä vain kun tila on oletus/0 (ensimmäinen lataus tai kuoleman reset), teksti 'Liiku kadulla, potki kaikkea, mutta omalla vastuulla. Saattaa asukkaat hermostua! Ja muista Syödä!'. HUD näyttää nyt vain statuksen (avaimet/kolikot/hampurilaiset).
 
 ## 🔒 Lukitut osa-alueet
 
