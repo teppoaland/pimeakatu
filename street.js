@@ -3368,24 +3368,73 @@ const Street = (() => {
             // Takavalo
             ctx.fillStyle = '#cc3333'; ctx.fillRect(cx - 1, cy + v.h - 16, 4, 3);
         } else {
+            // ── Mopo + kuski (kerrokset: runko → kuski → etukate/tanko) ──
             const cx = vx, cy = vy;
+
+            // 1. Maavarjo
             ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(cx + 2, cy + v.h - 2, v.w - 4, 4);
+
+            // 2. Renkaat (takana + edessä)
             const wr = 5;
-            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(cx + 7, cy + v.h - 5, wr, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#111';
+            ctx.beginPath(); ctx.arc(cx + 7, cy + v.h - 5, wr, 0, Math.PI * 2); ctx.fill();
             ctx.beginPath(); ctx.arc(cx + v.w - 7, cy + v.h - 5, wr, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#444'; ctx.beginPath(); ctx.arc(cx + 7, cy + v.h - 5, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#555';
+            ctx.beginPath(); ctx.arc(cx + 7, cy + v.h - 5, 2, 0, Math.PI * 2); ctx.fill();
             ctx.beginPath(); ctx.arc(cx + v.w - 7, cy + v.h - 5, 2, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#666'; ctx.fillRect(cx + 4, cy + 4, v.w - 8, 5);
-            ctx.fillStyle = '#888'; ctx.fillRect(cx + 6, cy + 1, v.w - 14, 8);
-            ctx.fillStyle = '#333'; ctx.fillRect(cx + 10, cy + 10, 12, 7);
-            ctx.fillStyle = '#777'; ctx.fillRect(cx + 12, cy + 3, 10, 6);
-            ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
-            ctx.beginPath(); ctx.moveTo(cx + v.w - 10, cy + 4); ctx.lineTo(cx + v.w - 4, cy - 1); ctx.stroke();
-            ctx.fillStyle = '#444'; ctx.fillRect(cx + v.w - 16, cy - 8, 6, 10);
-            ctx.fillStyle = '#cca'; ctx.beginPath(); ctx.arc(cx + v.w - 13, cy - 10, 4, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#ffee88'; ctx.fillRect(cx + v.w - 1, cy + 6, 3, 3);
-            ctx.fillStyle = 'rgba(255,240,150,0.4)'; ctx.fillRect(cx + v.w + 2, cy + 5, 2, 5);
-            ctx.fillStyle = '#cc3333'; ctx.fillRect(cx - 2, cy + 6, 3, 2);
+
+            // 3. Runko + penkki (taainnaisena)
+            ctx.fillStyle = '#B71C1C';                       // astinlauta
+            ctx.fillRect(cx + 15, cy + 15, 14, 3);
+            ctx.fillStyle = '#D32F2F';                       // moottorin kate (punainen runko)
+            ctx.fillRect(cx + 3, cy + 8, 15, 9);
+            ctx.fillStyle = '#222222';                       // penkki
+            ctx.fillRect(cx + 3, cy + 4, 12, 4);
+
+            // 4. Kuski (istuu penkillä, pelaajan värit)
+            ctx.fillStyle = '#3366cc';                       // vartalo (sininen paita)
+            ctx.fillRect(cx + 4, cy - 8, 9, 12);
+            ctx.fillStyle = '#16265c';                       // jalat (housut)
+            ctx.fillRect(cx + 8, cy + 4, 7, 4);              //   reisi eteen
+            ctx.fillRect(cx + 13, cy + 8, 3, 8);             //   sääri astinlaudalle
+            ctx.fillStyle = '#ffcc99';                       // pää (iho)
+            ctx.fillRect(cx + 4, cy - 16, 8, 9);
+            ctx.fillStyle = '#553300';                       // hiukset (otsatukka)
+            ctx.fillRect(cx + 10, cy - 15, 2, 2);
+            ctx.fillStyle = '#2b2118';                       // silmä (katse eteen)
+            ctx.fillRect(cx + 10, cy - 12, 2, 2);
+            ctx.fillStyle = '#3366cc';                       // lippis (kupu)
+            ctx.fillRect(cx + 3, cy - 19, 11, 4);
+            ctx.fillStyle = '#224488';                       // lippis (lippa eteen)
+            ctx.fillRect(cx + 11, cy - 17, 6, 3);
+            ctx.fillStyle = '#3366cc';                       // käsi ojennettuna tankoon
+            ctx.beginPath();
+            ctx.moveTo(cx + 10, cy - 5);                     //   olkapää
+            ctx.lineTo(cx + 21, cy - 2);                     //   ranne
+            ctx.lineTo(cx + 20, cy + 1);                     //   ranteen alaosa
+            ctx.lineTo(cx + 9, cy - 1);                      //   kainalo
+            ctx.fill();
+            ctx.fillStyle = '#ffcc99';                       // sormet tangolla
+            ctx.fillRect(cx + 20, cy - 3, 3, 4);
+
+            // 5. Etukate + ohjaustanko (kuskin päälle → syvyys)
+            ctx.fillStyle = '#D32F2F';
+            ctx.beginPath();
+            ctx.moveTo(cx + 29, cy + 17);
+            ctx.lineTo(cx + 25, cy + 3);
+            ctx.lineTo(cx + 33, cy + 3);
+            ctx.lineTo(cx + 37, cy + 17);
+            ctx.fill();
+            ctx.fillStyle = '#555555';                       // tanko + mittaristo
+            ctx.fillRect(cx + 20, cy, 12, 3);
+
+            // 6. Valot
+            ctx.fillStyle = '#cc3333';                       // takavalo
+            ctx.fillRect(cx + 1, cy + 8, 2, 4);
+            ctx.fillStyle = '#ffee88';                       // etuvalo
+            ctx.fillRect(cx + 34, cy + 3, 3, 4);
+            ctx.fillStyle = 'rgba(255,240,150,0.4)';         // etuvalon hehku
+            ctx.fillRect(cx + 37, cy + 3, 2, 4);
         }
 
         // ── Ajovalot eteenpäin (kaikille ajoneuvotyypeille) ──
