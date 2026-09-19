@@ -24,6 +24,7 @@
 | BAR-kyltti (talo 8) laskettu alemmas | ✅ v4.1 – kyltin alareuna dy-10 (3px ovivalon yläpuolella, 10px oven yläpuolella) |
 | Ikkunat eivät jää oven taakse | ✅ v4.2 – drawBuildings: oven "ei-ikkunaa" -alue (DOOR_W+4 x DOOR_H+2, +2px reunus), ikkuna ohitetaan jos se leikkaa oven alueen |
 | BAR-viittakyltti puunraossa | ✅ v4.3 → v3.98 – pieni matala nuolikyltti I====> varren sisällä "BAR" (terävä pikselifontti), siirretty vasemmalle (x≈143) + jalat; v4.5 tekstin koko puolitettu (scale 2→1); v4.6 yöelämän neon-kyltti: puuosa lähes musta siluetti #1F1614; v4.7 teksti fillText-hehkuksi (shadowColor #FF0055, blur 10, ydin #FF66A3, 'Press Start 2P' 9px); v4.8 teksti 'BAR >' + varsi pidennetään measureText-mittauksella; v3.98 palautettu alkuperäiseen pituuteen + teksti 'BAR>' (ilman väliä) kokeiluun (versio pudotettu v4.9 → v3.98, jatkossa +0.01) |
+| Peliohjeet pois HUD:sta → popup 0-tilassa | ✅ v3.99 – updateHUD näyttää vain statuksen, ohje pop-upina (showSpawnHint) vain oletustilassa (ensimmäinen lataus / kuoleman reset), teksti + 'Ja muista Syödä!' |
 
 ## ⛏️ Dig Game (digGame1/) | 💎 Boulder Dash (digGame2/)
 
