@@ -8,13 +8,13 @@
 
 Versionumero näkyy pääsivun (`index.html`) oikeassa alakulmassa elementissä `#version-tag`.
 
-**Nykyinen versio:** `v1.0`
+**Nykyinen versio:** `v3.98`
 
 ---
 
-## ⬆️ Milloin päivitetään (+0.1)
+## ⬆️ Milloin päivitetään (+0.01)
 
-Versionumeroa nostetaan **aina +0.1** kun:
+Versionumeroa nostetaan **aina +0.01** kun:
 
 - Pääportaalin koodia muutetaan (`index.html`, `street.js`, `gameState.js`, `style.css`)
 - Alapelin koodia muutetaan (uusi ominaisuus, bugikorjaus, taso lisätty/poistettu)
@@ -30,7 +30,7 @@ Versionumeroa **ei** nosteta kun:
 - Vain `README.md`, `PROJECT.md`, `CHANGELOG.md`, `start_server.bat` muuttuu
 - Buildattuja tiedostoja (`dig_game.html`) regeneroidaan
 
-**Nyrkkisääntö:** Jos muutos vaikuttaa pelilogiikkaan tai rakenteeseen (uusi ominaisuus, bugikorjaus, uusi taso) → +0.1. Jos pelkkä parametrin/arvon/tekstin säätö → ei. Tekstit ja asetukset ovat parametreja, eivät koodia — niihin saa ja pitää koskea tarvittaessa ilman versionnostoa.
+**Nyrkkisääntö:** Jos muutos vaikuttaa pelilogiikkaan tai rakenteeseen (uusi ominaisuus, bugikorjaus, uusi taso) → +0.01. Jos pelkkä parametrin/arvon/tekstin säätö → ei. Tekstit ja asetukset ovat parametreja, eivät koodia — niihin saa ja pitää koskea tarvittaessa ilman versionnostoa.
 
 ---
 
@@ -43,6 +43,6 @@ Versionumeroa **ei** nosteta kun:
 
 **Esimerkki:**
 ```html
-<!-- Ennen: --> <div id="version-tag">v1.0</div>
-<!-- Jälkeen: --> <div id="version-tag">v1.1</div>
+<!-- Ennen: --> <div id="version-tag">v3.98</div>
+<!-- Jälkeen: --> <div id="version-tag">v3.99</div>
 ```

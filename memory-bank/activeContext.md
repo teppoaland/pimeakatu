@@ -12,7 +12,7 @@
 
 ## 📍 Nyt
 
-**v4.5** | 19.9.2026 | Pääportaalin BAR-viittakyltin teksti pienennetty (street.js drawBarSign): pikseliskaala 2 → 1 (BAR-sana puolet pienempi). drawPixelTextin startX/startY pyöristetään kokonaisluvuiksi, jotta reunat pysyvät terävinä myös pienemmällä koolla. Versio index.html:ssä: v4.5.
+**v3.98** | 19.9.2026 | Versionumero pudotettu v4.9 → v3.98 ja siirrytty takaisin sadasosakorotuksiin (+0.01) käyttäjän pyynnöstä (03-versioning.md päivitetty). BAR-viittakyltti palautettu alkuperäiseen pituuteen (street.js drawBarSign: shaftLen 22, ei measureText-pidennystä), teksti 'BAR>' (ilman väliä), '>' neonvärisenä, keskitetään koko kyltille. Neon: shadowColor #FF0055, blur 10, ydin #FF66A3, 'Press Start 2P' 9px. Versio index.html:ssä: v3.98.
 
 ## 🔒 Lukitut osa-alueet
 
