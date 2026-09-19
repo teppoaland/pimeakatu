@@ -44,6 +44,7 @@
 | Kiveysrivien saumavaihe taloittain | ✅ v4.13 – `housePhase`/`houseDrift` (`initForeground`): saumavaihe 0–6 px ja sävy −1…+1 per talo (deterministinen LCG) → sama kiveysruudukko ei jatku yhtenä "barina" laidasta laitaan |
 
 
+| Oviukko (Avenger): ovesta tuleva hyökkääjä | ✅ v4.14 – potkun pudotukseen 3. arvonta: **1/8 + 30 s cooldown → pelaajan kaksonen astuu ovesta kynnykseltä** (ei putoa kuten ruukku/kolikko), juoksee 2.0 px/f (> pelaaja 1.225) kiinni → **ei väistettävissä**; osuma = tainnutus 600 f + **−1 🍔** (ei tuplaosumaa; 🍔 0 → kuolema), paluu ovelle ja katoaminen; iframen aikana jäissä; portti `!avenger` estää ruukun/kolikon samaan aikaan; uusi ääni `playKnock()`; ei uusia tekstejä |
 ## 🍒 Hedelmäpeli (fruitgame/) – Vaihe 1 + debug 19.9.2026
 
 | Ominaisuus | Tila |

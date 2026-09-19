@@ -149,6 +149,21 @@ const Street = (() => {
     let flowerPot = null;            // { x, y, vx, vy, active, rotation }
     let kickCoin = null;             // { x, y, vy, landed, ttl } – kolikko potkusta
     let kickCoinCooldown = 0;        // 30s tauko ennen kuin uusi kolikko voi pudota potkusta
+
+    /* ── Oviukko (Avenger): kolikon vastakohta ────────
+       Ei putoa ikkunasta kuten ruukku/kolikko – astuu OVESTA kynnykseltä ja
+       juoksee pelaajan kiinni. Nopeus > pelaajan nopeus → ei väistettävissä.
+       Osuma = tainnutus + 1 hampurilainen (kuten kukkaruukku), mutta pakollinen.
+       AVENGER_KIND: 'twin' = pelaajan kaksonen (nyt). 'dog' = koira myöhemmin. */
+    const AVENGER_KIND      = 'twin';
+    const AVENGER_CHANCE    = 0.12;    // 1/8 – harvinaisempi kuin kolikko (1/5)
+    const AVENGER_COOLDOWN  = 1800;    // 30s tauko @ ~60fps (kuten potkukolikolla)
+    const AVENGER_SPEED     = 2.0;     // > PLAYER_SPEED (1.225) → tavoittaa aina
+    const AVENGER_TELEGRAPH = 21;      // ~350ms oviaukon varoitus ennen ulostuloa
+    const AVENGER_HIT_R     = 18;      // osumasäde (px)
+    const AVENGER_STUN      = 600;     // 10s tainnutus (sama kuin ruukulla/autolla)
+    let avenger = null;              // { x, y, w, h, bldgIdx, facing, phase, timer, walkTimer, scale }
+    let avengerCooldown = 0;         // tauko ennen kuin uusi oviukko voi tulla
     let playerDead = false;          // kuolemasekvenssi käynnissä
     let deathTimer = 0;              // laskuri ennen reloadia (frameä)
     let deathAlpha = 0;              // mustan overlayn alpha (0→1 pimennyksen aikana)
@@ -199,10 +214,28 @@ const Street = (() => {
         flowerPot = { x: dc.x, y: windowY, vx: 0, vy: 0, rotation: 0, active: true };
     }
 
-    /* ── Potkun pudotus: kukkaruukku tai kolikko (1/5) ── */
+    /* ── Oviukko: astuu ovesta kynnykseltä (ei putoa ikkunasta) ── */
+    function spawnAvenger(bldg) {
+        const dc = doorCenter(bldg);
+        spawnParticles(dc.x, dc.y, '#ff8866', 8);
+        avenger = {
+            x: dc.x - 10, y: GROUND_Y - 30, w: 20, h: 30,
+            bldgIdx: buildings.indexOf(bldg),
+            facing: 1, phase: 'emerge', timer: AVENGER_TELEGRAPH,
+            walkTimer: 0, scale: buildingScale(bldg)
+        };
+    }
+
+    /* ── Potkun pudotus: oviukko (1/8) → kolikko (1/5) → kukkaruukku ── */
     function spawnKickDrop(bldg) {
         const dc = doorCenter(bldg);
         const windowY = GROUND_Y - bldg.h + 40;
+        // 1/8 oviukko – kolikon vastakohta (tainnutus + 1 hampurilainen)
+        if (avengerCooldown <= 0 && !avenger && Math.random() < AVENGER_CHANCE) {
+            avengerCooldown = AVENGER_COOLDOWN;
+            spawnAvenger(bldg);
+            return;
+        }
         // 1/5 kolikko – mutta vain jos cooldown on ohi (estää kolikoiden farmaamisen)
         if (kickCoinCooldown <= 0 && Math.random() < 0.2) {
             spawnParticles(dc.x, windowY, '#ffd700', 8);
@@ -211,6 +244,70 @@ const Street = (() => {
         } else {
             spawnFlowerPot(bldg);
         }
+    }
+
+    /* ── Oviukon päivitys: emerge → chase → osuma → return ──
+       Kutsutaan sekä normaalivirrasta että tainnutus-haarasta, jotta paluu
+       ovelle jatkuu myös silloin kun pelaaja makaa maassa.
+       Ei näkymätöntä osumaa iframe-pelin aikana (loop() ei pysähdy overlayn ajaksi). */
+    function updateAvenger(dt) {
+        if (!avenger) return;
+        const ov = document.getElementById('game-iframe-overlay');
+        if (ov && ov.classList.contains('active')) return;   // peli auki → jäihin
+
+        const a = avenger;
+        const acx = a.x + a.w / 2, acy = a.y + a.h / 2;
+        const pcx = player.x + player.w / 2, pcy = player.y + player.h / 2;
+
+        // 1) Varoitus: ovi aukeaa kynnyksellä ennen kuin hahmo astuu ulos
+        if (a.phase === 'emerge') {
+            a.timer -= dt;
+            if (a.timer <= 0) a.phase = 'chase';
+            return;
+        }
+
+        // 2) Peräänkäynti – nopeampi kuin pelaaja → tavoittaa aina (ei väistettävissä)
+        if (a.phase === 'chase') {
+            a.facing = (pcx - acx) >= 0 ? 1 : -1;
+            a.x += Math.sign(pcx - acx) * AVENGER_SPEED * dt;
+            a.y += Math.sign(player.y - a.y) * AVENGER_SPEED * dt;
+            a.walkTimer += dt;
+            const d = Math.sqrt((pcx - acx) * (pcx - acx) + (pcy - acy) * (pcy - acy));
+            if (d < AVENGER_HIT_R) {
+                if (!player.knockedDown) { knockPlayerDown(); }   // osuma vain kerran
+                spawnParticles(pcx, pcy, '#ffaa44', 12);
+                playKnock();
+                a.phase = 'return';
+            }
+            return;
+        }
+
+        // 3) Paluu: kävelee takaisin kynnykselle ja katoaa ovesta
+        const homeX = doorCenter(buildings[a.bldgIdx]).x - a.w / 2;
+        const homeY = GROUND_Y - a.h;
+        a.x += Math.sign(homeX - a.x) * AVENGER_SPEED * dt;
+        a.y += Math.sign(homeY - a.y) * AVENGER_SPEED * dt;
+        a.walkTimer += dt;
+        a.facing = (homeX - a.x) >= 0 ? 1 : -1;
+        if (Math.abs(homeX - a.x) < 2 && Math.abs(homeY - a.y) < 2) {
+            spawnParticles(homeX + a.w / 2, GROUND_Y - 10, '#ff8866', 8);
+            avenger = null;
+        }
+    }
+
+    /* ── Onnettomuus: tainnutus + 1 hampurilainen ───
+       Sama vaikutus kuin kukkaruukulla/autolla/sähköiskulla.
+       Käyttää vain uusi oviukko-koodi – vanhat haarat ennallaan. */
+    function knockPlayerDown() {
+        player.knockedDown = true;
+        player.knockdownTimer = AVENGER_STUN;
+        player.kicking = false;
+        player.kickFrame = 0;
+        hamburgerCount--;
+        state.inventory.hamburgerCount = hamburgerCount;
+        GameState.save(state);
+        updateHUD();
+        if (hamburgerCount <= 0) { killPlayer(); }
     }
 
     /* ── Pelaajan kuolema (hampurilaiset loppu) ────── */
@@ -330,6 +427,40 @@ const Street = (() => {
                 osc.connect(gain).connect(audioCtx.destination);
                 osc.start(now); osc.stop(now + 0.08);
             });
+        } catch(e) {}
+    }
+    /* ── Tömähdys (oviukon osuma) ──────────────────── */
+    function playKnock() {
+        try {
+            initAudio();
+            if (!audioCtx || audioCtx.state !== 'running') return;
+            const now = audioCtx.currentTime;
+            // Matala tömähdys: kohina + lyhyt matala jyrinä
+            const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.12), audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.02));
+            }
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 500;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.75, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            src.connect(filter).connect(gain).connect(audioCtx.destination);
+            src.start(now); src.stop(now + 0.12);
+
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(45, now + 0.11);
+            const ogain = audioCtx.createGain();
+            ogain.gain.setValueAtTime(0.30, now);
+            ogain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+            osc.connect(ogain).connect(audioCtx.destination);
+            osc.start(now); osc.stop(now + 0.12);
         } catch(e) {}
     }
     /* ── Sähköiskun ääni ───────────────────────────── */
@@ -687,6 +818,7 @@ const Street = (() => {
             coin.sparkle += 0.05 * dt;
             if (firstHouseWindowsLit && firstHouseWindowTimer > 0) { firstHouseWindowTimer -= dt; if (firstHouseWindowTimer <= 0) { firstHouseWindowsLit = false; firstHouseKickCount = 0; firstHouseKickTarget = 0; } }
             for (const idx in smallHouseLights) { const sh = smallHouseLights[idx]; if (sh.lit && sh.timer > 0) { sh.timer -= dt; if (sh.timer <= 0) { sh.lit = false; sh.timer = 0; } } }
+            updateAvenger(dt);   // oviukko: paluu ovelle jatkuu tainnutuksen aikana
             for (let i = 0; i < lamps.length; i++) { if (lamps[i].overheatTimer > 0) { lamps[i].overheatTimer -= dt; if (lamps[i].overheatTimer <= 0) { lamps[i].overheatTimer = 0; lamps[i].overheat = false; lamps[i].kickCount = 0; } } }
             if (!shootingStar || !shootingStar.active) { if (shootingStar) { shootingStar.timer -= dt; } if (!shootingStar || shootingStar.timer <= 0) { const ang = -0.3 - Math.random() * 0.5; const spd = 1.5 + Math.random() * 2.5; shootingStar = { x: -10 + Math.random() * WORLD_W * 0.4, y: 15 + Math.random() * 100, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, active: true, life: 120 + Math.random() * 180, trail: [], timer: 600 + Math.random() * 2100 }; } } else { shootingStar.x += shootingStar.vx * dt; shootingStar.y -= shootingStar.vy * dt; shootingStar.trail.push({x: shootingStar.x, y: shootingStar.y}); if (shootingStar.trail.length > 18) shootingStar.trail.shift(); shootingStar.life -= dt; if (shootingStar.life <= 0 || shootingStar.x > WORLD_W + 30 || shootingStar.y < -30 || shootingStar.y > GROUND_Y) { shootingStar.active = false; } }
             if (!satellite || !satellite.active) { if (satellite) { satellite.timer -= dt; } if (!satellite || satellite.timer <= 0) { const dir2 = Math.random() < 0.5 ? 1 : -1; satellite = { x: dir2 > 0 ? -10 : WORLD_W + 10, y: 25 + Math.random() * 70, vx: dir2 * (0.25 + Math.random() * 0.5), active: true, blinkPhase: Math.random() * Math.PI * 2, timer: 400 + Math.random() * 900 }; } } else { satellite.x += satellite.vx * dt; satellite.blinkPhase += 0.08 * dt; if ((satellite.vx > 0 && satellite.x > WORLD_W + 15) || (satellite.vx < 0 && satellite.x < -15)) { satellite.active = false; } }
@@ -950,6 +1082,10 @@ const Street = (() => {
             }
         }
 
+        // ── Oviukko (Avenger) ────────────────────────
+        if (avengerCooldown > 0) avengerCooldown -= dt;
+        updateAvenger(dt);
+
         // ── Katueläin ────────────────────────────────
         if (!groundAnimal) {
             animalSpawnTimer -= dt;
@@ -1172,7 +1308,7 @@ const Street = (() => {
             player.kicking = true;
             player.kickFrame = 0;
             hitPauseTimer = HIT_PAUSE;   // tuntuva osuma
-            if (firstHouseWindowsLit && !flowerPot && !kickCoin) { spawnKickDrop(buildings[0]); return; }
+            if (firstHouseWindowsLit && !flowerPot && !kickCoin && !avenger) { spawnKickDrop(buildings[0]); return; }
             if (firstHouseKickTarget === 0) {
                 firstHouseKickTarget = 3 + Math.floor(Math.random() * 4); // 3-6
             }
@@ -1196,7 +1332,7 @@ const Street = (() => {
                 playKick(); player.kicking = true; player.kickFrame = 0;
                 hitPauseTimer = HIT_PAUSE;   // tuntuva osuma
                 const sh = smallHouseLights[i];
-                if (sh.lit && !flowerPot && !kickCoin) { spawnKickDrop(buildings[i]); }
+                if (sh.lit && !flowerPot && !kickCoin && !avenger) { spawnKickDrop(buildings[i]); }
                 else { sh.lit = true; sh.timer = 1200; spawnParticles(dc.x, dc.y, '#ffdd88', 6); }
                 return;
             }
@@ -2007,6 +2143,9 @@ const Street = (() => {
 
         // Katueläin
         if (groundAnimal) drawAnimal();
+
+        // Oviukko (Avenger) – piirretään pelaajan alle
+        if (avenger) drawAvenger();
 
         // Pelaaja
         drawPlayer();
@@ -3851,6 +3990,81 @@ const Street = (() => {
             ctx.fill();
         }
         }
+
+        ctx.restore();
+    }
+
+    /* ── Oviukko (Avenger) – pelaajan kaksonen, astuu ovesta ──
+       Sama blokkityyli kuin drawPlayer, mutta tunnisteväri (tummanpunainen paita)
+       – erottuu pelaajasta ilman tekstiä. Skaalautuu talon buildingScale()-arvolla. */
+    function drawAvenger() {
+        const a = avenger;
+        if (!a) return;
+        const s = a.scale || 1;
+        const px = Math.round(a.x), py = Math.round(a.y);
+        const pw = a.w, ph = a.h;
+        // Ulostulo: liukuu esiin kynnykseltä (alpha + pieni nousu)
+        const emerge = a.phase === 'emerge'
+            ? 1 - Math.max(0, Math.min(1, a.timer / AVENGER_TELEGRAPH)) : 1;
+        const top = py + (1 - emerge) * 10;
+        const bobY = (Math.floor(a.walkTimer / 6) % 2) * 1;   // 2-frame kävelysykli
+
+        ctx.save();
+        // Peilaus kulkusuunnan mukaan + talon syvyysskaalaus (pohjan keskipiste)
+        ctx.translate(px + pw / 2, GROUND_Y);
+        ctx.scale(s * (a.facing === -1 ? -1 : 1), s);
+        ctx.translate(-(px + pw / 2), -GROUND_Y);
+        ctx.globalAlpha = 0.35 + 0.65 * emerge;
+
+        // Maakosketusvarjo (2 kerrosta, kuten pelaajalla)
+        const feetX = px + pw / 2, feetY = py + ph - 1;
+        ctx.fillStyle = 'rgba(0,0,0,0.30)';
+        ctx.beginPath(); ctx.ellipse(feetX, feetY, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.beginPath(); ctx.ellipse(feetX, feetY, 6, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+
+        // Housut + kengät
+        ctx.fillStyle = '#16265c';
+        ctx.fillRect(px + 4, top + 21 + bobY, pw - 8, 8);
+        ctx.fillStyle = '#221008';
+        ctx.fillRect(px + 4, top + 29, pw - 8, 2);
+        // Vartalo – tunnisteväri: tummanpunainen paita (pelaaja #3366cc)
+        ctx.fillStyle = '#a03030';
+        ctx.fillRect(px + 4, top + 10 + bobY, pw - 8, ph - 18);
+        // Kylkivarjostus + etureunan valokaista
+        ctx.fillStyle = '#7a2020';
+        ctx.fillRect(px + 4, top + 10 + bobY, 2, ph - 18);
+        ctx.fillStyle = '#c05050';
+        ctx.fillRect(px + pw - 5, top + 10 + bobY, 1, ph - 18);
+        // Vyötärön raja
+        ctx.fillStyle = 'rgba(0,0,0,0.20)';
+        ctx.fillRect(px + 4, top + 21 + bobY, pw - 8, 1);
+        // Kädet (lepoasento, seuraa bobY:tä) + kädet hihan päissä
+        const backArmX = px + 3, frontArmX = px + pw - 6, armY = top + 12 + bobY;
+        ctx.fillStyle = '#7a2020';
+        ctx.fillRect(backArmX, armY, 3, 8);
+        ctx.fillRect(frontArmX, armY, 3, 8);
+        ctx.fillStyle = '#ffcc99';
+        ctx.fillRect(backArmX, armY + 8, 3, 2);
+        ctx.fillRect(frontArmX, armY + 8, 3, 2);
+        // Pää + hiukset
+        ctx.fillStyle = '#ffcc99';
+        ctx.beginPath(); ctx.arc(px + pw / 2, top + 6 + bobY, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#553300';
+        ctx.beginPath(); ctx.arc(px + pw / 2, top + 3 + bobY, 7, Math.PI, 0); ctx.fill();
+        // Kasvojen takaosan varjo + lipan varjo
+        ctx.fillStyle = 'rgba(0,0,0,0.10)';
+        ctx.fillRect(px + 4, top + 6 + bobY, 2, 4);
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.fillRect(px + 5, top + 5 + bobY, 11, 1);
+        // Silmä (kulkusuunnan puoleinen)
+        ctx.fillStyle = '#2b2118';
+        ctx.fillRect(px + 13, top + 7 + bobY, 2, 2);
+        // Lippis (tunnisteväri)
+        ctx.fillStyle = '#a03030';
+        ctx.fillRect(px + pw / 2 - 6, top, 14, 5);
+        ctx.fillStyle = '#7a2020';
+        ctx.fillRect(px + pw / 2 + 2, top + 1, 7, 3);
 
         ctx.restore();
     }
