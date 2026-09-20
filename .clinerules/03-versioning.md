@@ -8,7 +8,7 @@
 
 Versionumero näkyy pääsivun (`index.html`) oikeassa alakulmassa elementissä `#version-tag`.
 
-**Nykyinen versio:** `v4.18`
+**Nykyinen versio:** `v4.19`
 
 ---
 
@@ -36,10 +36,12 @@ Versionumeroa **ei** nosteta kun:
 
 ## 📝 Työnkulku
 
-1. Tee muutokset normaalisti
+1. Tee muutokset normaalisti ja **jätä ne työpuuhun** – käyttäjä näkee muuttuneet tiedostot VS Coden GIT-ikkunassa
 2. Ennen committia: jos muutos täyttä versionnostokriteerit, päivitä `#version-tag` `index.html`:ssa
-3. Committaa normaalisti
-4. GitHub-päivitys (`git add -A && git commit -m "..." && git push`) **VAIN** käyttäjän erillisestä komennosta. Julkaisun jälkeen pushausta EI tehdä automaattisesti.
+3. 🚫 **Älä committaa automaattisesti** – käyttäjä pyytää committia erikseen (20.9.2026). Commit tehdään vasta kun käyttäjä sanoo (esim. "commit")
+4. GitHub-päivitys (`git push`) **VAIN** käyttäjän erillisestä komennosta. Julkaisun jälkeen pushausta EI tehdä automaattisesti.
+5. **Raportoi lyhyesti** – ei pitkiä yhteenvetoja (käyttäjä ei ehdi lukea niitä). Vain oleellinen: mitä muuttui ja lopputulos.
+
 
 **Esimerkki:**
 ```html

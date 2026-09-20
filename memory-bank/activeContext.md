@@ -7,6 +7,10 @@
 ## 📌 Kommunikaatiosääntö (KÄYTTÄJÄN PYYNTÖ)
 
 > **"Lue membank"** → lue muistipankki hiljaa itseäsi varten. **ÄLÄ anna yhteenvetoa.** Muistipankki on Clinea varten, ei käyttäjälle raportoitavaksi. Käyttäjä on pyytänyt tätä useamman kerran.
+>
+> **🚫 Älä committaa automaattisesti** (20.9.2026) → jätä muutokset aina työpuuhun, jotta käyttäjä näkee ne VS Coden GIT-ikkunassa ja voi katsoa diffin. **Commit vain kun käyttäjä pyytää** (esim. "commit"). Push vain erillisestä komennosta.
+>
+> **✂️ Ei pitkiä yhteenvetoja** (20.9.2026) → *"en tarvitse yhteenvetoa kun muutoksia tulee niin paljon että en niitä ehdi kuitenkaan lukea"*. Raportoi 2–5 riviä: mitä muuttui + lopputulos. Ei taulukoita, ei vaiheittaisia selostuksia ellei erikseen pyydetä.
 
 ---
 
