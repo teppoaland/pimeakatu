@@ -59,6 +59,10 @@ avata; jukeboxin ovea ei päivällä potkita eikä valoja sytytetä. `#notificat
 (`VEHICLE_HEADLIGHT_DIM 1` → pois päältä päivällä, `headlightDim`/`headlightOn` `drawVehicle()`issa);
 takavalot ja ambulanssin kattovilkku eivät muutu. Puhtaasti visuaalinen – ei pelimekaniikkaa.
 
+**Liikenne (v4.37):** ajoneuvojen spawn-väli puolittuu päivällä (`TRAFFIC_DAY_MULT 2`, kerroin
+`1 + (MULT − 1) · dayT`) → yö 20–40 s/kaista, täysi päivä 10–20 s/kaista. Kaistat (`LANE_DEFS`),
+ajoneuvotyypit, nopeudet ja törmäyslogiikka ovat ennallaan (edelleen 1 ajoneuvo/kaista).
+
 ## 🎮 Pelien yhteinen arkkitehtuurimalli
 
 ```

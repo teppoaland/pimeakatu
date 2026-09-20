@@ -17,9 +17,10 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.36` (`index.html` → `#version-tag`) · **Git:** **v4.36 committattu ja pushattu
-  20.9.2026** (`73d0e8b`, origin/main) · työpuu puhdas · käyttäjän palaute: nukkumisen
-  Zzz-ajoitus säädettiin 3 sekuntiin.
+- **Versio:** `v4.37` (`index.html` → `#version-tag`) · **Git:** **v4.37 committattu ja pushattu
+  20.9.2026** (`273552c`, origin/main) · työpuu puhdas.
+- **Päivä (v4.37):** kadun ajoneuvovirta **tuplataan päivällä** (`TRAFFIC_DAY_MULT 2`, kerroin
+  liukuu `dayT`:n mukana) – yöllä liikenne täsmälleen ennallaan.
 - **Tila:** pääportaali + 4 alipeliä (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️, `fruitgame` 🍒) valmiit ja pelattavat.
 - **Kadun canvas-huoneet (ei iframe):** **makuuhuone** (ex-palkintohuone, `buildings[7]`, Nuku/Poistu) · BAR (talo 9) ·
   jukebox (`buildings[4]`, ovi x 410) · hedelmäpelitalo `buildings[6]` (iframe).
@@ -36,6 +37,13 @@
 ---
 
 ## 🆕 Tuoreimmat versiot (20.9.2026)
+
+**v4.37 – Päivällä kaksinkertainen liikenne.** Kaistan spawn-laskuri kuluu nyt
+`dt * (1 + (TRAFFIC_DAY_MULT - 1) * dayT)` (r. 1375): spawn-väli on yöllä 20–40 s/kaista
+(ennallaan) ja täydellä päivällä **10–20 s/kaista** – kerroin liukuu auringonnousun mukana.
+Kaistat, ajoneuvotyypit, nopeudet ja törmäykset ovat ennallaan (edelleen 1 ajoneuvo/kaista),
+joten muutos on vain liikenteen tiheys. Nuppi `TRAFFIC_DAY_MULT 2` (3 = kolminkertainen).
+Versio `v4.37`.
 
 **v4.36 – Nukkumisen Zzz-efekti 3 s.** Nukkuminen jaettiin kolmeen nuppiin:
 `SLEEP_DARK_FRAMES 45` (~0,75 s pimennys), `SLEEP_ZZZ_FRAMES 180` (itse Zzz ~3 s) ja
@@ -281,6 +289,9 @@ katuun (v4.11 ✅).
 - **Aukiolo (v4.34):** `CLOSED_SIGN 'Avoinna\nKlo 20 - 06'` · `CLOSED_AT_DAYT 0.5` (dayT-raja,
   sama kuin makuuhuoneen tilanvaihdossa) · `nightOnlyClosed()` – jukebox (talo 5) ja
   hedelmäpeli (talo 7) auki vain öisin, päivällä popup eikä sisään.
+- **Liikenne (v4.37):** `TRAFFIC_DAY_MULT 2` (päivän spawn-kerroin: spawn-pohja
+  `1200 + random·1200` framet = 20–40 s jaetaan kertoimella) · `LANE_DEFS` y 340 / 328 ·
+  nopeudet auto 1,0–1,5 · mopo 1,5–2,5 · ambulanssi 1,8–3,0 · 1 ajoneuvo / kaista.
 - **Ajovalot (v4.35):** `VEHICLE_HEADLIGHT_DIM 1` (1 = kokonaan pois päivällä, 0 = ei muutosta) ·
   `headlightDim` / `headlightOn` `drawVehicle()`issa (r. ~4922) – auton ja mopon etuvalo + valokeila
   himmenevät `dayT`:n myötä; takavalot ja ambulanssin kattovilkku ennallaan.

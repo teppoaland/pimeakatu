@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> **v4.36 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
+> **v4.37 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -30,6 +30,7 @@
 | 🌙 Jukebox & Hedelmäpeli vain öisin | ✅ v4.34 – päivällä (`dayT >= 0.5`) ovesta teksti-popup `Avoinna` / `Klo 20 - 06` (`CLOSED_SIGN`, `nightOnlyClosed()`); jukeboxin ovea ei potkita eikä valoja sytytetä päivällä. Yöllä portti ennallaan. `#notification` sai `white-space: pre-line` (2 riviä). **Talousarvot ennallaan** |
 | 🚗 Ajovalot päivällä | ✅ v4.35 – `VEHICLE_HEADLIGHT_DIM 1`: auton ja mopon etuvalo + hehku ja valokeila himmenevät `dayT`:n myötä (`headlightDim`/`headlightOn`), pois kokonaan päivällä; takavalot, ambulanssin kattovilkku ja `hasHeadlight`-arpa ennallaan |
 | 🛏️ Nukkumisen Zzz | ✅ v4.36 – `SLEEP_DARK_FRAMES 45` (~0,75 s pimennys) + `SLEEP_ZZZ_FRAMES 180` → Zzz näkyy tasan **3 s** (yhteensä ~3,75 s); pimennys lasketaan kuluneesta ajasta, joten Zzz ei enää vilahtele |
+| 🚦 Päiväliikenne ×2 | ✅ v4.37 – `TRAFFIC_DAY_MULT 2`: spawn-väli 20–40 s → **10–20 s / kaista** täydellä päivällä (kerroin liukuu `dayT`:n mukana). Yöllä ennallaan; kaistat, tyypit, nopeudet ja törmäykset ennallaan (1 ajoneuvo/kaista) |
 
 ## 🍒 Hedelmäpeli (fruitgame/) – talo 7, auki vain öisin (v4.34)
 
