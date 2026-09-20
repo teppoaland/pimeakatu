@@ -139,8 +139,9 @@ const Street = (() => {
         return digKeyCollected && boulderKeyCollected && bmKeyCollected;
     }
     /* ── Makuuhuone (ex-palkintohuone, talo 7) ────────
-       Lukko = 3 avainta (v4.33, kolikkoreitti poistettu). Huoneessa on
-       kaksi valintaa: Nuku ja Poistu.
+       Ovi on aina auki (v4.43, sama käytös kuin BAR:lla): ei avaimia
+       eikä lamppua, päivällä ja yöllä – pelaaja päättää itse, milloin
+       haluaa nukkua. Huoneessa on kaksi valintaa: Nuku ja Poistu.
          Poistu = ei muuta mitään (päivä/yö pysyy ennallaan)
          Nuku   = päivä → yö  TAI  yö → päivä
        Molemmat ovat ilmaisia eikä niillä ole vaikutusta talouteen. */
@@ -170,7 +171,7 @@ const Street = (() => {
        1 kolikko = 1 kappale, joka soi kokonaan loppuun asti. */
     const JUKEBOX_BLDG_IDX = 4;
     /* Makuuhuone (ex-palkintohuone, talo 7, ovi x 675, lamps[3]):
-       lukko = 3 avainta, ei kolikoita (v4.33) */
+       ovi aina auki, ei lukkoa eikä kolikoita (v4.43) */
     const SLEEP_BLDG_IDX = 7;
     /* Tiedostonimet vastaavat sisältöä (korjattu 20.9.2026, v4.27): aiemmin
        `our_song.mp3` ja `unafraid.mp3` olivat ristissä keskenään → raita 1 ja 2
@@ -360,15 +361,16 @@ const Street = (() => {
        Päivällä ovesta tulee sama teksti-popup kuin lukitusta ovesta.
        Talousarvot eivät muutu – vain aukioloaika. Nuppi: CLOSED_AT_DAYT
        (sama raja kuin makuuhuoneen tilanvaihdossa: dayT >= 0.5 = päivä). */
-    const CLOSED_SIGN    = 'Avoinna\nKlo 20 - 06';
+    const CLOSED_SIGN    = 'Avoinna\nKlo 20-06';
     const CLOSED_AT_DAYT = 0.5;   // tämän yli = päivä = ovet kiinni
     function nightOnlyClosed() { return dayT >= CLOSED_AT_DAYT; }
 
     /* ── Ovet auki ilman lampun potkaisua päivällä (v4.38) ──
        Päivällä (dayT >= CLOSED_AT_DAYT) ovi aukeaa ilman että katuvalo
        pitää potkaista päälle – valoisalla kadulla lamppu ei ole portti.
-       Avainportit (Dig Däsh vaatii digKey, Blue Mäx vaatii boulderKey) ja
-       makuuhuoneen 3 avainta pysyvät ennallaan, samoin koko yökäytös.
+       Avainportit (Dig Däsh vaatii digKey, Blue Mäx vaatii boulderKey)
+       pysyvät ennallaan, samoin koko yökäytös. Makuuhuone (talo 7) on
+       aina auki eikä tarvitse lamppua (v4.43).
        Nuppi DOOR_NO_LAMP_AT_DAY: false = vanha käytös (lamppu ensin aina). */
     const DOOR_NO_LAMP_AT_DAY = true;
     function lampFreeOpen() { return DOOR_NO_LAMP_AT_DAY && dayT >= CLOSED_AT_DAYT; }
@@ -1720,9 +1722,9 @@ const Street = (() => {
                     barBuyHeldDown = false;
                     return;
                 }
-                // Makuuhuone (talo 7): kun kaikki 3 avainta on koossa, ovi on
-                // aina auki – lamppua ei tarvita ("3 avainta on lukko", v4.33).
-                if (lamp.bldgIdx === SLEEP_BLDG_IDX && allKeysCollected()) {
+                // Makuuhuone (talo 7): ovi on aina auki – ei avaimia eikä
+                // lamppua, päivällä ja yöllä (v4.43, kuten BAR).
+                if (lamp.bldgIdx === SLEEP_BLDG_IDX) {
                     sleepRoom = true;
                     sleepSel = 0;
                     sleepHeldUp = false;
@@ -1743,11 +1745,7 @@ const Street = (() => {
                         return;
                     }
                     if (lamp.gameUrl) { enterGame(lamp.gameUrl); }
-                    else if (lamp.bldgIdx === SLEEP_BLDG_IDX) {
-                        // Talo 7 (makuuhuone): lukko = 3 avainta. Ilman avaimia
-                        // ei sisään, vaikka lamppu palaisi (v4.33).
-                        showNotification('🚧 Ei tänne pääse ilman avainta! Hanki kaikki kolme avainta.');
-                    } else { showNotification('🚧 Ei tänne pääse ilman avainta! Hanki avaimet tai keksi jotain muuta.'); }
+                    else { showNotification('🚧 Ei tänne pääse ilman avainta! Hanki avaimet tai keksi jotain muuta.'); }
                 } else {
                     showNotification('💡 Ovi on lukossa.\nSytytä lamppu ensin!');
                 }
@@ -3484,8 +3482,8 @@ const Street = (() => {
             const ownerLamp = lamps.find(l => l.bldgIdx === t.bldgIdx);
             const jukeboxLit = t.bldgIdx === JUKEBOX_BLDG_IDX &&
                                !!(smallHouseLights[t.bldgIdx] && smallHouseLights[t.bldgIdx].lit);
-            // Makuuhuone (talo 7): 3 avainta = ovi aina auki (valo palaa kynnyksellä)
-            const sleepOpen = t.bldgIdx === SLEEP_BLDG_IDX && allKeysCollected();
+            // Makuuhuone (talo 7): ovi aina auki (v4.43) → valo palaa kynnyksellä
+            const sleepOpen = (t.bldgIdx === SLEEP_BLDG_IDX);
             const active = isBar || jukeboxLit || sleepOpen ||
                            !!(ownerLamp && (ownerLamp.lit || lampFreeOpen()));
             if (THRESH_LIGHT && active) {
@@ -3797,7 +3795,7 @@ const Street = (() => {
     }
 
     /* ── Makuuhuone (ex-palkintohuone, talo 7) ────
-       Lukko = 3 avainta (v4.33). Huoneessa on kaksi valintaa:
+       Ovi aina auki (v4.43: ei avaimia eikä lamppua). Huoneessa on kaksi valintaa:
          Nuku   = vaihtaa päivä/yö-tilan (päivä → yö TAI yö → päivä)
          Poistu = ei muuta mitään
        Molemmat ovat ilmaisia. Sänky on piirretty sivusta (pääty, paksu patja,
@@ -4848,8 +4846,8 @@ const Street = (() => {
         // Jukebox-talo (5): ovi näkyy auki vasta kun ikkunat on potkaistu valaistuiksi
         const isJukebox = (bldgIdx === JUKEBOX_BLDG_IDX);
         const jukeboxOpen = isJukebox && !!(smallHouseLights[bldgIdx] && smallHouseLights[bldgIdx].lit);
-        // Makuuhuone (talo 7): kun kaikki 3 avainta on koossa, ovi on aina auki
-        const sleepOpen = (bldgIdx === SLEEP_BLDG_IDX) && allKeysCollected();
+        // Makuuhuone (talo 7): ovi on aina auki (v4.43, kuten BAR)
+        const sleepOpen = (bldgIdx === SLEEP_BLDG_IDX);
         const isActive = (isBar || jukeboxOpen || sleepOpen) ? true
                        : (ownerLamp && (ownerLamp.lit || lampFreeOpen()));
         const doorType = bldg.doorType || 0;

@@ -17,11 +17,13 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.42` (`index.html` → `#version-tag`) · **Git:** v4.39–v4.42 committattu ja
-  pushattu 20.9.2026 (`2ffcd94`, origin/main) · **työpuu puhdas** · käyttäjän testaus OK
+- **Versio:** `v4.43` (`index.html` → `#version-tag`) · **Git:** v4.39–v4.42 committattu ja
+  pushattu 20.9.2026 (`2ffcd94`, origin/main) · **työpuu: v4.43 muutokset odottavat committia** ·
+  käyttäjän testaus OK
   ("Tuli hieno" – led-valot syttyvät naksahdellen, vanhat lamput olivat dramaattisempia).
 - **Katuvalot (v4.42):** kun yö on laskeutunut **täyteen** (`dayT === 0`) ja pelaaja on jo edennyt
-  (`state.isDay === false` = 3 avainta + makuuhuoneen Nuku yöhön), katuvalot **syttyvät itsestään
+  (`state.isDay === false` = päivä/yö on ratkaistu ja Nuku vei yöhön – avaimet tai v4.43:n vapaa
+  makuuhuone), katuvalot **syttyvät itsestään
   yksi kerrallaan** vasemmalta oikealle (~0,3 s väli; `NIGHT_LAMP_FIRST 30`, `NIGHT_LAMP_INTERVAL 18`,
   `NIGHT_LAMP_ORDER 'wave'`) + pehmeä syttymisnaksahdus (`playLampOn()`) ja kipinähiukkaset lampussa.
   Uudessa pelissä (`isDay === null`) ja sivunlatauksessa yöllä valot pitää yhä **potkia itse**
@@ -31,6 +33,14 @@
   ilman potkua **vasta kun päivä/yö on ratkaistu**. Testityökalu `?day=0` näyttää efektin heti.
   **Käyttäjän testaus 20.9.2026: "Tuli hieno" – sopivasti pikkuisen liioiteltu; syttymisnaksahdus on
   terävämpi kuin vanhojen dramaattisten lamppujen (led-ajan valot) → hyväksytty.**
+- **Makuuhuoneen ovi auki (v4.43):** talo 7:n makuuhuoneeseen pääsee **aina** – ei 3 avainta eikä
+  lamppua, päivällä ja yöllä (kuten BAR). `handleAction()` avaa huoneen oven edestä; sama tila ohjaa
+  oven ulkoasua (`drawDoor()`) ja kynnysvaloa (`drawThresholdPaving()`), ja avainpopup ("Ei tänne
+  pääse ilman avainta") poistui tästä ovesta. Käyttäjän pyyntö 20.9.2026: *"Vapauta ovi, että ei
+  tarvi 3 avainta että pääsee nukkumaan. Pitähän sen pelaajan itse voida päättää milloin haluaa
+  nukkua."* Talous ennallaan (sääntö 04). **Seuraus:** nukkua voi heti ensimmäisenä yönä →
+  `state.isDay` voi ratketa ennen avaimia (v4.32:n auringonnousu ei enää laukea sen jälkeen);
+  huone on nyt myös vapaa paikka pitää nälkä jäissä (v4.41).
 - **Nukkuminen (v4.41):** nälkä on **jäissä** makuuhuoneessa ja Zzz-pimennyksen ajan
   (`hungerOnHold()`) → pelaaja ei voi kuolla nukkuessaan; herätessä ajastimelle jää vähintään
   `HUNGER_WAKE_GRACE 600` (10 s). Rajaus: **vain nukkuminen** – muualla (BAR, jukebox,
@@ -59,17 +69,29 @@
   ovesta tulee sama teksti-popup kuin lukitusta ovesta: `Avoinna` / `Klo 20 - 06` (`CLOSED_SIGN`).
 - **Päivä/yö (v4.33):** 3 avainta nostaa päivän kerran (`state.isDay` null → true, v4.32-käytös) →
   sen jälkeen **makuuhuoneen Nuku vaihtaa päivä ⇄ yö** ja tila on tallennettu; Poistu ei muuta mitään.
-  Huoneeseen pääsee **vain 3 avaimella** (kolikkoreitti poistettu) – silloin ovi on aina auki ilman lamppua.
+  Makuuhuoneen ovi on **aina auki** (v4.43: ei avaimia eikä lamppua; kolikkoreitti poistettu v4.33).
 - **Aurinko:** valkoinen sisäkiekko poistettu; tasainen keltainen kiekko + lämmin hehku. Päivällä
   aurinko seisoo **vasemmalla** (`SUN_X 140`) ja yöllä kuu oikealla (`MOON_X 680`) – vain
   alpha-ristihäivytys, **ei liukua** (v4.41).
 - **Lukossa:** talous (sääntö 04) ja inventaario · **vapaasti säädettävissä:** testityökalut
   (`COIN_CHEAT_*`, `?coins`, `?debug`, `?day=0` / `?day=1`, `MUSIC_SOURCE`, `bm`-debug).
-- **Avoinna:** v4.39–v4.42 odottavat committia (ks. yllä) · muuten ks. "🔜 Seuraavaksi".
+- **Avoinna:** v4.39–v4.43 odottavat committia (ks. yllä) · muuten ks. "🔜 Seuraavaksi".
 
 ---
 
 ## 🆕 Tuoreimmat versiot (20.9.2026)
+
+**v4.43 – Makuuhuoneen ovi auki ilman avaimia (ei lukkoa).** Talo 7:n makuuhuoneeseen pääsee nyt
+**aina**: ei 3 avainta eikä lamppua, päivällä ja yöllä – täsmälleen kuten BAR. `handleAction()`in ehto
+`lamp.bldgIdx === SLEEP_BLDG_IDX && allKeysCollected()` → `lamp.bldgIdx === SLEEP_BLDG_IDX`, joten
+huone avautuu ennen `lamp.lit || lampFreeOpen()` -tarkistusta; kuollut avainpopup ("🚧 Ei tänne pääse
+ilman avainta! Hanki kaikki kolme avainta.") poistui. Sama avoin tila ohjaa nyt oven ulkoasua
+(`drawDoor()`in `sleepOpen`) ja kynnysvaloa (`drawThresholdPaving()`) → ovi näyttää aukeavalta ja
+kynnys hehkuu myös yöllä ilman potkittua lamppua. Avainportit (Dig Däsh `digKey`, Blue Mäx
+`boulderKey`), ensiauringonnousu ja koko muu katu ennallaan; **talous ei muutu** (Nuku/Poistu
+ilmaisia, 2400 / katto 10 / hinnat / RTP). Käyttäjän pyyntö 20.9.2026: *"Vapauta ovi, että ei tarvi
+3 avainta että pääsee nukkumaan. Pitähän sen pelaajan itse voida päättää milloin haluaa nukkua."*
+Versio `v4.43`, ei committia.
 
 **v4.41 – Nälkä jäihin nukkuessa + kuu ⇄ aurinko -ristihäivytys.** Kaksi pientä parannusta:
 (1) `hungerOnHold()` (`sleepRoom || sleepPhase > 0`) pitää nälkäajastimen jäissä makuuhuoneessa ja
@@ -378,7 +400,9 @@ katuun (v4.11 ✅).
   `CLOUD_DAY_ALPHA 5` (peittävyyskerroin päivällä, 1 = ei muutosta) – `drawClouds()` (r. ~2001).
 - **HUD 🍔-varoitus (v4.39):** `HUNGER_WARN 3` (r. ~189) – `updateHUD()` lisää `burger-warning`-luokan
   (`style.css`: `burgerBlink` 0,8 s, punainen), kun hampurilaisia on tämä määrä tai vähemmän.
-- **Makuuhuone (talo 7):** `SLEEP_BLDG_IDX 7` · `SLEEP_DARK_FRAMES 45` (~0,75 s pimennys) ·
+- **Makuuhuone (talo 7):** `SLEEP_BLDG_IDX 7` · **ovi aina auki** (v4.43: ei avaimia eikä lamppua;
+  sama `sleepOpen`-ehto (`bldgIdx === SLEEP_BLDG_IDX`) ohjaa `handleAction`ia, `drawDoor`ia ja
+  kynnysvaloa) · `SLEEP_DARK_FRAMES 45` (~0,75 s pimennys) ·
   `SLEEP_ZZZ_FRAMES 180` (Zzz ~3 s) · `SLEEP_FADE_FRAMES = DARK + ZZZ` (~3,75 s yhteensä) ·
   `hungerOnHold()` (`sleepRoom || sleepPhase > 0`) · `HUNGER_WAKE_GRACE 600` (10 s herätysrauha, v4.41) ·
   `sleepSel` (0 = Nuku, 1 = Poistu) · sängyn koko paneelista (`bedW = min(340, panelW − 16)`),
@@ -431,15 +455,18 @@ katuun (v4.11 ✅).
   kvantisoi skaala portaisiin (esim. 0,025 välein) tai vaihda offscreen-blittiin (lähin naapuri).
 - **Päivä/yö (v4.33):** tila on **tallennettu** (`state.isDay`: `null` = ratkaisematon, `true` = päivä,
   `false` = yö). 3 avainta nostaa päivän kerran (v4.32-käytös) ja tallentaa `true`; sen jälkeen vain
-  makuuhuoneen **Nuku** vaihtaa tilaa. Sivuvaikutus: **avain-cheat** (vitoslamppu 5 potkua → kaikki avaimet)
+  makuuhuoneen **Nuku** vaihtaa tilaa – v4.43:ssa huone on aina auki, joten **Nuku voi ratkaista tilan
+  jo ennen avaimia** (silloin v4.32:n "3 avainta → päivä" -auringonnousu ei enää laukea). Sivuvaikutus: **avain-cheat** (vitoslamppu 5 potkua → kaikki avaimet)
   sytyttää myös päivän – sama "läpäisty"-tila, joten käytös on johdonmukainen. Vanha tallennus ilman
   `isDay`-kenttää → `deepMerge` tuo `null`in → päivä nousee kuten ennen. Päivänvalo on additive-kerros
   (`'lighter'`), eli se ei muuta yhtään väripalettia: jos kadun pitää näyttää vielä valoisammalta,
   nosta `DAY_LIGHT_ALPHA` (0.30) tai vaalenna `DAY_SKY_*`-sävyjä.
-- **Makuuhuone (v4.33):** liuku on pysähdyksissä huoneessa (`!sleepRoom`), joten nukahduksen jälkeen
-  auringonnousu/-lasku näkyy vasta kadulle palatessa – sama portti kuin iframe-peleillä. Huone piirretään
-  `render()`issa ennen päivänvalo-washiä → sisätila ei kirkastu. Nukkuminen **ei** kosketa taloutta,
-  🍔-ajastinta, lamppuja, ovia eikä avaimia.
+- **Makuuhuone (v4.33, ovi auki v4.43):** liuku on pysähdyksissä huoneessa (`!sleepRoom`), joten
+  nukahduksen jälkeen auringonnousu/-lasku näkyy vasta kadulle palatessa – sama portti kuin
+  iframe-peleillä. Huone piirretään `render()`issa ennen päivänvalo-washiä → sisätila ei kirkastu.
+  Nukkuminen **ei** kosketa taloutta, 🍔-ajastinta, lamppuja, ovia eikä avaimia. Ovi on aina auki
+  ilman avaimia ja lamppua (v4.43), joten myös nälkäpysäytys (`hungerOnHold()`) on käytettävissä
+  heti pelin alusta – se ei tuota kolikoita eikä 🍔:tä.
 - `handleAction()` palaa heti osumasta → hit pause asetetaan haaroissa, `actionJustPressed` nollataan
   framen lopussa (ei tuplapotkua). `KICK_DURATION` ja törmäyslogiikka ennallaan.
 - `street.js` `lamps[].label` on **kuollutta dataa** – kadun kyltit eivät näytä pelien nimiä (vain BAR

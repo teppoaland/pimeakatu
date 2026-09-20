@@ -7,9 +7,9 @@
 - **Pääportaali (juuri):** `index.html`, `style.css`, `street.js`, `gameState.js`, `audio.js` – ei `js/`-kansiota.
 - **Iframet (4 alipeliä):** `digGame1/` ⛏️ Dig Game · `digGame2/` 💎 Dig Däsh · `bm/` ✈️ Blue Mäx ·
   `fruitgame/` 🍒 Hedelmäpeli (talo 7, **auki vain öisin** v4.34).
-- **Kadun canvas-huoneet (ei iframe):** **makuuhuone** (ex-palkintohuone, `buildings[7]`, lukko = 3 avainta,
-  valinnat Nuku/Poistu) · BAR (talo 9, 🍔) · jukebox (talo 5, `buildings[4]`, ovi x 410, 1 kolikko = koko
-  kappale, **auki vain öisin** v4.34).
+- **Kadun canvas-huoneet (ei iframe):** **makuuhuone** (ex-palkintohuone, `buildings[7]`, **ovi aina auki**
+  v4.43 – ei avaimia eikä lamppua, valinnat Nuku/Poistu) · BAR (talo 9, 🍔) · jukebox (talo 5, `buildings[4]`,
+  ovi x 410, 1 kolikko = koko kappale, **auki vain öisin** v4.34).
 - **Kommunikaatio:** `window.parent.postMessage()` molempiin suuntiin.
 - **LocalStorage-avaimet:** `pimeakatu_gamestate` (portaali; sisältää myös **`isDay`** = päivä/yö-tila),
   `digKeyCollected`, `boulderKeyCollected`,
@@ -42,7 +42,9 @@ hitboxit (`player.w/h`, törmäykset, keräyssäteet) eivät skaalaudu, joten pe
 **Päivä/yö (v4.33):** tila on **tallennettu** (`state.isDay`, `pimeakatu_gamestate`issa): `null` =
 ratkaisematon, `true` = päivä, `false` = yö. Kun kaikki 3 avainta on kerätty (`allKeysCollected()`),
 kadulle nousee päivä **kerran** (v4.32-käytös) ja tila tallennetaan → sen jälkeen **makuuhuoneen
-Nuku-valinta** vaihtaa tilaa (päivä → yö TAI yö → päivä), Poistu ei muuta mitään. `dayT` liukuu
+Nuku-valinta** vaihtaa tilaa (päivä → yö TAI yö → päivä), Poistu ei muuta mitään. Koska huoneen ovi
+on aina auki (v4.43), **Nuku voi ratkaista tilan jo ennen avaimia** – sen jälkeen auringonnousu ei
+enää laukea. `dayT` liukuu
 molempiin suuntiin (`DAY_FADE_FRAMES` nousu, `NIGHT_FADE_FRAMES` lasku) ja on pysähdyksissä kun
 alapeli on auki (`iframeOpen`) tai ollaan canvas-huoneessa → muutos näkyy kadulle palatessa.
 Testityökalut `?day=1` / `?day=0` pakottavat tilan eivätkä tallenna.
@@ -62,8 +64,9 @@ takavalot ja ambulanssin kattovilkku eivät muutu. Puhtaasti visuaalinen – ei 
 **Päivällä ovet ilman lamppua (v4.38):** kun `dayT >= 0.5` (`lampFreeOpen()`, nuppi
 `DOOR_NO_LAMP_AT_DAY`), lamppuovet aukeavat **ilman potkaistua katuvaloa** ja sama ehto ohjaa oven
 ulkoasua (`drawDoor()`in `isActive`, kynnysvalo) – ettei ovi näytä lukitulta mutta aukea. Avainportit
-(Dig Däsh `digKeyCollected`, Blue Mäx `boulderKeyCollected`) ja makuuhuoneen 3 avainta pysyvät;
-yöllä lamppu pitää yhä potkaista ("💡 Sytytä lamppu ensin!"). Täydellä päivällä (`dayT === 1`)
+(Dig Däsh `digKeyCollected`, Blue Mäx `boulderKeyCollected`) pysyvät; makuuhuone (talo 7) on
+**aina auki ilman avaimia ja lamppua** (v4.43); yöllä muiden lamppuovien lamppu pitää yhä potkaista
+("💡 Sytytä lamppu ensin!"). Täydellä päivällä (`dayT === 1`)
 `update()` sammuttaa **kaikki katuvalot kerran** (`dayLampsOff`-lippu, nollautuu `dayT === 0`) –
 valot voi silti potkaista päälle myös päivällä, ja moskiitot (`MOSQUITO_DAY_DIM`) ovat poissa päivältä.
 

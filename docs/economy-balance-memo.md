@@ -18,7 +18,7 @@
    │ BAR:        1 kolikko = 1 🍔 (katto 10)            │
    │ Jukebox:    1 kolikko = 1 koko kappale             │
    │ Hedelmäpeli:1 kolikko / pyöräytys, RTP 78,5 %      │
-   │ Makuuhuone: 3 avainta (Nuku/Poistu ilmaisia)      │
+   │ Makuuhuone: aina auki (Nuku/Poistu ilmaisia)       │
    └────────────────────────┬───────────────────────────┘
                             ▼
    ┌──────────── paine (pakko pitää huolta) ────────────┐
@@ -57,7 +57,7 @@ ihan kuin oikeassa elämässä".
 | Hampurilaiset | alussa **5**, +1 / **40 s** (`hamburgerTimer = 2400` framet) |
 | BAR | **1 kolikko = 1 🍔** (katto 10, ▼ peruu vain vierailun ostot) |
 | Jukebox | **1 kolikko = 1 koko kappale**, auki vain öisin (v4.34) |
-| Makuuhuone (ex-palkintohuone, talo 7) | **3 avainta** = lukko (kolikkoreitti poistettu v4.33). Nuku/Poistu **ilmaisia** → ei vaikutusta talouteen |
+| Makuuhuone (ex-palkintohuone, talo 7) | **Aina auki, ei lukkoa** (v4.43: ei avaimia eikä lamppua). Nuku/Poistu **ilmaisia** → ei vaikutusta talouteen |
 | Nukkuminen – nälkä jäissä (v4.41) | Nälkäajastin ei tikitä makuuhuoneessa eikä Zzz-pimennyksen aikana (`hungerOnHold()`), joten pelaaja **ei kuole nukkuessaan**. Herätessä ajastin jatkuu siitä mihin jäi, mutta vähintään **10 s** (`HUNGER_WAKE_GRACE = 600`). Tahti 1/40 s (2400 framet) ennallaan |
 | Oviukko / kukkaruukku / sähkökaappi | osuma = tainnutus + **−1 🍔** (🍔 0 → kuolema) |
 | Syntymäpaketti | uusi peli / reset: **2 kolikkoa + 5 🍔** |
@@ -87,6 +87,23 @@ pitää mennä onholdiin. Pelaaja ei saa kuolla nukkuessa."* Rajaus: **vain nukk
   hyväksikäyttöä).
 - **Lukitut arvot ennallaan:** 2400 framet (1 🍔 / 40 s), katto 10, BAR 1 kolikko = 1 🍔,
   RTP ≈ 78,5 %. Muutos koskee vain *sitä, milloin* ajastin käy – ei sen tahtia eikä hintoja.
+
+### Makuuhuoneen ovi auki ilman avaimia (v4.43) – ei lukittu talousarvo
+
+Käyttäjän pyyntö 20.9.2026: *"Vapauta ovi, että ei tarvi 3 avainta että pääsee nukkumaan.
+Pitähän sen pelaajan itse voida päättää milloin haluaa nukkua."*
+
+- **Nyt:** makuuhuoneen (`buildings[7]`) ovi on **aina auki** – ei avaimia eikä lamppua, päivällä ja
+  yöllä, täsmälleen kuten BAR. `handleAction()` avaa huoneen heti oven edestä, ja sama tila ohjaa oven
+  ulkoasua (`drawDoor()`) ja kynnysvaloa (`drawThresholdPaving()`). Avainpopup ("Ei tänne pääse ilman
+  avainta") poistui tästä ovesta.
+- **Ei talousvaikutusta:** Nuku ja Poistu ovat ilmaisia eivätkä ne käytä kolikoita eivätkä 🍔:tä.
+  Nälkätahti 2400 framet (1 🍔 / 40 s), katto 10, BAR 1 kolikko = 1 🍔, jukebox 1 kolikko / kappale,
+  hedelmäpelin panos/painot/maksut/RTP ≈ 78,5 % ja syntymäpaketti 2 kolikkoa + 5 🍔 ovat **ennallaan**.
+- **Seuraus (hyväksytty):** huoneeseen pääsee nyt heti ensimmäisenä yönä, joten `state.isDay` voi
+  ratketa Nuku-valinnalla ennen avaimia → v4.32:n "3 avainta → päivä kerran" -auringonnousu ei enää
+  laukea sen jälkeen (sama tila syntyi aiemminkin nukkumalla avaimet koossa). Vapaa huone on samalla
+  paikka pitää nälkä jäissä (`hungerOnHold()`, v4.41) – se ei tuota rahaa eikä 🍔:tä.
 
 ---
 
@@ -126,4 +143,5 @@ vapaasti (esim. `COIN_CHEAT_COOLDOWN = 0` nopeampaan testaukseen) ilman versiono
 | 20.9.2026 | v4.33 | Palkintohuone (talo 7): pääsy **kaikki avaimet tai 3 kolikkoa**; huoneessa pokaali | Makuuhuone (talo 7): pääsy **vain 3 avainta** (kolikkoreitti poistettu); Nuku/Poistu ilmaisia. **Kolikko-/🍔-talous ei muutu** – poistui vain yksi kolikoiden käyttökohde |
 | 20.9.2026 | v4.34 | Jukebox ja Hedelmäpeli olivat auki aina (yöllä ja päivällä) | Auki **vain öisin (klo 20–06)**; päivällä ovesta teksti-popup `Avoinna` / `Klo 20 - 06` (`street.js`: `CLOSED_SIGN`, `CLOSED_AT_DAYT 0.5`). **Panos, painot, maksut, RTP, 🍔-tahti ja hinnat ennallaan** – muuttui vain aukioloaika |
 | 20.9.2026 | v4.41 | Nälkäajastin tikitti myös nukkuessa – herätessä se jatkui täsmälleen siitä mihin jäi, joten 1 🍔:lla nukkuja saattoi kuolla heti herätessään | Nälkä **jäissä** nukkuessa (`hungerOnHold()`: makuuhuone + Zzz-pimennys) + herätysrauha 10 s (`HUNGER_WAKE_GRACE 600`). **2400 framet (1/40 s), katto 10, hinnat ja RTP ennallaan**; rajaus vain nukkumiseen |
+| 20.9.2026 | v4.43 | Makuuhuoneen (talo 7) ovi oli lukossa ilman **3 avainta** (avaimilla ovi auki ilman lamppua) | Ovi **aina auki kuten BAR** – ei avaimia eikä lamppua, päivällä ja yöllä; avainpopup poistettu (`handleAction`). **Talousarvot ennallaan** (Nuku/Poistu ilmaisia, 2400 / katto 10 / hinnat / RTP). Nukkua voi nyt heti ensimmäisenä yönä → `state.isDay` voi ratketa ennen avaimia |
 
