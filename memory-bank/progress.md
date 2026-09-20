@@ -86,5 +86,5 @@
 
 | Ominaisuus | Tila |
 |-----------|------|
-| Tekijänoikeudet (`LICENSE` + README-osio) | ✅ 20.9.2026 – uusi juuren `LICENSE` (Copyright (c) 2024–2026 Teppo Aland, All rights reserved, ei myönnä lisenssiä eikä käyttöoikeutta; myös grafiikka/äänet/`jukebox/`-kappaleet mainittu) + README-osio "Tekijänoikeudet / Copyright"; ei versionostoa (vain dokumentaatio, sääntö 03) |
+| Tekijänoikeudet (`LICENSE` + README-osio) | ✅ 20.9.2026 – uusi juuren `LICENSE` (Copyright (c) 2024–2026 Teppo Ålander, All rights reserved, ei myönnä lisenssiä eikä käyttöoikeutta; myös grafiikka/äänet/`jukebox/`-kappaleet mainittu) + README-osio "Tekijänoikeudet / Copyright"; tekijännimi korjattu `Aland` → `Ålander`; ei versionostoa (vain dokumentaatio, sääntö 03) |
 

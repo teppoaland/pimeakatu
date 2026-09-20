@@ -50,7 +50,7 @@ ovat aina ajan tasalla.
 
 ## Tekijänoikeudet / Copyright
 
-**Copyright (c) 2024–2026 Teppo Aland. Kaikki oikeudet pidätetään.**
+**Copyright (c) 2024–2026 Teppo Ålander. Kaikki oikeudet pidätetään.**
 
 Peli kokonaisuudessaan (lähdekoodi, grafiikka, äänet ja musiikki) on tekijänsä
 omaisuutta. Sitä **ei saa** kopioida, muokata, julkaista uudelleen, levittää eikä
