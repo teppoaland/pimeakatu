@@ -22,7 +22,7 @@
 | Mobiilikamera (vaakascrollaus pystymoodissa) | ✅ v3.91 – kosketuslaitteella zoom (täyttää korkeuden) + `camX` seuraa pelaajaa; PC: koko katu ennallaan |
 | Lampun visuaalinen viimeistely | ✅ v3.96 – varren pyöreä gradientti + jalusta katukivetyksen rasterina, pystyraita vaihtelee oikealla/vasemmalla lampuittain |
 | Teräsaidan alavaakarauta (vaihtelu) | ✅ v4.0 – pystysuuntainen pyöreä gradientti + niitit joka pystypiikin kohdalle, aiemmin tasainen #2e2e2e |
-| Boulder Däsh alkudialogi (vaakakuva) | ✅ v4.0 – #overlay-content max-height/overflow-y + @media (max-height: 500px) pienentää otsikon/tekstit, jotta ylä-/alakehykset mahtuvat |
+| Dig Däsh alkudialogi (vaakakuva) | ✅ v4.0 – #overlay-content max-height/overflow-y + @media (max-height: 500px) pienentää otsikon/tekstit, jotta ylä-/alakehykset mahtuvat |
 | BAR-kyltti (talo 8) laskettu alemmas | ✅ v4.1 – kyltin alareuna dy-10 (3px ovivalon yläpuolella, 10px oven yläpuolella) |
 | Ikkunat eivät jää oven taakse | ✅ v4.2 – drawBuildings: oven "ei-ikkunaa" -alue (DOOR_W+4 x DOOR_H+2, +2px reunus), ikkuna ohitetaan jos se leikkaa oven alueen |
 | BAR-viittakyltti puunraossa | ✅ v4.3 → v3.98 – pieni matala nuolikyltti I====> varren sisällä "BAR" (terävä pikselifontti), siirretty vasemmalle (x≈143) + jalat; v4.5 tekstin koko puolitettu (scale 2→1); v4.6 yöelämän neon-kyltti: puuosa lähes musta siluetti #1F1614; v4.7 teksti fillText-hehkuksi (shadowColor #FF0055, blur 10, ydin #FF66A3, 'Press Start 2P' 9px); v4.8 teksti 'BAR >' + varsi pidennetään measureText-mittauksella; v3.98 palautettu alkuperäiseen pituuteen + teksti 'BAR>' (ilman väliä) kokeiluun (versio pudotettu v4.9 → v3.98, jatkossa +0.01) |
@@ -44,6 +44,7 @@
 | Kiveysrivien saumavaihe taloittain | ✅ v4.13 – `housePhase`/`houseDrift` (`initForeground`): saumavaihe 0–6 px ja sävy −1…+1 per talo (deterministinen LCG) → sama kiveysruudukko ei jatku yhtenä "barina" laidasta laitaan |
 | 🧹 Siivous: commando_c64 pois git-historiasta + alipelikansion uudelleennimeäminen | ✅ v4.17 – `git filter-branch --index-filter` (vain `main`, Cline-checkpointit säilyivät) → 4 tiedostoa pois historiasta, 3 tyhjäksi jäänyttä committia karsiutui; `git mv bluemax_c64 bm` + `git mv docs/bluemax.md docs/bm.md`; viittaukset korjattu (`street.js` gameUrl + avainportti, `.clinerules/01`, `README.md`, `PROJECT.md`, `CHANGELOG.md`, `docs/plan.md`, `docs/bm.md`, muistipankki); versio v4.17 |
 | 🧹 Kaupalliset viittaukset siivottu (julkaisuvalmiutta varten) | ✅ v4.17 (jatko) – bändin nimi pois `audio.js`-kommenteista (melodia ja soitto ennallaan, käyttäjän päätös), `BOULDER DASH` → `Boulder Däsh` (19 tekstiä), `C64` → `dev` (5 kohtaa: näkyvä HUD-tägi + otsikot + `docs/bm.md`), `docs/boulder-dash-memo.md` → `docs/bd-memo.md` ja `docs/boulder-dash-build-cleanup.md` → `docs/bd-cleanup.md`; **havainto: `street.js`:n `lamps[].label` on kuollutta dataa** → kadun kyltit eivät näytä pelien nimiä (vain BAR piirretään erikseen); asset-taso puhdas (repossa vain `knived_unafraid.mp3`, kaikki grafiikka proseduraalista, äänet synteettisiä); 7 regressiotestiä 0 löydöstä; ei versionostoa |
+| 🏷️ Pelinimi: Boulder Däsh → Dig Däsh | ✅ 20.9.2026 – vain näkyvä nimi + tekstiviittaukset (23 kohtaa: pelin `<title>`/`<h1>`, `street.js`-label + kommentit, `gameState.js`/`bm/audio.js`-kommentit, README/PROJECT/docs/muistipankki); **sisäiset tunnisteet** (`boulderKeyCollected`, `BOULDER_KEY_COLLECTED`, `TILE.BOULDER`, `SCORE_BOULDER_FALL`), kansionimi `digGame2/` ja tiedostot `docs/bd-*.md` jäivät ennalleen (käyttäjän linjaus: sana `boulder` muuttujissa **ei** ole tavaramerkkiasia – saa olla, vain näkyvät tekstit muutetaan); ei versionostoa |
 
 
 | Oviukko (Avenger): ovesta tuleva hyökkääjä | ✅ v4.14 – potkun pudotukseen 3. arvonta: **1/8 + 30 s cooldown → pelaajan kaksonen astuu ovesta kynnykseltä** (ei putoa kuten ruukku/kolikko), juoksee 2.0 px/f (> pelaaja 1.225) kiinni → **ei väistettävissä**; osuma = tainnutus 600 f + **−1 🍔** (ei tuplaosumaa; 🍔 0 → kuolema), paluu ovelle ja katoaminen; iframen aikana jäissä; portti `!avenger` estää ruukun/kolikon samaan aikaan; uusi ääni `playKnock()`; ei uusia tekstejä; **v4.15 – isku dramaattisemmaksi: kontakti jäädyttää koko maailman 3 s (hit-stop + vinjetti + iskuvälähdys + tärinä + tähdet), vasta lopuksi pelaaja kosahtaa kasaan (tainnutus 600 f + −1 🍔)** |
@@ -64,7 +65,7 @@
 | Dokumentaatio | ✅ `docs/fruit-game-memo.md` (säännöt, protokolla, kytkentä, testit) |
 | Testipenkki | `%TEMP%\ftest.cjs` (peli) + `%TEMP%\street-fruit-test.cjs` (katu-integraatio), ei repossa |
 
-## ⛏️ Dig Game (digGame1/) | 💎 Boulder Däsh (digGame2/)
+## ⛏️ Dig Game (digGame1/) | 💎 Dig Däsh (digGame2/)
 
 | Ominaisuus | Tila |
 |-----------|------|

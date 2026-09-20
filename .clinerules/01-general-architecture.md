@@ -29,7 +29,7 @@ Jokainen alipeli on **itsenäinen kokonaisuus** omassa kansiossaan:
 | Kansio | Peli | Tila |
 |--------|------|------|
 | `digGame1/` | ⛏️ Dig Game – kaivuripeli, yksi yhtenäinen maailma | ✅ Valmis |
-| `digGame2/` | 💎 Boulder Däsh – 4 tason timanttipeli | ✅ Valmis |
+| `digGame2/` | 💎 Dig Däsh – 4 tason timanttipeli | ✅ Valmis |
 | `bm/` | ✈️ Blue Max – isometrinen lentopeli | 🚧 Tulossa |
 
 > **Sääntö:** Älä sekoita eri pelien koodia keskenään. Jokainen peli käyttää vain oman kansionsa tiedostoja.

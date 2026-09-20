@@ -101,7 +101,7 @@ const AudioFX = (() => {
         } catch(e) {}
     }
 
-    /* ── Räjähdys (3-kerroksinen jysäys, kuten Boulder Däsh) ─ */
+    /* ── Räjähdys (3-kerroksinen jysäys, kuten Dig Däsh) ─ */
     function playExplosion() {
         try {
             init();

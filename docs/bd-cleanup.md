@@ -1,5 +1,5 @@
 ﻿=========================================================================
-    BOULDER DÄSH: BUILDAUS POIS - Toimenpidelista (seuraava sessio)
+    DIG DÄSH: BUILDAUS POIS - Toimenpidelista (seuraava sessio)
 =========================================================================
 
 Tausta: digGame2/-kansiossa on viela buildattu boulder_dash.html ja

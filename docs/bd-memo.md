@@ -1,10 +1,10 @@
-# Boulder Däsh — Memo
+# Dig Däsh — Memo
 
 Päivämäärä: 11.9.2026
 Versio: 1.1
 
 ## Mikä tämä on
-Boulder Däsh -tyylinen selainpeli. Toteutettu puhtaalla HTML + CSS + JavaScriptillä,
+Dig Däsh -tyylinen selainpeli. Toteutettu puhtaalla HTML + CSS + JavaScriptillä,
 ei ulkoisia riippuvuuksia eikä kirjastoja. Toimii pelkällä tiedoston avaamisella selaimessa.
 
 ## Tiedostorakenne
@@ -90,10 +90,10 @@ Esimerkkejä pääsiäismunista:
       kävellä seinien läpi tms.), täydellinen kaaoshetki.
 - [ ] **Piilotettu pistekertoja** — salainen keräys, joka moninkertaistaa pisteet.
 
-Tavoite: pinnalla kaikki näyttää tutulta Boulder Däshiltä, mutta syvemmällä
+Tavoite: pinnalla kaikki näyttää tutulta Dig Däshiltä, mutta syvemmällä
 pelaaja törmää jatkuvasti yllätyksiin, joista voi kertoa kavereille.
 
 ## Versiohallinta
 - Paikallinen git-repo kansiossa. **Ei ole tarkoitus julkaista mihinkään.**
-- Ensimmäinen snapshot: "Boulder Däsh - initial working version"
+- Ensimmäinen snapshot: "Dig Däsh - initial working version"
 - Nykyinen versio: **v1.0** (git-tag `v1.0`)

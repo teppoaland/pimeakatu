@@ -29,7 +29,7 @@ Koko sivusto käyttää kevyttä, selaimen muistiin pohjautuvaa tilanhallintaa (
 - **Mekaniikka**: Yksi yhtenäinen maailma, kaivamista, puiden/talojen pudottelua
 - **Status**: ✅ Valmis
 
-### Peli 2: Boulder Däsh (`digGame2/`)
+### Peli 2: Dig Däsh (`digGame2/`)
 - **Mekaniikka**: Perinteinen ruudukko- ja timanttipeli (4 kenttää)
 - **Status**: ✅ Valmis
 - **Jekku (Kenttä 5)**: Reitti maaliin on täysin kivilohkareiden saartama (ei vielä koodattu)
@@ -52,7 +52,7 @@ Koko sivusto käyttää kevyttä, selaimen muistiin pohjautuvaa tilanhallintaa (
 
 ## 5. Kehitysmalli: erilliset tiedostot
 
-Alapelien (Dig Game, Boulder Däsh) stand-alone-buildaus yhteen HTML-tiedostoon
+Alapelien (Dig Game, Dig Däsh) stand-alone-buildaus yhteen HTML-tiedostoon
 (`dig_game.html`, `boulder_dash.html`) oli alkuperäinen jaettavan version malli.
 **Tästä on luovuttu** – pelejä ei enää ahdeta turhaan yhteen tiedostoon.
 

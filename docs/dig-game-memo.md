@@ -4,7 +4,7 @@ Päivämäärä: 16.8.2026
 Versio: 1.0
 
 ## Mikä tämä on
-Dig Game on kaivuripeli (pohjana Boulder Däsh -tyyppinen mekaniikka). Puhdas HTML + CSS +
+Dig Game on kaivuripeli (pohjana Dig Däsh -tyyppinen mekaniikka). Puhdas HTML + CSS +
 JavaScript, ei ulkoisia riippuvuuksia eikä kirjastoja. Toimii pelkällä
 tiedoston avaamisella selaimessa.
 
@@ -167,7 +167,7 @@ jatkuvasti yllätyksiin, joista voi kertoa kavereille.
 
 ## Versiohallinta
 - Paikallinen git-repo kansiossa. **Ei ole tarkoitus julkaista mihinkään.**
-- Alkuperäinen pohja: Boulder Däsh -peli (d427c08, tag `v1.0` poistettu).
+- Alkuperäinen pohja: Dig Däsh -peli (d427c08, tag `v1.0` poistettu).
 - **v1.0: Dig Game** — yksi yhtenäinen maailma, maanpinta + puut/talot,
   pyöristetty kaivaminen, objektien työntö ja veto, pudotuspulma,
   tiedostonimi dig_game.html hakemiston digGame mukaan.

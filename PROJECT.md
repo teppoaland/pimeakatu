@@ -24,8 +24,8 @@ syttyäkseen ja astuu talojen oviin päästäkseen alapeleihin.
 Yksi yhtenäinen maailma, ei tasoja. Pelaaja kaivaa maan alta, pudottaa puita ja taloja,
 kerää timantteja. Leveys ~77 ruutua. [Lisätiedot →](docs/dig-game-memo.md)
 
-### 💎 Boulder Däsh (`digGame2/`)
-Klassinen 4 tason Boulder Däsh -tyylinen timanttienkeruupeli aikarajalla.
+### 💎 Dig Däsh (`digGame2/`)
+Klassinen 4 tason Dig Däsh -tyylinen timanttienkeruupeli aikarajalla.
 [Lisätiedot →](docs/bd-memo.md)
 
 ### ✈️ Blue Max (`bm/`) – *tulossa*
@@ -50,7 +50,7 @@ D:\AI\Main\
 │   ├── js/ (8 tiedostoa)
 │   ├── game_main.html    Kehitysversio (ainoa versio)
 │
-├── digGame2/             💎 Boulder Däsh
+├── digGame2/             💎 Dig Däsh
 │   ├── css/style.css
 │   ├── js/ (8 tiedostoa)
 │   └── game_main.html    Kehitysversio (ainoa versio)
@@ -62,7 +62,7 @@ D:\AI\Main\
     ├── plan.md            Alkuperäinen arkkitehtuurisuunnitelma
     ├── dig-game-memo.md   Dig Game -muistio
     ├── dig-game-roadmap.md Dig Game -kehityssuunnitelma
-    ├── bd-memo.md          Boulder Däsh -muistio
+    ├── bd-memo.md          Dig Däsh -muistio
     └── bm.md              Blue Max -muistio
 ```
 

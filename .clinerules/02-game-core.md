@@ -52,8 +52,8 @@ Kun saat uuden alataskin (subtask) joka koskee jotain alipeliä:
 | Yhteys | Selitys |
 |--------|---------|
 | `gameState.js` ↔ pelit | Alapelit kommunikoivat portaalille `gameState.js` kautta |
-| `digGame1` → `digGame2` | Dig Gamen avain avaa Boulder Däshin portaalissa |
-| `digGame2` → tuleva | Boulder Däshin avain avaa seuraavan pelin |
+| `digGame1` → `digGame2` | Dig Gamen avain avaa Dig Däshin portaalissa |
+| `digGame2` → tuleva | Dig Däshin avain avaa seuraavan pelin |
 
 > **Sääntö:** Älä muuta pelien välistä kommunikaatiorajapintaa ilman erillistä pyyntöä.
 

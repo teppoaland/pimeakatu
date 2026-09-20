@@ -15,11 +15,11 @@ const GameState = (() => {
             coinCount: 0,
             hamburgerCount: 5
         },
-        // Onko Dig Game -pelin avain kerätty (avaa Boulder Däshin)
+        // Onko Dig Game -pelin avain kerätty (avaa Dig Däshin)
         digKeyCollected: false,
         boulderKeyCollected: false,
         bmKeyCollected: false,
-        // Boulder Däsh -tason 5 custom-kartta (tyhjä oletus)
+        // Dig Däsh -tason 5 custom-kartta (tyhjä oletus)
         customLevel5: null
     };
 

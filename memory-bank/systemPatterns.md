@@ -21,7 +21,7 @@
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Iframet (4 alipeliä):** `digGame1/` ⛏️ Dig Game · `digGame2/` 💎 Boulder Däsh · `bm/` ✈️ Blue Mäx · `fruitgame/` 🍒 Hedelmäpeli (talo 7, aina auki)
+**Iframet (4 alipeliä):** `digGame1/` ⛏️ Dig Game · `digGame2/` 💎 Dig Däsh · `bm/` ✈️ Blue Mäx · `fruitgame/` 🍒 Hedelmäpeli (talo 7, aina auki)
 
 **Kommunikaatio:** `window.parent.postMessage()` → portaalilta peleille ja takaisin
 
@@ -109,7 +109,7 @@ peli/
 
 - **localStorage:** `pimeakatu_gamestate` – pääportaalin pelitila
 - **Pelien sisäinen tila:** ei tallenneta (jokainen pelikerta alusta)
-- **Avaimet:** Dig Gamen avain → `digKeyCollected`, Boulder Däshin avain → `boulderKeyCollected`, Blue Mäxin avain → `bmKeyCollected`; Hedelmäpelin ilmaisen pyöräytyksen jäädytys on pelin **omassa** avaimessa `pimeakatu_fruit_free` (kadun `pimeakatu_gamestate` pysyy koskemattomana)
+- **Avaimet:** Dig Gamen avain → `digKeyCollected`, Dig Däshin avain → `boulderKeyCollected`, Blue Mäxin avain → `bmKeyCollected`; Hedelmäpelin ilmaisen pyöräytyksen jäädytys on pelin **omassa** avaimessa `pimeakatu_fruit_free` (kadun `pimeakatu_gamestate` pysyy koskemattomana)
 - **Äänitiedostot:** gitissä vain `knived_unafraid.mp3` (pelin taustamusiikki); biisien masterit ovat repon ulkopuolella `D:\AI\Knived` (`.gitignore` estää `*.mpeg`/`*.mp4`)
 
 ---

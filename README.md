@@ -20,7 +20,7 @@ street.js           → päävalikon logiikka (muokkaus täällä)
 style.css           → ulkoasu (CRT-efekti, värit, fontit)
 gameState.js        → tallennus (localStorage-rakenne)
 digGame1/           → ⛏️ Dig Game (kaivuripeli)
-digGame2/           → 💎 Boulder Däsh (timanttipeli)
+digGame2/           → 💎 Dig Däsh (timanttipeli)
 docs/               → dokumentaatio ja suunnitelmat
 ```
 
