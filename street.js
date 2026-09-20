@@ -150,7 +150,7 @@ const Street = (() => {
     let sleepHeldDown = false;     // ▼ reunanilmaisu
     let sleepPhase = 0;            // > 0 = nukkumisen pimennys käynnissä (frameä)
     const SLEEP_DARK_FRAMES = 45;   // ~0,75 s: ruutu ehtii mustaksi ennen Zzziä
-    const SLEEP_ZZZ_FRAMES  = 180;  // ~3 s: itse Zzz-efekti mustalla taustalla
+    const SLEEP_ZZZ_FRAMES  = 280;  // ~3 s: itse Zzz-efekti mustalla taustalla
     const SLEEP_FADE_FRAMES = SLEEP_DARK_FRAMES + SLEEP_ZZZ_FRAMES;  // ~3,75 s yhteensä
     let isDay = false;             // tallennettu päivä/yö-tila (state.isDay)
     let barRoom = false;
@@ -274,6 +274,7 @@ const Street = (() => {
     const DAY_LIGHT_RGB   = [70, 58, 40];  // additive-päivänvalon sävy
     const DAY_LIGHT_ALPHA = 0.30;          // 0 = ei valoa … ~0.35 = kirkas päivä
     const LAMP_DAY_DIM    = 0.15;          // paljonko lampun hehkusta jää päivällä
+    const MOSQUITO_DAY_DIM = 1;            // 1 = moskiitot häviävät päivällä (yöllä ennallaan), 0 = ei muutosta
     const VEHICLE_HEADLIGHT_DIM = 1;       // ajovalot: 1 = kokonaan pois päivällä, 0 = ei muutosta
     /* Testityökalut (eivät tallenna mitään): ?day=1 = päivä heti,
        ?day=0 = pakota yö. Pakotettu tila ohittaa tallennetun tilan eikä
@@ -282,6 +283,11 @@ const Street = (() => {
         ? new URLSearchParams(location.search).get('day') : null;
     const DAY_FORCE = (DAY_PARAM === '1') ? 'day' : (DAY_PARAM === '0' ? 'night' : null);
     const DAY_DEBUG = DAY_FORCE !== null;   // pakotettu → liuku heti perille
+    /* Päivä sammuttaa katuvalot kerran (v4.38): kun aurinko on noussut
+       täyteen (dayT === 1), kaikki lamput sammutetaan kertaalleen. Ne voi
+       silti potkaista uudelleen päälle myös päivällä. Lippu nollautuu vasta
+       kun yö on palannut → seuraava auringonnousu sammuttaa taas kerran. */
+    let dayLampsOff = false;
 
     /* ── Aukiolo (v4.34): Jukebox ja Hedelmäpeli auki vain öisin ──
        Päivällä ovesta tulee sama teksti-popup kuin lukitusta ovesta.
@@ -290,6 +296,15 @@ const Street = (() => {
     const CLOSED_SIGN    = 'Avoinna\nKlo 20 - 06';
     const CLOSED_AT_DAYT = 0.5;   // tämän yli = päivä = ovet kiinni
     function nightOnlyClosed() { return dayT >= CLOSED_AT_DAYT; }
+
+    /* ── Ovet auki ilman lampun potkaisua päivällä (v4.38) ──
+       Päivällä (dayT >= CLOSED_AT_DAYT) ovi aukeaa ilman että katuvalo
+       pitää potkaista päälle – valoisalla kadulla lamppu ei ole portti.
+       Avainportit (Dig Däsh vaatii digKey, Blue Mäx vaatii boulderKey) ja
+       makuuhuoneen 3 avainta pysyvät ennallaan, samoin koko yökäytös.
+       Nuppi DOOR_NO_LAMP_AT_DAY: false = vanha käytös (lamppu ensin aina). */
+    const DOOR_NO_LAMP_AT_DAY = true;
+    function lampFreeOpen() { return DOOR_NO_LAMP_AT_DAY && dayT >= CLOSED_AT_DAYT; }
 
     /* Päivän tavoite liu'ulle: 1 = päivä, 0 = yö. Tallennettu tila
        (isDay) ratkaisee, paitsi pakotettuna ?day=0/1. */
@@ -897,6 +912,28 @@ const Street = (() => {
                 dayT = Math.max(0, dayT - step);
             }
             if (Math.abs(dayWanted - dayT) < step) dayT = dayWanted;  // ei jää värähtelyä
+        }
+
+        // ── Päivä sammuttaa katuvalot kerran (v4.38) ──
+        // Kynnys on täysi päivä (dayT === 1): hehku on siihen mennessä jo
+        // hiipunut LAMP_DAY_DIM:iin, joten sammutus ei poksahda silmään.
+        // Lippu nollautuu vasta kun yö on palannut → kerran per auringonnousu.
+        // Lampun voi silti potkaista päälle myös päivällä (lit = true).
+        if (dayT === 1) {
+            if (!dayLampsOff) {
+                dayLampsOff = true;
+                let anyLit = false;
+                for (let i = 0; i < lamps.length; i++) {
+                    if (lamps[i].lit) {
+                        lamps[i].lit = false;
+                        state.litLamps[i] = false;
+                        anyLit = true;
+                    }
+                }
+                if (anyLit) GameState.save(state);
+            }
+        } else if (dayT === 0) {
+            dayLampsOff = false;
         }
 
         // ── Kuolemasekvenssi ─────────────────────────
@@ -1557,7 +1594,8 @@ const Street = (() => {
                     sleepPhase = 0;
                     return;
                 }
-                if (lamp.lit) {
+                // Päivällä lamppua ei tarvita (v4.38): valoisa katu avaa oven
+                if (lamp.lit || lampFreeOpen()) {
                     // Dig Däsh vaatii Dig Gamesta kerätyn avaimen
                     if (lamp.gameUrl && lamp.gameUrl.includes('digGame2') && !digKeyCollected) {
                         showNotification('🔑 Avain puuttuu! Saat avaimen kun läpäiset ensin pelin ensimmäisessä talossa!');
@@ -3301,7 +3339,8 @@ const Street = (() => {
                                !!(smallHouseLights[t.bldgIdx] && smallHouseLights[t.bldgIdx].lit);
             // Makuuhuone (talo 7): 3 avainta = ovi aina auki (valo palaa kynnyksellä)
             const sleepOpen = t.bldgIdx === SLEEP_BLDG_IDX && allKeysCollected();
-            const active = isBar || jukeboxLit || sleepOpen || !!(ownerLamp && ownerLamp.lit);
+            const active = isBar || jukeboxLit || sleepOpen ||
+                           !!(ownerLamp && (ownerLamp.lit || lampFreeOpen()));
             if (THRESH_LIGHT && active) {
                 ctx.save();
                 ctx.beginPath();
@@ -4487,8 +4526,9 @@ const Street = (() => {
         const by = GROUND_Y + 15;              // tolpan juuri (y = maanpinta + 15px alempana)
         const poleTop = by - LAMP_POST_H + 15; // tolpan yläpää
         const bulbY = poleTop - 8;             // lampun kupu (lähempänä tolppaa)
-        // Päivällä hehku himmenee (LAMP_DAY_DIM). HUOM: lamp.lit ei muutu
-        // mihinkään → ovet, pelit ja makuuhuone aukeavat kuten ennenkin.
+        // Päivällä hehku himmenee (LAMP_DAY_DIM) ja moskiitot häipyvät
+        // (MOSQUITO_DAY_DIM, v4.38). HUOM: lamp.lit ei muutu mihinkään →
+        // yöllä ovet aukeavat potkaistusta lampusta täsmälleen kuten ennenkin.
         const dayDim = 1 - LAMP_DAY_DIM * dayT;
 // Ylikuumentuneen lampun punainen hehku + savu
         if (lamp.overheat) {
@@ -4610,30 +4650,34 @@ const Street = (() => {
             ctx.beginPath();
             ctx.arc(bx, bulbY + 4, 4, 0, Math.PI*2);
             ctx.fill();
-            // Moskiitot lampun valossa
-            const t = Date.now() * 0.001;
-            const mAlphaMin = isTouchDevice ? 0.25 : 0.126;
-            const mAlphaRange = isTouchDevice ? 0.2 : 0.063;
-            const mRadius = isTouchDevice ? 2.0 : 1.3;
-            const mGlow = isTouchDevice;
-            for (let m = 0; m < 4; m++) {
-                const mt = t * (1.1 + m * 0.25);
-                const mx = bx + Math.cos(mt + m * 2.3) * (10 + Math.sin(mt * 0.6) * 5);
-                const my = bulbY + 6 + Math.sin(mt * 1.2 + m * 1.7) * (8 + Math.cos(mt * 0.8) * 4);
-                const malpha = mAlphaMin + Math.sin(mt * 2.5 + m) * mAlphaRange;
-                if (mGlow) {
-                    const glow = ctx.createRadialGradient(mx, my, 0, mx, my, mRadius * 2);
-                    glow.addColorStop(0, 'rgba(255,220,140,' + malpha + ')');
-                    glow.addColorStop(1, 'rgba(255,220,140,0)');
-                    ctx.fillStyle = glow;
+            // Moskiitot lampun valossa – häipyvät päivällä kokonaan (v4.38)
+            const mosquitoDim = 1 - MOSQUITO_DAY_DIM * dayT;
+            if (mosquitoDim > 0.01) {
+                ctx.globalAlpha = dayDim * mosquitoDim;
+                const t = Date.now() * 0.001;
+                const mAlphaMin = isTouchDevice ? 0.25 : 0.126;
+                const mAlphaRange = isTouchDevice ? 0.2 : 0.063;
+                const mRadius = isTouchDevice ? 2.0 : 1.3;
+                const mGlow = isTouchDevice;
+                for (let m = 0; m < 4; m++) {
+                    const mt = t * (1.1 + m * 0.25);
+                    const mx = bx + Math.cos(mt + m * 2.3) * (10 + Math.sin(mt * 0.6) * 5);
+                    const my = bulbY + 6 + Math.sin(mt * 1.2 + m * 1.7) * (8 + Math.cos(mt * 0.8) * 4);
+                    const malpha = mAlphaMin + Math.sin(mt * 2.5 + m) * mAlphaRange;
+                    if (mGlow) {
+                        const glow = ctx.createRadialGradient(mx, my, 0, mx, my, mRadius * 2);
+                        glow.addColorStop(0, 'rgba(255,220,140,' + malpha + ')');
+                        glow.addColorStop(1, 'rgba(255,220,140,0)');
+                        ctx.fillStyle = glow;
+                        ctx.beginPath();
+                        ctx.arc(mx, my, mRadius * 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.fillStyle = 'rgba(255,240,170,' + Math.min(1, malpha + (mGlow ? 0.15 : 0)) + ')';
                     ctx.beginPath();
-                    ctx.arc(mx, my, mRadius * 2, 0, Math.PI * 2);
+                    ctx.arc(mx, my, mRadius, 0, Math.PI * 2);
                     ctx.fill();
                 }
-                ctx.fillStyle = 'rgba(255,240,170,' + Math.min(1, malpha + (mGlow ? 0.15 : 0)) + ')';
-                ctx.beginPath();
-                ctx.arc(mx, my, mRadius, 0, Math.PI * 2);
-                ctx.fill();
             }
             ctx.restore();
         }
@@ -4659,7 +4703,8 @@ const Street = (() => {
         const jukeboxOpen = isJukebox && !!(smallHouseLights[bldgIdx] && smallHouseLights[bldgIdx].lit);
         // Makuuhuone (talo 7): kun kaikki 3 avainta on koossa, ovi on aina auki
         const sleepOpen = (bldgIdx === SLEEP_BLDG_IDX) && allKeysCollected();
-        const isActive = (isBar || jukeboxOpen || sleepOpen) ? true : (ownerLamp && ownerLamp.lit);
+        const isActive = (isBar || jukeboxOpen || sleepOpen) ? true
+                       : (ownerLamp && (ownerLamp.lit || lampFreeOpen()));
         const doorType = bldg.doorType || 0;
 
         // Syvyysefekti: ovi skaalautuu talon etäisyyden mukaan (pohjan keskipisteen ympäri)

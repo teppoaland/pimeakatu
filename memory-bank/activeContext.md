@@ -17,8 +17,14 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.37` (`index.html` → `#version-tag`) · **Git:** **v4.37 committattu ja pushattu
-  20.9.2026** (`273552c`, origin/main) · työpuu puhdas.
+- **Versio:** `v4.38` (`index.html` → `#version-tag`) · **Git:** v4.37 committattu ja pushattu
+  20.9.2026 (`273552c`, origin/main) · **v4.38 työpuussa, ei committia** (odottaa käyttäjän testausta).
+- **Päivä (v4.38):** ovet aukeavat **ilman lampun potkaisua** kun `dayT >= 0.5` (`lampFreeOpen()`,
+  `DOOR_NO_LAMP_AT_DAY`), moskiitot **häipyvät päivällä kokonaan** (`MOSQUITO_DAY_DIM 1`) ja
+  **täydellä päivällä (`dayT === 1`) kaikki katuvalot sammutetaan kerran** (`dayLampsOff`) –
+  ne voi silti potkaista päälle myös päivällä. Yöllä kaikki käytös on täsmälleen ennallaan.
+  **Käyttäjän testaus 20.9.2026: "Tuli hienosti" – valot napsahtavat pimeäksi vasta kun pimeä on
+  poistunut, "aivan kuin tosielämässä valoisuustunnistimet toimivat".**
 - **Päivä (v4.37):** kadun ajoneuvovirta **tuplataan päivällä** (`TRAFFIC_DAY_MULT 2`, kerroin
   liukuu `dayT`:n mukana) – yöllä liikenne täsmälleen ennallaan.
 - **Tila:** pääportaali + 4 alipeliä (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️, `fruitgame` 🍒) valmiit ja pelattavat.
@@ -37,6 +43,19 @@
 ---
 
 ## 🆕 Tuoreimmat versiot (20.9.2026)
+
+**v4.38 – Päivällä ovet auki ilman lamppua + moskiitot pois päivältä.** Uusi `lampFreeOpen()`
+(`DOOR_NO_LAMP_AT_DAY true`, raja `CLOSED_AT_DAYT 0.5`): päivällä `handleAction()` päästää sisään
+ilman potkaistua katuvaloa (`if (lamp.lit || lampFreeOpen())`), ja sama ehto ohjaa oven ulkoasua
+(`drawDoor()`in `isActive` ja kynnyksen valo), ettei ovi näytä lukitulta mutta aukea. Avainportit
+(Dig Däsh `digKeyCollected`, Blue Mäx `boulderKeyCollected`), makuuhuoneen 3 avainta, BAR,
+jukebox/hedelmäpelin yöaukiolo ja koko potkumekaniikka (ylikuumeneminen, 5/20 potkun cheatit)
+ennallaan – öinen "💡 Sytytä lamppu ensin!" säilyy. Moskiitot (`drawLampPost()`) piirretään vain kun
+`mosquitoDim = 1 - MOSQUITO_DAY_DIM * dayT > 0.01`: yöllä kerroin 1 (piirto bitilleen ennallaan),
+täydellä päivällä 0. Lisäksi **täysi päivä sammuttaa katuvalot kerran**: kun `dayT === 1`,
+`update()` nollaa kaikkien lamppujen `lit`-tilan ja tallentaa `state.litLamps`in (`dayLampsOff`-lippu,
+joka nollautuu vasta `dayT === 0`) – lamppuun voi silti potkaista valot päälle myös päivällä.
+Versio `v4.38`.
 
 **v4.37 – Päivällä kaksinkertainen liikenne.** Kaistan spawn-laskuri kuluu nyt
 `dt * (1 + (TRAFFIC_DAY_MULT - 1) * dayT)` (r. 1375): spawn-väli on yöllä 20–40 s/kaista
@@ -295,6 +314,11 @@ katuun (v4.11 ✅).
 - **Ajovalot (v4.35):** `VEHICLE_HEADLIGHT_DIM 1` (1 = kokonaan pois päivällä, 0 = ei muutosta) ·
   `headlightDim` / `headlightOn` `drawVehicle()`issa (r. ~4922) – auton ja mopon etuvalo + valokeila
   himmenevät `dayT`:n myötä; takavalot ja ambulanssin kattovilkku ennallaan.
+- **Päivä-ovet + moskiitot (v4.38):** `DOOR_NO_LAMP_AT_DAY true` + `lampFreeOpen()`
+  (raja `CLOSED_AT_DAYT 0.5`; `false` = vanha käytös, lamppu potkaistava aina) ·
+  `MOSQUITO_DAY_DIM 1` (1 = moskiitot häviävät päivällä, 0 = ei muutosta) –
+  `drawLampPost()`in moskiittolohko (r. ~4625) · `dayLampsOff`-lippu: `dayT === 1` sammuttaa
+  kaikki lamput kerran (`state.litLamps` tallennetaan), nollautuu `dayT === 0`.
 - **Makuuhuone (talo 7):** `SLEEP_BLDG_IDX 7` · `SLEEP_DARK_FRAMES 45` (~0,75 s pimennys) ·
   `SLEEP_ZZZ_FRAMES 180` (Zzz ~3 s) · `SLEEP_FADE_FRAMES = DARK + ZZZ` (~3,75 s yhteensä) ·
   `sleepSel` (0 = Nuku, 1 = Poistu) · sängyn koko paneelista (`bedW = min(340, panelW − 16)`),
