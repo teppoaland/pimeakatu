@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   game.js – Blue Max -lentopelin ydin
+   game.js – Blue Mäx -lentopelin ydin
    ═══════════════════════════════════════════════════════════ */
 const BlueMax = (() => {
 let cnv, ctx, afid, lt=0;

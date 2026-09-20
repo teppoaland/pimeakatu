@@ -1290,7 +1290,7 @@ const Street = (() => {
                         showNotification('🔑 Avain puuttuu! Saat avaimen kun läpäiset ensin pelin ensimmäisessä talossa!');
                         return;
                     }
-                    // Blue Max vaatii Dig Däshistä kerätyn avaimen
+                    // Blue Mäx vaatii Dig Däshistä kerätyn avaimen
                     if (lamp.gameUrl && lamp.gameUrl.includes('bm/') && !boulderKeyCollected) {
                         showNotification('🔑 Avain puuttuu tonttu! Hae se edellisestä talosta!');
                         return;

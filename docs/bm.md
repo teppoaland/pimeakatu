@@ -1,16 +1,16 @@
-# Blue Max — Memo
+# Blue Mäx — Memo
 
 Päivämäärä: 10.9.2026
 Versio: 1.1 (debuggauskorjaus)
 
 ## Mikä tämä on
-Blue Max on retroklassikosta inspiroitunut isometrinen lentopeli. Puhdas HTML + CSS +
+Blue Mäx on retroklassikosta inspiroitunut isometrinen lentopeli. Puhdas HTML + CSS +
 JavaScript, ei ulkoisia riippuvuuksia eikä kirjastoja. Toimii pelkällä tiedoston
 avaamisella selaimessa. Pelaaja ohjaa Sopwith Camel -kaksitasoa I maailmansodan
 rintamalla, ampuu viholliskoneita ja pommittaa maakohteita.
 
 Peli on osa **Pimeä Katu** -peliportaalia ja käynnistyy pääkadulta oven 3 kautta
-(lamppu: "BLUE MAX").
+(lamppu: "BLUE MÄX").
 
 ## Tiedostorakenne
 
@@ -154,5 +154,5 @@ Pelin suunniteltu jekku (plan.md:n mukainen):
   - KK-tuli ei toiminut: `ks[' ']` → `ks['Space']` (keyCode-korjaus)
   - Canvas-koko korjattu: CSS `width: 100% !important` → peliruutu on nyt footerin levyinen (max 800px)
   - Rakennevirhe `}})();` → `})();` (ylimääräinen sulkumerkki poistettu)
-- **v1.0: Blue Max** — peruspeli: lentäminen, ammunta, pommitus,
+- **v1.0: Blue Mäx** — peruspeli: lentäminen, ammunta, pommitus,
   laskeutuminen, äänet, Rule Britannia -intro, kolikon tunnistus.

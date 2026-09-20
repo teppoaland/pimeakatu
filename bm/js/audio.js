@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   audio.js – Blue Max -proseduraaliset äänet
+   audio.js – Blue Mäx -proseduraaliset äänet
    Web Audio API: moottori, kk, pommit, räjähdykset, Rule Britannia
    ═══════════════════════════════════════════════════════════ */
 const AudioFX = (() => {

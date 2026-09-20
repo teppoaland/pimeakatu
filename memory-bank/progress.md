@@ -45,6 +45,7 @@
 | 🧹 Siivous: commando_c64 pois git-historiasta + alipelikansion uudelleennimeäminen | ✅ v4.17 – `git filter-branch --index-filter` (vain `main`, Cline-checkpointit säilyivät) → 4 tiedostoa pois historiasta, 3 tyhjäksi jäänyttä committia karsiutui; `git mv bluemax_c64 bm` + `git mv docs/bluemax.md docs/bm.md`; viittaukset korjattu (`street.js` gameUrl + avainportti, `.clinerules/01`, `README.md`, `PROJECT.md`, `CHANGELOG.md`, `docs/plan.md`, `docs/bm.md`, muistipankki); versio v4.17 |
 | 🧹 Kaupalliset viittaukset siivottu (julkaisuvalmiutta varten) | ✅ v4.17 (jatko) – bändin nimi pois `audio.js`-kommenteista (melodia ja soitto ennallaan, käyttäjän päätös), `BOULDER DASH` → `Boulder Däsh` (19 tekstiä), `C64` → `dev` (5 kohtaa: näkyvä HUD-tägi + otsikot + `docs/bm.md`), `docs/boulder-dash-memo.md` → `docs/bd-memo.md` ja `docs/boulder-dash-build-cleanup.md` → `docs/bd-cleanup.md`; **havainto: `street.js`:n `lamps[].label` on kuollutta dataa** → kadun kyltit eivät näytä pelien nimiä (vain BAR piirretään erikseen); asset-taso puhdas (repossa vain `knived_unafraid.mp3`, kaikki grafiikka proseduraalista, äänet synteettisiä); 7 regressiotestiä 0 löydöstä; ei versionostoa |
 | 🏷️ Pelinimi: Boulder Däsh → Dig Däsh | ✅ 20.9.2026 – vain näkyvä nimi + tekstiviittaukset (23 kohtaa: pelin `<title>`/`<h1>`, `street.js`-label + kommentit, `gameState.js`/`bm/audio.js`-kommentit, README/PROJECT/docs/muistipankki); **sisäiset tunnisteet** (`boulderKeyCollected`, `BOULDER_KEY_COLLECTED`, `TILE.BOULDER`, `SCORE_BOULDER_FALL`), kansionimi `digGame2/` ja tiedostot `docs/bd-*.md` jäivät ennalleen (käyttäjän linjaus: sana `boulder` muuttujissa **ei** ole tavaramerkkiasia – saa olla, vain näkyvät tekstit muutetaan); ei versionostoa |
+| 🧹/🏷️ Nimi yhdenmukaiseksi: Blue Max → Blue Mäx (ei-näkyvät tekstit) | ✅ 20.9.2026 – käyttäjän löydös `docs/plan.md:38` → koko repo tarkistettu: **näkyvät tekstit olivat jo muodossa `Blue Mäx`** (vaihdettu jo v2.9 / commit `99be099`: title, h1, canvas-intro, lamppulabel) ja `C64` poistettu v4.17:ssä, mutta **8 tiedostossa oli yhä muoto ilman ä:tä**: `docs/plan.md:38`, `.clinerules/01-general-architecture.md:33`, `PROJECT.md:31,58,66`, `docs/bm.md:1,7,13,157`, `bm/css/style.css:2`, `bm/js/audio.js:2`, `bm/js/game.js:2`, `street.js:1293` (kommentti, suojattu tiedosto – käyttäjän hyväksymä; sama rivi siivottiin jo v4.17:ssä) + `memory-bank/progress.md:76,80` → kaikki muotoon `Blue Mäx`; **ennallaan:** `const BlueMax`, `window.BlueMax.init`, `bmKeyCollected`, kansionimi `bm/`, `docs/bm.md`, näkyvät `bm/game_main.html:6,12` ja `bm/js/game.js:138`; **arvioitu ei-kaupallisiksi:** "Rule Britannia" (perinteinen 1740-luvun laulu, PD) ja "Sopwith Camel" (historiallinen WWI-kone); git-commit-metatieto (initial commit `71b4247`) jäi – vaatisi `--msg-filter`-uudelleenkirjoituksen; ei versionostoa (sääntö 03) |
 
 
 | Oviukko (Avenger): ovesta tuleva hyökkääjä | ✅ v4.14 – potkun pudotukseen 3. arvonta: **1/8 + 30 s cooldown → pelaajan kaksonen astuu ovesta kynnykseltä** (ei putoa kuten ruukku/kolikko), juoksee 2.0 px/f (> pelaaja 1.225) kiinni → **ei väistettävissä**; osuma = tainnutus 600 f + **−1 🍔** (ei tuplaosumaa; 🍔 0 → kuolema), paluu ovelle ja katoaminen; iframen aikana jäissä; portti `!avenger` estää ruukun/kolikon samaan aikaan; uusi ääni `playKnock()`; ei uusia tekstejä; **v4.15 – isku dramaattisemmaksi: kontakti jäädyttää koko maailman 3 s (hit-stop + vinjetti + iskuvälähdys + tärinä + tähdet), vasta lopuksi pelaaja kosahtaa kasaan (tainnutus 600 f + −1 🍔)** |
@@ -73,11 +74,11 @@
 | Äänet, kosketusohjaus, iframe | ✅ |
 | Kolikot | ✅ v3.72 – DG1:1, DG2:4 (1/taso), hiljainen keräys |
 
-## ✈️ Blue Max (bm/)
+## ✈️ Blue Mäx (bm/)
 
 | Ominaisuus | Tila |
 |-----------|------|
-| Blue Max: lento, taistelu, HUD | ✅ |
+| Blue Mäx: lento, taistelu, HUD | ✅ |
 
 ## 🛠️ Infrastruktuuri
 `.clinerules/`, `memory-bank/`, Git – ✅

@@ -28,7 +28,7 @@ kerää timantteja. Leveys ~77 ruutua. [Lisätiedot →](docs/dig-game-memo.md)
 Klassinen 4 tason Dig Däsh -tyylinen timanttienkeruupeli aikarajalla.
 [Lisätiedot →](docs/bd-memo.md)
 
-### ✈️ Blue Max (`bm/`) – *tulossa*
+### ✈️ Blue Mäx (`bm/`) – *tulossa*
 Isometrinen lentely- ja pommituspeli.
 [Lisätiedot →](docs/bm.md)
 
@@ -55,7 +55,7 @@ D:\AI\Main\
 │   ├── js/ (8 tiedostoa)
 │   └── game_main.html    Kehitysversio (ainoa versio)
 │
-├── bm/                   ✈️ Blue Max (tulossa)
+├── bm/                   ✈️ Blue Mäx (tulossa)
 ├── entrance/             Varakansio
 │
 └── docs/
@@ -63,7 +63,7 @@ D:\AI\Main\
     ├── dig-game-memo.md   Dig Game -muistio
     ├── dig-game-roadmap.md Dig Game -kehityssuunnitelma
     ├── bd-memo.md          Dig Däsh -muistio
-    └── bm.md              Blue Max -muistio
+    └── bm.md              Blue Mäx -muistio
 ```
 
 ## 🔧 Tekninen toteutus
