@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> v4.17 – 20.9.2026
+> v4.20 – 20.9.2026
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -49,6 +49,7 @@
 
 
 | Oviukko (Avenger): ovesta tuleva hyökkääjä | ✅ v4.14 – potkun pudotukseen 3. arvonta: **1/8 + 30 s cooldown → pelaajan kaksonen astuu ovesta kynnykseltä** (ei putoa kuten ruukku/kolikko), juoksee 2.0 px/f (> pelaaja 1.225) kiinni → **ei väistettävissä**; osuma = tainnutus 600 f + **−1 🍔** (ei tuplaosumaa; 🍔 0 → kuolema), paluu ovelle ja katoaminen; iframen aikana jäissä; portti `!avenger` estää ruukun/kolikon samaan aikaan; uusi ääni `playKnock()`; ei uusia tekstejä; **v4.15 – isku dramaattisemmaksi: kontakti jäädyttää koko maailman 3 s (hit-stop + vinjetti + iskuvälähdys + tärinä + tähdet), vasta lopuksi pelaaja kosahtaa kasaan (tainnutus 600 f + −1 🍔)** |
+| 🎵 Jukebox-huone (talo 5, ovi x410) | ✅ v4.20 – potkaise ikkunat valaistuiksi → ovi aukeaa (2. painallus), 1 kolikko = koko kappale (`jukebox/` 3 × 128 kbps mp3, taso ≈ −13,5 LUFS); valinta ▲/▼ 0–3 (0 = ei valintaa → ei maksua eikä soittoa), soidessa valinta lukossa ja kappale soi loppuun; kappale peruuttaa taustamusiikin syklin ja taustamusiikki palaa `JUKEBOX_GAP` 2,5 s jälkeen; `killPlayer` pysäyttää myös jukeboxin; proseduraalinen Wurlitzer + neonkyltti + kynnysvalo kun valot palavat; 1/5 arpa ei ole enää tavoitettavissa talossa 5 (kuten hedelmäpelitalossa v4.11) |
 ## 🍒 Hedelmäpeli (fruitgame/) – Vaihe 1 + debug 19.9.2026
 
 | Ominaisuus | Tila |

@@ -14,6 +14,7 @@ syttyäkseen ja astuu talojen oviin päästäkseen alapeleihin.
 | Toiminto | Välilyönti = potku (missä vain) / ovesta sisään |
 | Lamput | 5 kpl talojen väleissä – potkaise sytyttääksesi |
 | Ovet | 9 talossa, 5 aktiivista (lampun takana), 4 lukittua |
+| Jukebox | **Talo 5** (ovi x410), BM-talon edessä: potkaise ikkunat valaistuiksi → ovi aukeaa. 1 kolikko = koko kappale. [Memo →](docs/jukebox-memo.md) |
 | Kolikko | Löydettävissä kadun oikeasta reunasta → `inventory.coin` |
 | Reset | ✕-nappi oikealla ylhäällä → tyhjentää localStorage |
 | Tilanhallinta | `localStorage`: lamput + inventory säilyy F5:n yli |
@@ -73,6 +74,7 @@ D:\AI\Main\
 - **iframe-integraatio** – alapelit ladataan iframe-overlayhin
 - **localStorage** – pelitila säilyy selainistuntojen yli (`pimeakatu_gamestate`)
 - **CRT Scanline** CSS-efekti retro-tunnelmaa varten
+- **Jukebox** – `jukebox/`-kansio: 3 koko kappaletta (128 kbps mp3), soitetaan talosta 5 (1 kolikko / kappale)
 - **Mobiilituki** – D-pad + toimintanappi, `touch-action: none`
 - **Responsiivinen** – canvas skaalautuu näytön kokoon
 

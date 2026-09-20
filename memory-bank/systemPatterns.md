@@ -23,6 +23,8 @@
 
 **Iframet (4 alipeliä):** `digGame1/` ⛏️ Dig Game · `digGame2/` 💎 Dig Däsh · `bm/` ✈️ Blue Mäx · `fruitgame/` 🍒 Hedelmäpeli (talo 7, aina auki)
 
+**Kadun omat canvas-huoneet (ei iframe):** palkintohuone (`buildings[7]`, kaikki avaimet tai 3 kolikkoa) · BAR (talo 9, 🍔) · **jukebox (talo 5, `buildings[4]`, ovi x 410)** – ovi aukeaa kun ikkunat on potkaistu valaistuiksi, 1 kolikko = koko kappale (`StreetAudio.playJukebox()`).
+
 **Kommunikaatio:** `window.parent.postMessage()` → portaalilta peleille ja takaisin
 
 ---
@@ -51,6 +53,7 @@ peli/
 **bm/** on kevyempi: `game_main.html` + `css/style.css` + `js/game.js` + `js/audio.js` (ei constants/levels/physics/enemies/renderer/input-tiedostoja).
 **fruitgame/:** `game_main.html` + `css/style.css` + `js/{constants,renderer,input,audio,game}.js`.
 **Portaalin juuressa:** `index.html`, `style.css`, `street.js`, `gameState.js` ja `audio.js` (taustamusiikki `knived_unafraid.mp3` + SFX) – ei `js/`-kansiota.
+**`jukebox/`** (juuressa): 3 koko kappaletta 128 kbps mp3 (`our_song`, `unafraid`, `unafraid_instrumental`) – soitetaan kadun jukebox-huoneesta (talo 5); masterit `*.mpeg` ovat repon ulkopuolella (`D:\AI\Knived`, `.gitignore`).
 
 ---
 

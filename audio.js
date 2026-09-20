@@ -25,6 +25,14 @@ const StreetAudio = (() => {
 
     const MUSIC_VOLUME = 0.05; // kappaleen perusvoimakkuus (vastaa masterGain 0.05025)
 
+    // ── Jukebox (kadun jukebox-huone): koko kappale alusta loppuun ──
+    // Taustamusiikin sykli peruutetaan soiton ajaksi ja palaa itsestään.
+    const JUKEBOX_VOLUME = MUSIC_VOLUME; // soittotaso (säädettävä nuppi – sama kuin taustamusiikki)
+    const JUKEBOX_GAP = 2500;            // ms taukoa ennen kuin taustamusiikki palaa
+    let jukeEl = null;                   // <audio> jukebox-kappaleelle (koko kappale)
+    let jukePlaying = false;              // soiko jukebox-kappale parhaillaan
+    let pendingJukeUrl = null;            // autoplay-esto: soitetaan seuraavassa eleessä
+
     const BPM_MIN = 110;
     const BPM_MAX = 142;
     let BPM = 138;
@@ -164,6 +172,93 @@ const StreetAudio = (() => {
             try { musicEl.volume = MUSIC_VOLUME; } catch (e) {} // palauta perustaso seuraavaa soittoa varten
         }
     }
+
+    /* ═══════════════════════════════════════════════════
+       JUKEBOX: koko kappale alusta loppuun (ostetaan kadulla)
+       – peruuttaa taustamusiikin syklin soiton ajaksi
+       – palaa automaattisesti taustamusiikkiin (JUKEBOX_GAP)
+       – peliäänet (SFX) eivät liity tähän mitenkään
+       ═══════════════════════════════════════════════════ */
+
+    /* Peruuttaa käynnissä olevan syklin: ajastimet, MP3 ja syntikka hiljaa.
+       HUOM: phase asetetaan kutsujan toimesta (jukebox ei ole 'playing'). */
+    function cancelCycle() {
+        if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
+        if (loopId) { clearInterval(loopId); loopId = null; }
+        if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
+        started = false;
+        stopMusicLoop();                            // MP3 tauolle + currentTime = 0 + volume takaisin
+        if (synthGain) synthGain.gain.value = 0;    // syntikka ei soi päällekkäin
+    }
+
+    /* Kappale päättyi (koko kappale soi) → taustamusiikki palaa hetken kuluttua. */
+    function onJukeboxEnded() {
+        jukePlaying = false;
+        if (phase !== 'jukebox') return;
+        phase = 'silent';
+        if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
+        cycleTimer = setTimeout(playPhase, JUKEBOX_GAP);
+    }
+
+    /* Palauttaa taustamusiikkiin myös virhetilanteessa (tiedosto ei aukea / autoplay esto). */
+    function resumeAfterJukebox() {
+        if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
+        if (phase === 'jukebox') phase = 'silent';
+        if (!cycleTimer) cycleTimer = setTimeout(playPhase, JUKEBOX_GAP);
+    }
+
+    /* Soittaa koko kappaleen alusta loppuun. Palauttaa false jos ääntä ei saada
+       lainkaan (kadun puoli voi silloin palauttaa kolikon). */
+    function playJukebox(url) {
+        init();
+        if (!ctx) return false;
+        try { if (ctx.state === 'suspended') ctx.resume(); } catch (e) {}
+        cancelCycle();
+        phase = 'jukebox';   // ei 'playing' → canplay/onGesture eivät käynnistä taustamusiikkia
+        if (!jukeEl) {
+            try {
+                jukeEl = new Audio();
+            } catch (e) {
+                return false;
+            }
+            jukeEl.loop = false;
+            jukeEl.preload = 'auto';
+            jukeEl.addEventListener('ended', onJukeboxEnded);
+            jukeEl.addEventListener('error', () => {
+                // Kappale ei aukea → älä jää jumiin, taustamusiikki takaisin
+                jukePlaying = false;
+                pendingJukeUrl = null;
+                jukeEl = null;
+                resumeAfterJukebox();
+            });
+        }
+        try { jukeEl.volume = JUKEBOX_VOLUME; } catch (e) {}
+        jukePlaying = true;
+        pendingJukeUrl = null;
+        try { jukeEl.src = url; } catch (e) { jukePlaying = false; return false; }
+        const p = jukeEl.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(() => {
+                // Autoplay estetty → soitetaan seuraavassa eleessä (osto on jo tehty)
+                jukePlaying = false;
+                pendingJukeUrl = url;
+                resumeAfterJukebox();
+            });
+        }
+        return true;
+    }
+
+    /* Pysäyttää jukeboxin (kuolema, uusi kappale, sivun sulku). */
+    function stopJukebox() {
+        jukePlaying = false;
+        pendingJukeUrl = null;
+        if (jukeEl) {
+            try { jukeEl.pause(); } catch (e) {}
+            try { jukeEl.currentTime = 0; } catch (e) {}
+        }
+    }
+
+    function isJukeboxPlaying() { return jukePlaying; }
 
     /* ═══════════════════════════════════════════════════
        RUMMUT: Kick, Snare, Hi-hat
@@ -511,6 +606,15 @@ const StreetAudio = (() => {
     function onGesture() {
         init();
         if (ctx && ctx.state === 'suspended') ctx.resume();
+        // Jukebox soi → ei taustamusiikkia päälle
+        if (jukePlaying || phase === 'jukebox') return;
+        // Autoplay-eston jälkeen soitetaan odottava jukebox-kappale (osto on jo tehty)
+        if (pendingJukeUrl) {
+            const url = pendingJukeUrl;
+            pendingJukeUrl = null;
+            playJukebox(url);
+            return;
+        }
         // Käyttäjän ele avaa autoplay-lukon → kokeile MP3:a uudelleen jos se oli estetty
         if (musicReady && musicBlocked) {
             musicBlocked = false;
@@ -593,6 +697,8 @@ const StreetAudio = (() => {
         if (ctx.state === 'suspended') {
             ctx.resume();
         }
+        // Jukebox soi → ei käynnistetä taustamusiikkia sen päälle
+        if (jukePlaying || phase === 'jukebox') return;
         // Käynnistä vain jos mikään sykli ei ole käynnissä
         if (!cycleTimer && !started) playPhase();
     }
@@ -603,11 +709,13 @@ const StreetAudio = (() => {
         if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
         started = false;
         phase = 'silent';
+        stopJukebox();             // myös jukebox-kappale hiljenee (kuolema keskeyttää kaiken)
         stopMusicLoop();
     }
 
     function getCtx() { init(); return ctx; }
     function getDestination() { init(); return ctx ? ctx.destination : null; }
 
-    return { init, start, stop, playDeathGong, getCtx, getDestination };
+    return { init, start, stop, playDeathGong, getCtx, getDestination,
+             playJukebox, stopJukebox, isJukeboxPlaying };
 })();

@@ -93,6 +93,7 @@ const Street = (() => {
     const THRESH_LIGHT = true;       // oviaukon valo aktiivisille oville
     const THRESH_LIGHT_HOUSE = '255,230,150';   // talojen lämmin valo
     const THRESH_LIGHT_BAR = '255,102,163';     // BAR: neonpinkki (sopii kylttiin)
+    const THRESH_LIGHT_JUKEBOX = '215,130,255'; // Jukebox-talo (talo 5): violetti neoni
     const KERB_GAP_EXTRA = 5;        // lasketun reunakiven lisäys oven leveyteen
 
     /* ── Mustat lehdettömät puut (isoimmat raot) ── */
@@ -138,6 +139,22 @@ const Street = (() => {
     let barBuyQty = 0;             // BAR: tämän vierailun ostetut (▼ peruu vain nämä)
     let barBuyHeldUp = false;      // ▲ reunanilmaisu – ei toistoa pohjassa
     let barBuyHeldDown = false;    // ▼ reunanilmaisu
+
+    /* ── Jukebox (talo 5, buildings[4], ovi x 410) ────
+       Ovi aukeaa vasta kun talon ikkunat on potkaistu valaistuiksi
+       (1. painallus ovella = potku → valot 20 s, 2. painallus = sisään).
+       1 kolikko = 1 kappale, joka soi kokonaan loppuun asti. */
+    const JUKEBOX_BLDG_IDX = 4;
+    const JUKEBOX_TRACKS = [
+        { url: 'jukebox/our_song.mp3',              title: 'Knived - Our Song' },
+        { url: 'jukebox/unafraid.mp3',              title: 'Knived - Unafraid' },
+        { url: 'jukebox/unafraid_instrumental.mp3', title: 'Knived - Unafraid (inst.)' }
+    ];
+    let jukeboxRoom = false;
+    let jukeSel = 0;               // 0 = ei valintaa, 1..N = kappale
+    let jukeHeldUp = false;        // ▲ reunanilmaisu
+    let jukeHeldDown = false;      // ▼ reunanilmaisu
+    let jukeTrack = 0;             // soiva kappale (1..N, 0 = ei mitään tällä istunnolla)
     let coinCount = 0;
     let coinRespawnTimer = 0;
     let hamburgerCount = 5;
@@ -815,6 +832,55 @@ const Street = (() => {
             return;
         }
 
+        // JUKEBOX-huone (talo 5) – valinta nuolilla, osto + soitto poistuttaessa
+        //   ▲ / W = valitse seuraava      ▼ / S = valitse edellinen
+        //   0 = ei valintaa → poistuminen ei veloita eikä soita mitään
+        //   (o) / Space / Enter / ⚡ = poistu: valinta 1-N → 1 kolikko + koko kappale
+        if (jukeboxRoom) {
+            const selUp = !!(keys['ArrowUp'] || keys['w'] || keys['W']);
+            const selDown = !!(keys['ArrowDown'] || keys['s'] || keys['S']);
+            const trackCount = JUKEBOX_TRACKS.length;
+            const songPlaying = StreetAudio.isJukeboxPlaying();
+
+            // Valinta on lukossa kun kappale soi (soi aina loppuun asti)
+            if (!songPlaying) {
+                if (selUp && !jukeHeldUp) jukeSel = Math.min(trackCount, jukeSel + 1);
+                if (selDown && !jukeHeldDown) jukeSel = Math.max(0, jukeSel - 1);
+            }
+            jukeHeldUp = selUp;
+            jukeHeldDown = selDown;
+
+            if (actionJustPressed) {
+                if (!songPlaying && jukeSel > 0) {
+                    if (coinCount > 0) {
+                        coinCount--;
+                        state.inventory.coinCount = coinCount;
+                        GameState.save(state);
+                        updateHUD();
+                        if (StreetAudio.playJukebox(JUKEBOX_TRACKS[jukeSel - 1].url)) {
+                            jukeTrack = jukeSel;
+                            playCoin();
+                        } else {
+                            // Ääntä ei saatu lainkaan → kolikko takaisin
+                            coinCount++;
+                            state.inventory.coinCount = coinCount;
+                            GameState.save(state);
+                            updateHUD();
+                            showNotification('🔇 Ääntä ei saatu – kolikko palautettiin.');
+                        }
+                    } else {
+                        showNotification('💰 Ei kolikoita!');
+                    }
+                }
+                jukeboxRoom = false;
+                jukeSel = 0;
+                jukeHeldUp = false;
+                jukeHeldDown = false;
+            }
+            actionJustPressed = false;
+            return;
+        }
+
         updateClouds(dt);
         updateForeground(dt);
 
@@ -1270,6 +1336,19 @@ const Street = (() => {
             return;
         }
 
+        // 0.5 JUKEBOX (talo 5, buildings[4], ovi x 410) – ovi aukeaa vasta kun talon
+        //     ikkunat palavat (1. painallus ovella = potku → valot syttyvät 20 s)
+        const jkDoor = doorCenter(buildings[JUKEBOX_BLDG_IDX]);
+        const jkLights = smallHouseLights[JUKEBOX_BLDG_IDX];
+        const jkdx = px - jkDoor.x, jkdy = py - jkDoor.y;
+        if (jkLights && jkLights.lit && Math.sqrt(jkdx * jkdx + jkdy * jkdy) < DOOR_RADIUS) {
+            jukeboxRoom = true;
+            jukeSel = 0;
+            jukeHeldUp = false;
+            jukeHeldDown = false;
+            return;
+        }
+
         // 1. OVET ENSIN – ei potkua, kävellään suoraan sisään
         for (let i = 0; i < lamps.length; i++) {
             const lamp = lamps[i];
@@ -1524,6 +1603,10 @@ const Street = (() => {
         bmKeyCollected = state.bmKeyCollected || false;
         darkRoom = false;
         barRoom = false;
+        jukeboxRoom = false;
+        jukeSel = 0;
+        jukeHeldUp = false;
+        jukeHeldDown = false;
         player.x = savedPlayerX; player.y = savedPlayerY;
         player.vx = 0; player.vy = 0;
         updateHUD();
@@ -1988,7 +2071,9 @@ const Street = (() => {
                 cracks: cracks,
                 pebbles: pebbles,
                 slab: { x: Math.round(cx - slabW / 2), y: GROUND_Y + 2, w: slabW, h: Math.max(4, Math.round(5 * s)) },
-                lightRGB: bi === 8 ? THRESH_LIGHT_BAR : THRESH_LIGHT_HOUSE,
+                lightRGB: bi === 8 ? THRESH_LIGHT_BAR
+                        : bi === JUKEBOX_BLDG_IDX ? THRESH_LIGHT_JUKEBOX
+                        : THRESH_LIGHT_HOUSE,
                 depth: y0 - yTop
             });
             foreground.kerbGaps.push({ l: gapL, r: gapR });
@@ -2052,6 +2137,8 @@ const Street = (() => {
         if (darkRoom) { camX = (WORLD_W - viewW) / 2; ctx.save(); ctx.translate(-Math.round(camX), 0); drawDarkRoom(); ctx.restore(); return; }
 
         if (barRoom) { camX = (WORLD_W - viewW) / 2; ctx.save(); ctx.translate(-Math.round(camX), 0); drawBarRoom(); ctx.restore(); return; }
+
+        if (jukeboxRoom) { camX = (WORLD_W - viewW) / 2; ctx.save(); ctx.translate(-Math.round(camX), 0); drawJukeboxRoom(); ctx.restore(); return; }
 
         ctx.save();
         ctx.translate(-Math.round(camX), 0);
@@ -2921,7 +3008,9 @@ const Street = (() => {
             // 2) Oviaukon valo (vain aktiivisille oville – sama logiikka kuin drawDoor)
             const isBar = t.bldgIdx === 8;
             const ownerLamp = lamps.find(l => l.bldgIdx === t.bldgIdx);
-            const active = isBar || !!(ownerLamp && ownerLamp.lit);
+            const jukeboxLit = t.bldgIdx === JUKEBOX_BLDG_IDX &&
+                               !!(smallHouseLights[t.bldgIdx] && smallHouseLights[t.bldgIdx].lit);
+            const active = isBar || jukeboxLit || !!(ownerLamp && ownerLamp.lit);
             if (THRESH_LIGHT && active) {
                 ctx.save();
                 ctx.beginPath();
@@ -3310,6 +3399,246 @@ const Street = (() => {
         ctx.textAlign = 'start';
     }
 
+    /* ── Jukebox-huone (talo 5) ────────────────────
+       Valinta: 0 = ei valintaa (ei veloitusta), 1..N = kappale (1 kolikko,
+       soi kokonaan loppuun). HUOM: jukebox ei muuta peliääniä mitenkään. */
+    function drawJukeboxRoom() {
+        const W = WORLD_W, H = WORLD_H;
+        const now = Date.now();
+        const playing = StreetAudio.isJukeboxPlaying();
+        const trackCount = JUKEBOX_TRACKS.length;
+
+        // 1) Tausta + lämminvioletti seinä
+        ctx.fillStyle = '#08060e';
+        ctx.fillRect(0, 0, W, H);
+        const wall = ctx.createLinearGradient(0, 50, 0, GROUND_Y);
+        wall.addColorStop(0, '#1c1122');
+        wall.addColorStop(1, '#2b1a2e');
+        ctx.fillStyle = wall;
+        ctx.fillRect(40, 50, W - 80, GROUND_Y - 50);
+        // Lattia + lautojen perspektiivi
+        ctx.fillStyle = '#120d16';
+        ctx.fillRect(40, GROUND_Y, W - 80, H - GROUND_Y - 40);
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.fillRect(40, GROUND_Y, W - 80, 1);
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= 8; i++) {
+            const fx = 40 + i * (W - 80) / 8;
+            ctx.moveTo(fx, GROUND_Y + 1);
+            ctx.lineTo(fx + (fx - W / 2) * 0.16, H - 40);
+        }
+        ctx.stroke();
+
+        // 2) Otsikko
+        const glow = 0.7 + Math.sin(now / 500) * 0.3;
+        ctx.save();
+        ctx.font = '13px "Press Start 2P", monospace';
+        ctx.textAlign = 'left';
+        ctx.shadowColor = '#FF0055';
+        ctx.shadowBlur = 8 + glow * 8;
+        ctx.fillStyle = '#FF66A3';
+        ctx.fillText('♪ JUKEBOX', 62, 90);
+        ctx.restore();
+        ctx.fillStyle = 'rgba(230,225,235,0.6)';
+        ctx.font = '11px "Courier New", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('1 🪙 = koko kappale (soi loppuun asti)', 62, 108);
+
+        // 3) Kappalelista: rivi 0 = ei valintaa, rivit 1..N = kappaleet
+        const rowX = 62, rowW = 400, rowH = 30, rowGap = 6, rowTop = 126;
+        for (let i = 0; i <= trackCount; i++) {
+            const y = rowTop + i * (rowH + rowGap);
+            const selected = (i === jukeSel);
+            const playingRow = playing && i > 0 && i === jukeTrack;
+            if (selected) {
+                ctx.fillStyle = 'rgba(255,0,85,0.16)';
+                ctx.fillRect(rowX, y, rowW, rowH);
+                ctx.strokeStyle = '#FF0055';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(rowX + 0.5, y + 0.5, rowW - 1, rowH - 1);
+            } else {
+                ctx.fillStyle = 'rgba(255,255,255,0.035)';
+                ctx.fillRect(rowX, y, rowW, rowH);
+                ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(rowX + 0.5, y + 0.5, rowW - 1, rowH - 1);
+            }
+            // Numero
+            ctx.textAlign = 'left';
+            ctx.fillStyle = selected ? '#FF66A3' : 'rgba(255,255,255,0.45)';
+            ctx.font = '9px "Press Start 2P", monospace';
+            ctx.fillText(String(i), rowX + 14, y + 20);
+            // Nimi
+            ctx.fillStyle = selected ? '#ffffff' : 'rgba(230,225,235,0.75)';
+            ctx.font = '14px "Courier New", monospace';
+            ctx.fillText((i === 0) ? 'ei valintaa' : JUKEBOX_TRACKS[i - 1].title, rowX + 42, y + 20);
+            // Oikea reuna: soitossa ♪ SOI, kappaleilla 1 🪙, rivillä 0 viiva
+            ctx.textAlign = 'right';
+            if (playingRow) {
+                ctx.fillStyle = '#ffdd88';
+                ctx.font = 'bold 13px "Courier New", monospace';
+                ctx.fillText('♪ SOI', rowX + rowW - 12, y + 20);
+            } else if (i > 0) {
+                ctx.fillStyle = selected ? '#FFD700' : 'rgba(255,215,0,0.65)';
+                ctx.font = '13px "Courier New", monospace';
+                ctx.fillText('1 🪙', rowX + rowW - 12, y + 20);
+            } else {
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.font = '13px "Courier New", monospace';
+                ctx.fillText('–', rowX + rowW - 12, y + 20);
+            }
+        }
+        ctx.textAlign = 'left';
+        // 4) Tilatekstit (soi / valinta / ei valintaa)
+        const infoY = rowTop + (trackCount + 1) * (rowH + rowGap) + 16;
+        ctx.font = '14px "Courier New", monospace';
+        if (playing) {
+            const t = (jukeTrack > 0) ? JUKEBOX_TRACKS[jukeTrack - 1].title : '';
+            ctx.fillStyle = '#ffdd88';
+            ctx.fillText('🔊 SOI NYT: ' + t, 62, infoY);
+            ctx.font = '12px "Courier New", monospace';
+            ctx.fillText('Kappale soi loppuun asti – valinta vapautuu sen jälkeen', 62, infoY + 17);
+        } else if (jukeSel > 0) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('Valinta: ' + jukeSel + ' – ' + JUKEBOX_TRACKS[jukeSel - 1].title, 62, infoY);
+            ctx.font = '12px "Courier New", monospace';
+            if (coinCount > 0) {
+                ctx.fillStyle = '#8ce88c';
+                ctx.fillText('Poistu (⚡ / Space) = osta ja soita (1 🪙)', 62, infoY + 17);
+            } else {
+                ctx.fillStyle = '#ff8080';
+                ctx.fillText('💰 Ei kolikoita!', 62, infoY + 17);
+            }
+        } else {
+            ctx.fillStyle = 'rgba(230,225,235,0.8)';
+            ctx.fillText('Ei valintaa – poistuminen ei maksa mitään', 62, infoY);
+        }
+
+        // 5) Kolikkosaldo
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#FFD700';
+        ctx.font = '13px "Courier New", monospace';
+        ctx.fillText('💰 Kolikoita: ' + coinCount, W - 62, 90);
+        ctx.textAlign = 'left';
+
+        // 6) Jukebox-kone oikealla
+        drawJukeboxCabinet(560, GROUND_Y + 4, now, playing, jukeSel > 0);
+
+        // 7) Alaohje (BAR-huoneen tyylillä)
+        const pulse = Math.sin(now / 800) * 0.3 + 0.7;
+        ctx.fillStyle = 'rgba(255,255,255,' + pulse + ')';
+        ctx.font = '10px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('▲ = valitse   ▼ = valitse   POISTU: (o) / Space', 400, 386);
+        ctx.textAlign = 'start';
+    }
+
+    /* Jukebox-kone: Wurlitzer-henkinen kaappi (proseduraalinen, ei kuvatiedostoja) */
+    function drawJukeboxCabinet(x, baseY, now, playing, armed) {
+        const w = 176, h = 210;
+        const top = baseY - h;
+        const cx = x + w / 2;
+
+        // Varjo lattialla
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.beginPath();
+        ctx.ellipse(cx, baseY + 2, w * 0.5, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Runko: tumma puu/metal, kaareva huippu
+        const body = ctx.createLinearGradient(x, 0, x + w, 0);
+        body.addColorStop(0, '#20120c');
+        body.addColorStop(0.35, '#5a3a22');
+        body.addColorStop(0.7, '#3a2418');
+        body.addColorStop(1, '#20120c');
+        ctx.fillStyle = body;
+        ctx.beginPath();
+        ctx.moveTo(x, baseY);
+        ctx.lineTo(x, top + 46);
+        ctx.quadraticCurveTo(x, top, cx, top);
+        ctx.quadraticCurveTo(x + w, top, x + w, top + 46);
+        ctx.lineTo(x + w, baseY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Neonkaari: vuorotellen pinkki ja keltainen, hidas pulssi
+        const segs = 9;
+        const pulse = (Math.sin(now / 260) + 1) / 2;
+        ctx.lineWidth = 5;
+        for (let i = 0; i < segs; i++) {
+            const a0 = Math.PI + (i / segs) * Math.PI;
+            const a1 = Math.PI + ((i + 1) / segs) * Math.PI;
+            if (i % 2 === 0) {
+                ctx.strokeStyle = 'rgba(255,0,85,' + (0.5 + pulse * 0.45).toFixed(2) + ')';
+                ctx.shadowColor = '#FF0055';
+            } else {
+                ctx.strokeStyle = 'rgba(255,221,136,' + (0.45 + (1 - pulse) * 0.45).toFixed(2) + ')';
+                ctx.shadowColor = '#ffdd88';
+            }
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.ellipse(cx, top + 46, w * 0.44, 40, 0, a0, a1);
+            ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+
+        // Kromirivat kaaren alta alas
+        for (let i = 1; i < 7; i++) {
+            const rx = x + (w * i) / 7;
+            const g = ctx.createLinearGradient(rx - 2, 0, rx + 2, 0);
+            g.addColorStop(0, 'rgba(255,255,255,0.04)');
+            g.addColorStop(0.5, 'rgba(255,255,255,0.3)');
+            g.addColorStop(1, 'rgba(0,0,0,0.3)');
+            ctx.fillStyle = g;
+            ctx.fillRect(rx - 2, top + 62, 4, baseY - top - 64);
+        }
+
+        // Levypesä + levy (pyörii kun kappale soi)
+        const recY = top + 80, recR = 28;
+        ctx.fillStyle = '#0d0a10';
+        ctx.beginPath(); ctx.arc(cx, recY, recR + 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#171320';
+        ctx.beginPath(); ctx.arc(cx, recY, recR, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+        ctx.lineWidth = 1;
+        for (let r = 9; r < recR - 3; r += 3) { ctx.beginPath(); ctx.arc(cx, recY, r, 0, Math.PI * 2); ctx.stroke(); }
+        ctx.fillStyle = '#ffdd88';
+        ctx.beginPath(); ctx.arc(cx, recY, 3, 0, Math.PI * 2); ctx.fill();
+        if (playing) {
+            const spin = (now / 300) % (Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.fillRect(cx + Math.cos(spin) * 18 - 1, recY + Math.sin(spin) * 18 - 1, 2, 2);
+        }
+
+        // Kaiutinritilä alaosassa
+        for (let gy = baseY - 30; gy < baseY - 8; gy += 5) {
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.fillRect(x + 16, gy, w - 32, 2);
+        }
+
+        // Kolikkoluukku + hinta (hehkuu kun valinta on tehty)
+        const slotW = 46, slotH = 14;
+        const sx = x + w - slotW - 12, sy = top + 62;
+        ctx.fillStyle = '#2b2b34';
+        ctx.fillRect(sx, sy, slotW, slotH);
+        if (armed) { ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 6; }
+        ctx.strokeStyle = armed ? '#FFD700' : 'rgba(255,255,255,0.25)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, slotW - 1, slotH - 1);
+        ctx.fillStyle = armed ? '#FFD700' : 'rgba(255,215,0,0.6)';
+        ctx.font = '10px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('1 🪙', sx + slotW / 2, sy + 10);
+        ctx.shadowBlur = 0;
+        ctx.textAlign = 'start';
+
+        // Jalusta
+        ctx.fillStyle = '#170d08';
+        ctx.fillRect(x + 6, baseY - 8, w - 12, 8);
+    }
+
     /* ── BAR-huone (talo 8) ────────────────────── */
     function drawBarRoom() {
         // Täysin pimeä tausta
@@ -3638,7 +3967,10 @@ const Street = (() => {
         const ownerLamp = lamps.find(l => l.bldgIdx === buildings.indexOf(bldg));
         const bldgIdx = buildings.indexOf(bldg);
         const isBar = (bldgIdx === 8);
-        const isActive = isBar ? true : (ownerLamp && ownerLamp.lit);
+        // Jukebox-talo (5): ovi näkyy auki vasta kun ikkunat on potkaistu valaistuiksi
+        const isJukebox = (bldgIdx === JUKEBOX_BLDG_IDX);
+        const jukeboxOpen = isJukebox && !!(smallHouseLights[bldgIdx] && smallHouseLights[bldgIdx].lit);
+        const isActive = (isBar || jukeboxOpen) ? true : (ownerLamp && ownerLamp.lit);
         const doorType = bldg.doorType || 0;
 
         // Syvyysefekti: ovi skaalautuu talon etäisyyden mukaan (pohjan keskipisteen ympäri)
@@ -3772,6 +4104,25 @@ const Street = (() => {
             ctx.font = 'bold 9px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.fillText('  BAR  ', dc.x, dy - 14);
+            ctx.shadowBlur = 0;
+            ctx.textAlign = 'start';
+        }
+
+        // Jukebox-kyltti oven yllä (talo 5) – kiinni yläkarmissa (alareuna 1 px
+        // oviaukon yläreunan yläpuolella), hehkuu kirkkaammin kun valot palavat
+        if (isJukebox) {
+            ctx.fillStyle = '#2a1030';
+            ctx.fillRect(dx - 10, dy - 19, DOOR_W + 20, 16);
+            ctx.fillStyle = '#3d1846';
+            ctx.fillRect(dx - 8, dy - 17, DOOR_W + 16, 12);
+            const jkBlink = Math.sin(Date.now() / 420);
+            const jkLight = (jukeboxOpen ? 58 : 34) + jkBlink * 20;
+            ctx.fillStyle = 'hsl(318, 100%, ' + jkLight + '%)';
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = (jukeboxOpen ? 10 : 4) + Math.abs(jkBlink) * 12;
+            ctx.font = 'bold 8px "Courier New", monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('♪JUKEBOX', dc.x, dy - 7);
             ctx.shadowBlur = 0;
             ctx.textAlign = 'start';
         }
