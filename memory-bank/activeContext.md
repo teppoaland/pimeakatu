@@ -87,6 +87,8 @@
 - **Inventaario:** `inventory`-objektia (`coin`, `coinCount`, `hamburgerCount`) ei muokata ilman erillistä pyyntöä. Inventaario on lukittu.
 
 ## 🔜 Seuraavaksi (odottaa valintaa)
+- **🎵 Jukebox (suunnitteilla): biisit peliin – masterit eivät gitissä.** Biisien masterit (`.mpeg`) ovat repon ulkopuolella: **`D:\AI\Knived`** (4 kpl: `Knived_Our_song_2013`, `Knived_Unafraid_2013`, `Knived_Unafraid_instrumental_2013`, `Knived_unafraid`). `.gitignore` estää nyt vahingossa tapahtuvat `*.mpeg`/`*.mp4`-committaukset. **Pakatut `.mp3`-versiot tarvitaan repoon**, koska GitHub Pages palvelee vain repon tiedostoja (nykyinen `knived_unafraid.mp3` = 2,0 MB / 128 kbps / −13,0 LUFS, ks. v4.16). Käsittely: `ffmpeg -af volume=-7dB -ar 44100 -ac 2 -b:a 128k` → tavoite ≈ −13 LUFS ja ≤ ~2–3 MB / biisi (repon koko). Nykyinen soitinsykli (kertasoitto + 30–90 s tauko, volume 0.05) on parametrejä, mutta jukebox-ominaisuus koskee `audio.js`:ää (pääsivun koodi) → **+0.01**.
+
 
 - **🍒 Hedelmäpeli v4.11 – käytännön pelitestaus selaimessa** (ilmainen pyöräytys + jäädytyslaskuri + talo 7:n ovi). Testaa: `?coins=0` (ilmainen), `?debug`, poistu ja palaa < 120 s (ei ilmaista).
 - **Nälkäajastin jäihin iframen ajaksi** (`street.js`, suojattu → vaatii erillisen luvan): `hamburgerTimer` ei tikitä kun `#game-iframe-overlay` on `active` → estää näkymättömän kuoleman ja kesken pyöräytyksen hukkuvan panoksen.
