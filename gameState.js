@@ -22,6 +22,12 @@ const GameState = (() => {
         digKeyCollected: false,
         boulderKeyCollected: false,
         bmKeyCollected: false,
+        // Päivä/yö-tila (v4.33). Kadun makuuhuoneen Nuku-valinta vaihtaa tämän.
+        //   null  = ei vielä ratkaistu → 3 avainta nostaa päivän kerran (v4.32-käytös)
+        //   true  = päivä
+        //   false = yö
+        // Testityökalut ?day=0 / ?day=1 eivät tallenna tätä.
+        isDay: null,
         // Dig Däsh -tason 5 custom-kartta (tyhjä oletus)
         customLevel5: null
     };

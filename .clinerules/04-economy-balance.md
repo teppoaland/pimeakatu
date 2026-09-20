@@ -40,7 +40,7 @@
 | Hampurilaiset (elämät) | alussa **5**, +1 / **40 s** (`hamburgerTimer = 2400`), katto BAR:sta **10** | `street.js`, `gameState.js` |
 | BAR | **1 kolikko = 1 🍔**, katto 10, peruutus (▼) vain vierailun ostot | `street.js`, `docs/` |
 | Jukebox | **1 kolikko = 1 koko kappale** | `street.js`, `docs/jukebox-memo.md` |
-| Palkintohuone (talo 7) | **kaikki avaimet TAI 3 kolikkoa** | `street.js` |
+| Makuuhuone (ex-palkintohuone, talo 7) | **3 avainta** = lukko (kolikkoreitti **poistettu** 20.9.2026/v4.33) · Nuku / Poistu = **ilmainen**, ei vaikuta talouteen | `street.js` |
 | Oviukko / kukkaruukku / sähkökaappi | osuma = tainnutus + **−1 🍔** (0 → kuolema) | `street.js` |
 | Syntymäpaketti (uusi peli / reset) | **2 kolikkoa + 5 🍔** (`defaultState.inventory`) | `gameState.js` |
 
@@ -49,7 +49,8 @@
 ## ✅ Mikä ei ole lukossa
 
 - **Testityökalut** (eivät ole tulonlähde eivätkä vaikuta balanssiin): `COIN_CHEAT_*`-nupit (`street.js`),
-  `?coins=N` ja `?debug` (`fruitgame`), `bm`:n debug-moodi, `MUSIC_SOURCE`-kytkin, testikopioiden `_dbg`.
+  `?coins=N` ja `?debug` (`fruitgame`), `?day=0` / `?day=1` (`street.js`: pakotettu yö/päivä, ei tallenna),
+  `bm`:n debug-moodi, `MUSIC_SOURCE`-kytkin, testikopioiden `_dbg`.
 - **Ulkoasu, tekstit, äänet, animaatiot** ja muut kuin yllä listatut parametrit – niitä saa muuttaa normaalisti.
 
 ---
@@ -61,3 +62,11 @@
 3. Aja validoinnit: hedelmäpelin maksutaulukko (125/125) + RTP-simulaatio + katu-integraatio
    (`%TEMP%\ftest.cjs`, `%TEMP%\street-fruit-test.cjs`) sekä street-regressiot 0 löydöstä.
 4. Versionosto **+0.01** (sääntö 03) ja muistipankin päivitys.
+
+---
+
+## 📜 Muutoshistoria (ennen → jälkeen)
+
+| Pvm | Versio | Muutos | Ennen | Jälkeen |
+|-----|--------|--------|-------|---------|
+| 20.9.2026 | v4.33 | Talo 7: palkintohuone → **makuuhuone** (Nuku/Poistu). Pääsy vain 3 avaimella, kolikkoreitti poistettu (käyttäjän pyyntö: *"3 avainta on se lukko tässä, kolikko-lukituksen saa poistaa"*) | Pääsy: kaikki avaimet **tai 3 kolikkoa**; huoneessa pokaali + "To be continued…" | Pääsy: **vain 3 avainta** (ovi aina auki avaimilla, lamppua ei tarvita); huoneessa sänky + Nuku/Poistu. **Nukkuminen ja poistuminen ovat ilmaisia** → ei vaikutusta kolikko-/🍔-talouteen |

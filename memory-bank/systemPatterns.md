@@ -7,10 +7,11 @@
 - **Pääportaali (juuri):** `index.html`, `style.css`, `street.js`, `gameState.js`, `audio.js` – ei `js/`-kansiota.
 - **Iframet (4 alipeliä):** `digGame1/` ⛏️ Dig Game · `digGame2/` 💎 Dig Däsh · `bm/` ✈️ Blue Mäx ·
   `fruitgame/` 🍒 Hedelmäpeli (talo 7, aina auki).
-- **Kadun canvas-huoneet (ei iframe):** palkintohuone (`buildings[7]`, kaikki avaimet tai 3 kolikkoa) ·
-  BAR (talo 9, 🍔) · jukebox (talo 5, `buildings[4]`, ovi x 410, 1 kolikko = koko kappale).
+- **Kadun canvas-huoneet (ei iframe):** **makuuhuone** (ex-palkintohuone, `buildings[7]`, lukko = 3 avainta,
+  valinnat Nuku/Poistu) · BAR (talo 9, 🍔) · jukebox (talo 5, `buildings[4]`, ovi x 410, 1 kolikko = koko kappale).
 - **Kommunikaatio:** `window.parent.postMessage()` molempiin suuntiin.
-- **LocalStorage-avaimet:** `pimeakatu_gamestate` (portaali), `digKeyCollected`, `boulderKeyCollected`,
+- **LocalStorage-avaimet:** `pimeakatu_gamestate` (portaali; sisältää myös **`isDay`** = päivä/yö-tila),
+  `digKeyCollected`, `boulderKeyCollected`,
   `bmKeyCollected`, `pimeakatu_fruit_free` (hedelmäpelin oma).
 
 **Salaiset cheatit kadulla (testityökalut, eivät tallennu):** vitoslamppu (x 720) 5 potkua putkeen →
@@ -37,14 +38,15 @@ pelaaja `playerDepthScale()` ±10 % (0,90 kauas … 1,10 lähelle, 1,00 keskikoh
 ankkuroituna jalkojen kosketuspisteeseen (`px + pw/2, py + ph − 1`). **Skaalaus on visuaalinen** –
 hitboxit (`player.w/h`, törmäykset, keräyssäteet) eivät skaalaudu, joten pelimekaniikat pysyvät ennallaan.
 
-**Päivä (lopputila, v4.32):** kun kaikki 3 avainta on kerätty (`allKeysCollected()`), `dayT` nousee
-0 → 1 (~20 s) ja kadulle tulee päivä: päivätaivas, aurinko kuun tilalla, tähdet/tähdenlento/satelliitti
-pois, lamppujen hehku himmenee (`lamp.lit` **ei** muutu → ovet ja pelit ennallaan) ja additive-kerros
-(`'lighter'`, `DAY_LIGHT_RGB`/`DAY_LIGHT_ALPHA`) kirkastaa koko kadun. Liuku on pysähdyksissä kun
-alapeli on auki (`iframeOpen`) tai ollaan canvas-huoneessa → auringonnousu näkyy kadulle palatessa.
-**Visuaalinen vain ja johdettu avaimista** – ei uusia localStorage-kenttiä, ei muutoksia hitboxeihin,
-törmäyksiin eikä talouteen. Yö piirtyy täsmälleen kuten ennen, koska kaikki päivähaarat ovat ehtoja
-`dayT > 0`.
+**Päivä/yö (v4.33):** tila on **tallennettu** (`state.isDay`, `pimeakatu_gamestate`issa): `null` =
+ratkaisematon, `true` = päivä, `false` = yö. Kun kaikki 3 avainta on kerätty (`allKeysCollected()`),
+kadulle nousee päivä **kerran** (v4.32-käytös) ja tila tallennetaan → sen jälkeen **makuuhuoneen
+Nuku-valinta** vaihtaa tilaa (päivä → yö TAI yö → päivä), Poistu ei muuta mitään. `dayT` liukuu
+molempiin suuntiin (`DAY_FADE_FRAMES` nousu, `NIGHT_FADE_FRAMES` lasku) ja on pysähdyksissä kun
+alapeli on auki (`iframeOpen`) tai ollaan canvas-huoneessa → muutos näkyy kadulle palatessa.
+Testityökalut `?day=1` / `?day=0` pakottavat tilan eivätkä tallenna.
+**Visuaalinen vain:** ei muutoksia hitboxeihin, törmäyksiin eikä talouteen; yö piirtyy täsmälleen kuten
+ennen, koska kaikki päivähaarat ovat ehtoja `dayT > 0`.
 
 ## 🎮 Pelien yhteinen arkkitehtuurimalli
 

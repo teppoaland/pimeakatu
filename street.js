@@ -138,7 +138,19 @@ const Street = (() => {
     function allKeysCollected() {
         return digKeyCollected && boulderKeyCollected && bmKeyCollected;
     }
-    let darkRoom = false;
+    /* ── Makuuhuone (ex-palkintohuone, talo 7) ────────
+       Lukko = 3 avainta (v4.33, kolikkoreitti poistettu). Huoneessa on
+       kaksi valintaa: Nuku ja Poistu.
+         Poistu = ei muuta mitään (päivä/yö pysyy ennallaan)
+         Nuku   = päivä → yö  TAI  yö → päivä
+       Molemmat ovat ilmaisia eikä niillä ole vaikutusta talouteen. */
+    let sleepRoom = false;         // makuuhuone päällä
+    let sleepSel = 0;              // 0 = Nuku, 1 = Poistu
+    let sleepHeldUp = false;       // ▲ reunanilmaisu
+    let sleepHeldDown = false;     // ▼ reunanilmaisu
+    let sleepPhase = 0;            // > 0 = nukkumisen pimennys käynnissä (frameä)
+    const SLEEP_FADE_FRAMES = 90;  // ~1,5 s pimennys ennen tilan vaihtoa
+    let isDay = false;             // tallennettu päivä/yö-tila (state.isDay)
     let barRoom = false;
     let barBuyQty = 0;             // BAR: tämän vierailun ostetut (▼ peruu vain nämä)
     let barBuyHeldUp = false;      // ▲ reunanilmaisu – ei toistoa pohjassa
@@ -149,6 +161,9 @@ const Street = (() => {
        (1. painallus ovella = potku → valot 20 s, 2. painallus = sisään).
        1 kolikko = 1 kappale, joka soi kokonaan loppuun asti. */
     const JUKEBOX_BLDG_IDX = 4;
+    /* Makuuhuone (ex-palkintohuone, talo 7, ovi x 675, lamps[3]):
+       lukko = 3 avainta, ei kolikoita (v4.33) */
+    const SLEEP_BLDG_IDX = 7;
     /* Tiedostonimet vastaavat sisältöä (korjattu 20.9.2026, v4.27): aiemmin
        `our_song.mp3` ja `unafraid.mp3` olivat ristissä keskenään → raita 1 ja 2
        soivat valitun nimen vastaisesti. Älä "korjaa" nimiä takaisin ristiin. */
@@ -238,15 +253,17 @@ const Street = (() => {
     const BACKDROP_WIN_OY = Math.max(3, Math.round(10 * BACKDROP_SCALE));   // 5
     let backdrop = null;                 // { blocks: [...] } – generoidaan kerran init():ssä
 
-    /* ── Päivä (lopputila: kaikki 3 avainta kerätty) ──
-       Kun pelaaja on läpäissyt kaikki kolme peliä, kadulle nousee päivä:
-       kuu vaihtuu auringoksi ja valoisuus nousee päivätasolle. Yksi liukuva
-       arvo dayT (0 = yö … 1 = päivä) ohjaa kaikki muutokset, joten yö-tila
-       piirtyy täsmälleen kuten ennen (kaikki lisäykset ovat ehtoja dayT > 0).
-       VISUAALINEN VAIN: hitboxit, törmäykset, kamera, avaimet, ovet ja
-       talous eivät muutu mihinkään. */
+    /* ── Päivä/yö (v4.33) ──
+       Kun pelaaja on läpäissyt kaikki kolme peliä, kadulle nousee päivä kerran
+       (kuu vaihtuu auringoksi, valoisuus päivätasolle). Sen jälkeen tilan voi
+       vaihtaa talon 7 makuuhuoneessa (Nuku: päivä ⇄ yö) ja valinta tallennetaan
+       (state.isDay). Yksi liukuva arvo dayT (0 = yö … 1 = päivä) ohjaa kaikki
+       muutokset, joten yö-tila piirtyy täsmälleen kuten ennen (kaikki lisäykset
+       ovat ehtoja dayT > 0). VISUAALINEN VAIN: hitboxit, törmäykset, kamera,
+       avaimet, ovet ja talous eivät muutu mihinkään. */
     let dayT = 0;                          // 0 = yö … 1 = päivä (liukuva)
-    const DAY_FADE_FRAMES = 1200;          // ~20 s auringonnousu
+    const DAY_FADE_FRAMES   = 1200;        // ~20 s auringonnousu (yö → päivä)
+    const NIGHT_FADE_FRAMES = 1200;        // ~20 s auringonlasku (päivä → yö)
     const DAY_SKY_TOP     = '#3f7fc0';     // päivätaivaan yläosa
     const DAY_SKY_MID     = '#78b4e0';     // keskikohta
     const DAY_SKY_HORIZON = '#ffd9a0';     // lämmin horisontti
@@ -254,9 +271,21 @@ const Street = (() => {
     const DAY_LIGHT_RGB   = [70, 58, 40];  // additive-päivänvalon sävy
     const DAY_LIGHT_ALPHA = 0.30;          // 0 = ei valoa … ~0.35 = kirkas päivä
     const LAMP_DAY_DIM    = 0.15;          // paljonko lampun hehkusta jää päivällä
-    // Testityökalu: ?day=1 näyttää päivän heti ilman avainten keräämistä
-    const DAY_DEBUG = (typeof location !== 'undefined' && typeof URLSearchParams !== 'undefined')
-        ? new URLSearchParams(location.search).get('day') === '1' : false;
+    /* Testityökalut (eivät tallenna mitään): ?day=1 = päivä heti,
+       ?day=0 = pakota yö. Pakotettu tila ohittaa tallennetun tilan eikä
+       käynnistä ensiauringonnousua → kumpaankin suuntaan voi testata. */
+    const DAY_PARAM = (typeof location !== 'undefined' && typeof URLSearchParams !== 'undefined')
+        ? new URLSearchParams(location.search).get('day') : null;
+    const DAY_FORCE = (DAY_PARAM === '1') ? 'day' : (DAY_PARAM === '0' ? 'night' : null);
+    const DAY_DEBUG = DAY_FORCE !== null;   // pakotettu → liuku heti perille
+
+    /* Päivän tavoite liu'ulle: 1 = päivä, 0 = yö. Tallennettu tila
+       (isDay) ratkaisee, paitsi pakotettuna ?day=0/1. */
+    function dayTarget() {
+        if (DAY_FORCE === 'day') return 1;
+        if (DAY_FORCE === 'night') return 0;
+        return isDay ? 1 : 0;
+    }
 
     // Kaksisuuntainen liikenne: kaksi ajorataa (kaistaa)
     // 0 = alempi (lahempana kameraa), vasemmalta oikealle
@@ -675,9 +704,17 @@ const Street = (() => {
         digKeyCollected = state.digKeyCollected || false;
         boulderKeyCollected = state.boulderKeyCollected || false;
         bmKeyCollected = state.bmKeyCollected || false;
-        // Päivä on johdettu avaimista (ei uusia localStorage-kenttiä):
-        // valmiiksi läpäisty peli avautuu suoraan päivänä.
-        dayT = (DAY_DEBUG || allKeysCollected()) ? 1 : 0;
+        /* Päivä/yö on tallennettu tila (state.isDay, v4.33):
+             null  = ei vielä ratkaistu → 3 avainta nostaa päivän kerran
+             true  = päivä, false = yö (makuuhuoneen Nuku-valinta)
+           Valmiiksi läpäisty peli avautuu siis suoraan päivänä (v4.32-käytös),
+           mutta nukkumalla tilan voi vaihtaa ja valinta pysyy tallessa. */
+        if (state.isDay == null && !DAY_FORCE && allKeysCollected()) {
+            state.isDay = true;
+            GameState.save(state);
+        }
+        isDay = (state.isDay === true);
+        dayT = dayTarget();
         stars = [];
         for (let i = 0; i < 80; i++) {
             stars.push({
@@ -822,17 +859,31 @@ const Street = (() => {
         // Animaatiokello (hengitys, silmän vilkahdus)
         animClock += dt;
 
-        // ── Päivä (lopputila): kaikki 3 avainta → auringonnousu ──
-        // dayT nousee 0 → 1 (~20 s). Visuaalinen vain: mikään pelimekaniikka
-        // ei riipu tästä. Yöefektit nollataan, ettei taivaalle jää
-        // tähdenlentoa eikä satelliittia päivän aikana.
+        // ── Päivä/yö: liuku kohti tallennettua tavoitetta ──
+        // Ensiauringonnousu (v4.32-käytös): kun kaikki 3 avainta on koossa eikä
+        // tilaa ole vielä ratkaistu, kadulle nousee päivä kerran. Sen jälkeen
+        // tila on tallennettu (state.isDay) ja makuuhuoneen Nuku-valinta
+        // vaihtaa sitä vapaasti (päivä ⇄ yö).
+        if (state.isDay == null && !DAY_FORCE && allKeysCollected()) {
+            state.isDay = true;
+            isDay = true;
+            GameState.save(state);
+        }
         // Liuku pysäytetään, kunnes pelaaja on taas kadulla: avain saadaan
-        // alapelistä (iframe) ja huoneista → auringonnousu näkyy kadulle
-        // palatessa eikä jää taustalla näkymättömiin.
-        if (dayT < 1 && allKeysCollected() && !iframeOpen && !darkRoom && !barRoom && !jukeboxRoom) {
-            const wasNight = dayT === 0;
-            dayT = Math.min(1, dayT + (DAY_DEBUG ? 1 : dt / DAY_FADE_FRAMES));
-            if (wasNight) { shootingStar = null; satellite = null; }
+        // alapelistä (iframe) ja huoneista → muutos näkyy kadulle palatessa
+        // eikä jää taustalla näkymättömiin.
+        const dayWanted = dayTarget();
+        if (dayT !== dayWanted && !iframeOpen && !sleepRoom && !barRoom && !jukeboxRoom) {
+            const fadeFrames = (dayWanted > dayT) ? DAY_FADE_FRAMES : NIGHT_FADE_FRAMES;
+            const step = DAY_DEBUG ? 1 : dt / fadeFrames;
+            if (dayWanted > dayT) {
+                const wasNight = dayT === 0;
+                dayT = Math.min(1, dayT + step);
+                if (wasNight) { shootingStar = null; satellite = null; }
+            } else {
+                dayT = Math.max(0, dayT - step);
+            }
+            if (Math.abs(dayWanted - dayT) < step) dayT = dayWanted;  // ei jää värähtelyä
         }
 
         // ── Kuolemasekvenssi ─────────────────────────
@@ -846,9 +897,53 @@ const Street = (() => {
             return;
         }
 
-        // Dark room
-        if (darkRoom) {
-            if (actionJustPressed) { darkRoom = false; actionJustPressed = false; }
+        // ── Makuuhuone (ex-palkintohuone, talo 7) ──
+        //   ▲ / W = Nuku     ▼ / S = Poistu   (valinta liikkuu reunoilla)
+        //   (o) / Space / Enter / ⚡ = vahvista valinta
+        //   Poistuminen ilman nukkumista ei muuta päivä/yö-tilaa mihinkään.
+        //   Nuku → pimennys (SLEEP_FADE_FRAMES) → tila vaihtuu → takaisin kadulle.
+        if (sleepRoom) {
+            // Nukkumisen pimennys: tila vaihtuu vasta pimennyksen lopussa
+            if (sleepPhase > 0) {
+                sleepPhase -= dt;
+                if (sleepPhase <= 0) {
+                    sleepPhase = 0;
+                    // Tila vaihtuu siitä, miltä katu parhaillaan näyttää
+                    // (toimii myös keskellä hämärtymistä ja ?day-testityökalulla)
+                    isDay = !(dayT >= 0.5);        // päivä → yö  TAI  yö → päivä
+                    if (!DAY_FORCE) {              // testityökalut eivät tallenna
+                        state.isDay = isDay;
+                        GameState.save(state);
+                    }
+                    sleepRoom = false;
+                    sleepSel = 0;
+                    sleepHeldUp = false;
+                    sleepHeldDown = false;
+                    updateHUD();
+                }
+                actionJustPressed = false;
+                return;
+            }
+
+            const selUp = !!(keys['ArrowUp'] || keys['w'] || keys['W']);
+            const selDown = !!(keys['ArrowDown'] || keys['s'] || keys['S']);
+            if (selUp && !sleepHeldUp) sleepSel = Math.max(0, sleepSel - 1);
+            if (selDown && !sleepHeldDown) sleepSel = Math.min(1, sleepSel + 1);
+            sleepHeldUp = selUp;
+            sleepHeldDown = selDown;
+
+            if (actionJustPressed) {
+                if (sleepSel === 0) {
+                    sleepPhase = SLEEP_FADE_FRAMES;   // nukahdus käynnissä
+                } else {
+                    // Poistu: ei muutosta päivä/yö-tilaan
+                    sleepRoom = false;
+                    sleepSel = 0;
+                    sleepHeldUp = false;
+                    sleepHeldDown = false;
+                }
+            }
+            actionJustPressed = false;
             return;
         }
 
@@ -1430,6 +1525,16 @@ const Street = (() => {
                     barBuyHeldDown = false;
                     return;
                 }
+                // Makuuhuone (talo 7): kun kaikki 3 avainta on koossa, ovi on
+                // aina auki – lamppua ei tarvita ("3 avainta on lukko", v4.33).
+                if (lamp.bldgIdx === SLEEP_BLDG_IDX && allKeysCollected()) {
+                    sleepRoom = true;
+                    sleepSel = 0;
+                    sleepHeldUp = false;
+                    sleepHeldDown = false;
+                    sleepPhase = 0;
+                    return;
+                }
                 if (lamp.lit) {
                     // Dig Däsh vaatii Dig Gamesta kerätyn avaimen
                     if (lamp.gameUrl && lamp.gameUrl.includes('digGame2') && !digKeyCollected) {
@@ -1442,14 +1547,10 @@ const Street = (() => {
                         return;
                     }
                     if (lamp.gameUrl) { enterGame(lamp.gameUrl); }
-                    else if (i === 3) {
-                        // Talo 7: Palkintohuone – vaatii kaikki avaimet tai 3 kolikkoa
-                        const allKeys = allKeysCollected();
-                        if (allKeys || coinCount >= 3) {
-                            darkRoom = true;
-                        } else {
-                            showNotification('🚧 Ei tänne pääse ilman avainta! Hanki avaimet tai keksi jotain muuta.');
-                        }
+                    else if (lamp.bldgIdx === SLEEP_BLDG_IDX) {
+                        // Talo 7 (makuuhuone): lukko = 3 avainta. Ilman avaimia
+                        // ei sisään, vaikka lamppu palaisi (v4.33).
+                        showNotification('🚧 Ei tänne pääse ilman avainta! Hanki kaikki kolme avainta.');
                     } else { showNotification('🚧 Ei tänne pääse ilman avainta! Hanki avaimet tai keksi jotain muuta.'); }
                 } else {
                     showNotification('💡 Ovi on lukossa.\nSytytä lamppu ensin!');
@@ -1698,7 +1799,12 @@ const Street = (() => {
         digKeyCollected = state.digKeyCollected || false;
         boulderKeyCollected = state.boulderKeyCollected || false;
         bmKeyCollected = state.bmKeyCollected || false;
-        darkRoom = false;
+        sleepRoom = false;
+        sleepSel = 0;
+        sleepHeldUp = false;
+        sleepHeldDown = false;
+        sleepPhase = 0;
+        isDay = (state.isDay === true);   // tallennettu päivä/yö pysyy
         barRoom = false;
         jukeboxRoom = false;
         jukeSel = 0;
@@ -2231,7 +2337,7 @@ const Street = (() => {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, viewW, WORLD_H);
 
-        if (darkRoom) { camX = (WORLD_W - viewW) / 2; ctx.save(); ctx.translate(-Math.round(camX), 0); drawDarkRoom(); ctx.restore(); return; }
+        if (sleepRoom) { camX = (WORLD_W - viewW) / 2; ctx.save(); ctx.translate(-Math.round(camX), 0); drawSleepRoom(); ctx.restore(); return; }
 
         if (barRoom) { camX = (WORLD_W - viewW) / 2; ctx.save(); ctx.translate(-Math.round(camX), 0); drawBarRoom(); ctx.restore(); return; }
 
@@ -2291,9 +2397,9 @@ const Street = (() => {
             ctx.globalAlpha = dayT;
             // Hehku
             const sunGlow = ctx.createRadialGradient(SUN_X, SUN_Y, SUN_R * 0.4, SUN_X, SUN_Y, SUN_R * 3.4);
-            sunGlow.addColorStop(0, 'rgba(255,246,190,0.55)');
-            sunGlow.addColorStop(0.4, 'rgba(255,220,120,0.20)');
-            sunGlow.addColorStop(1, 'rgba(255,210,90,0)');
+            sunGlow.addColorStop(0, 'rgba(255,224,120,0.55)');
+            sunGlow.addColorStop(0.4, 'rgba(255,210,100,0.20)');
+            sunGlow.addColorStop(1, 'rgba(255,200,80,0)');
             ctx.fillStyle = sunGlow;
             ctx.beginPath(); ctx.arc(SUN_X, SUN_Y, SUN_R * 3.4, 0, Math.PI*2); ctx.fill();
             // Hitaasti pyörivä sädekehä
@@ -2309,11 +2415,9 @@ const Street = (() => {
                 ctx.lineTo(SUN_X + Math.cos(ang) * r1, SUN_Y + Math.sin(ang) * r1);
                 ctx.stroke();
             }
-            // Kiekko: vaalea keskusta, lämmin reuna
+            // Kiekko: tasainen lämmin keltainen (ei valkoista palloa keskellä)
             ctx.fillStyle = '#ffe066';
             ctx.beginPath(); ctx.arc(SUN_X, SUN_Y, SUN_R, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#fff6c4';
-            ctx.beginPath(); ctx.arc(SUN_X - 2, SUN_Y - 2, SUN_R * 0.66, 0, Math.PI*2); ctx.fill();
             ctx.restore();
         }
 
@@ -3173,7 +3277,9 @@ const Street = (() => {
             const ownerLamp = lamps.find(l => l.bldgIdx === t.bldgIdx);
             const jukeboxLit = t.bldgIdx === JUKEBOX_BLDG_IDX &&
                                !!(smallHouseLights[t.bldgIdx] && smallHouseLights[t.bldgIdx].lit);
-            const active = isBar || jukeboxLit || !!(ownerLamp && ownerLamp.lit);
+            // Makuuhuone (talo 7): 3 avainta = ovi aina auki (valo palaa kynnyksellä)
+            const sleepOpen = t.bldgIdx === SLEEP_BLDG_IDX && allKeysCollected();
+            const active = isBar || jukeboxLit || sleepOpen || !!(ownerLamp && ownerLamp.lit);
             if (THRESH_LIGHT && active) {
                 ctx.save();
                 ctx.beginPath();
@@ -3482,84 +3588,256 @@ const Street = (() => {
         drawGapPost(f.gapEnd);
     }
 
-    /* ── Pimeä huone (Pokaali / COMMANDO) ──────── */
-    function drawDarkRoom() {
-        // Täysin pimeä tausta
-        ctx.fillStyle = '#050508';
-        ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+    /* ── Makuuhuone (ex-palkintohuone, talo 7) ────
+       Lukko = 3 avainta (v4.33). Huoneessa on kaksi valintaa:
+         Nuku   = vaihtaa päivä/yö-tilan (päivä → yö TAI yö → päivä)
+         Poistu = ei muuta mitään
+       Molemmat ovat ilmaisia. Sänky on piirretty sivusta (pääty, paksu patja,
+       tyyny, peitto ja jalat), ja ikkunasta näkyy tämänhetkinen tila.
 
-        // Pieni valokeila katosta
-        const g = ctx.createRadialGradient(400, 30, 10, 400, 120, 220);
-        g.addColorStop(0, 'rgba(255,240,200,0.15)');
-        g.addColorStop(0.6, 'rgba(255,200,100,0.04)');
-        g.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = g;
-        ctx.fillRect(200, 0, 400, 300);
+       SISÄLTÖ SOVITETAAN NÄKYVÄÄN IKKUNAAN (kuten jukebox v4.22): mobiilissa
+       canvas on vain `viewW` (260–800) leveä ja kamera keskittää huoneen, joten
+       kaikki sijoitetaan x = 400:n ympärille ja enintään `winW − 24` leveäksi.
+       Koko piirto on save()/restore()-parin sisällä, ettei tila vuoda kadulle. */
+    function drawSleepRoom() {
+        const W = WORLD_W, H = WORLD_H;
+        const now = Date.now();
 
-        // Pöytä
-        const tx = 350, ty = 280, tw = 100, th = 12;
-        ctx.fillStyle = '#3a2010';
-        ctx.fillRect(tx - 2, ty, tw + 4, th);
-        ctx.fillStyle = '#5a3a1a';
-        ctx.fillRect(tx, ty - 2, tw, th + 2);
-        // Pöydän jalat
-        ctx.fillStyle = '#2a1808';
-        ctx.fillRect(tx + 5, ty + th, 8, 60);
-        ctx.fillRect(tx + tw - 13, ty + th, 8, 60);
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'rgba(0,0,0,0)';
+        ctx.textBaseline = 'alphabetic';
 
-        // Kultainen pokaali pöydällä
-        const cx = tx + tw / 2, cy = ty - 5;
-        // Jalusta
-        ctx.fillStyle = '#b8860b';
-        ctx.fillRect(cx - 12, cy, 24, 6);
-        ctx.fillStyle = '#daa520';
-        ctx.fillRect(cx - 8, cy - 4, 16, 4);
-        // Varsi
-        ctx.fillStyle = '#daa520';
-        ctx.fillRect(cx - 3, cy - 30, 6, 26);
-        // Malja
-        ctx.fillStyle = '#ffd700';
+        /* Ikkunasovitus + fonttikoko (näytön skaala: kapea kännykkä zoomataan) */
+        const winW   = Math.round(Math.min(WORLD_W, Math.max(VIEWW_MIN, viewW)));
+        const wide   = winW >= 560;                 // sivuikkunalle jää tilaa
+        const panelW = Math.max(196, winW - 24);
+        const panelX = Math.round(400 - panelW / 2);
+        const padX   = 12;
+        const rowX   = panelX + padX;
+        const rowW   = panelW - padX * 2;
+        const vs = (canvas && canvas.height && canvas.clientHeight)
+            ? canvas.clientHeight / canvas.height : 1;
+        const vsafe = (vs > 0.25) ? vs : 1;
+        const needPx = (target, base, max) =>
+            Math.round(Math.max(base, Math.min(max, target / vsafe)));
+
+        /* Pystyasettelu: paneeli ylhäällä, sänky alhaalla */
+        const titleY  = 80;
+        const stateY  = titleY + 22;
+        const nameFs  = needPx(15, 12, 15);
+        const rowH    = Math.max(18, Math.round(nameFs * 1.5));
+        const rowGap  = 6;
+        const listTop = stateY + 14;
+        const listH   = 2 * (rowH + rowGap) - rowGap;
+        const hintY   = listTop + listH + 18;
+        const panelTop    = titleY - 26;
+        const panelBottom = hintY + 10;
+
+        // 1) Tausta: seinä (yöllä kylmä, päivällä lämmin) + lattia
+        ctx.fillStyle = isDay ? '#241d2c' : '#07070f';
+        ctx.fillRect(0, 0, W, H);
+        const wall = ctx.createLinearGradient(0, 40, 0, GROUND_Y);
+        if (isDay) {
+            wall.addColorStop(0, '#3b3149');
+            wall.addColorStop(1, '#4c4058');
+        } else {
+            wall.addColorStop(0, '#151326');
+            wall.addColorStop(1, '#221f36');
+        }
+        ctx.fillStyle = wall;
+        ctx.fillRect(40, 40, W - 80, GROUND_Y - 40);
+        // Lattia + lautojen perspektiivi (sänky seisoo tällä)
+        ctx.fillStyle = isDay ? '#2c2434' : '#0f0d18';
+        ctx.fillRect(40, GROUND_Y, W - 80, H - GROUND_Y - 40);
+        ctx.strokeStyle = isDay ? '#1d1722' : '#08070e';
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(cx - 18, cy - 30);
-        ctx.lineTo(cx - 14, cy - 55);
-        ctx.quadraticCurveTo(cx, cy - 62, cx + 14, cy - 55);
-        ctx.lineTo(cx + 18, cy - 30);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#daa520';
-        ctx.lineWidth = 1.5;
+        for (let i = 0; i <= 8; i++) {
+            const fx = 40 + i * (W - 80) / 8;
+            ctx.moveTo(fx, GROUND_Y + 1);
+            ctx.lineTo(fx + (fx - W / 2) * 0.16, H - 40);
+        }
         ctx.stroke();
-        // Pokaalin kahvat
-        ctx.strokeStyle = '#daa520';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(cx - 16, cy - 42, 7, -0.5, 1.8);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(cx + 16, cy - 42, 7, 1.3, -1.8, true);
-        ctx.stroke();
 
-        // Kiilto pokaalissa
-        const gg = ctx.createRadialGradient(cx - 5, cy - 48, 2, cx, cy - 40, 20);
-        gg.addColorStop(0, 'rgba(255,255,255,0.5)');
-        gg.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = gg;
-        ctx.beginPath();
-        ctx.arc(cx - 3, cy - 45, 10, 0, Math.PI * 2);
-        ctx.fill();
+        // 2) Paneeli: otsikko + nykyinen tila + valinnat (yksi tumma laatta)
+        ctx.fillStyle = '#0b0812';
+        ctx.fillRect(panelX, panelTop, panelW, panelBottom - panelTop);
+        ctx.strokeStyle = '#3a3348';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(panelX + 0.5, panelTop + 0.5, panelW - 1, panelBottom - panelTop - 1);
+        // Yläreunan sävy kertoo tilan: keltainen = päivä, sininen = yö
+        ctx.fillStyle = isDay ? '#ffd070' : '#7c8ad8';
+        ctx.fillRect(panelX, panelTop, panelW, 2);
 
-        // "To be continued..."
-        ctx.fillStyle = '#ccaa44';
-        ctx.font = 'italic 16px "Courier New", monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('To be continued...', 400, 370);
+        ctx.font = needPx(16, 12, 16) + 'px "Press Start 2P", monospace';
+        ctx.fillStyle = '#eae4f2';
+        ctx.fillText('MAKUUHUONE', 400, titleY);
 
-        // Poistumisvihje
-        const pulse = Math.sin(Date.now() / 800) * 0.3 + 0.7;
-        ctx.fillStyle = `rgba(255,255,255,${pulse})`;
-        ctx.font = '10px Arial, sans-serif';
-        ctx.fillText('Paina Space poistuaksesi', 400, 390);
-        ctx.textAlign = 'start';
+        ctx.font = 'bold ' + nameFs + 'px "Courier New", monospace';
+        ctx.fillStyle = isDay ? '#ffdd88' : '#c8d8ff';
+        ctx.fillText('Nyt: ' + (isDay ? '☀️ Päivä' : '🌙 Yö'), 400, stateY);
+
+        /* 3) Valinnat: 0 = Nuku, 1 = Poistu
+              ▲/▼ liikuttaa valintaa, ⚡ / Space / (o) vahvistaa */
+        const rows = [
+            { label: 'Nuku',   note: isDay ? '→ yö' : '→ päivä' },
+            { label: 'Poistu', note: 'ei muuta tilaa' }
+        ];
+        for (let i = 0; i < rows.length; i++) {
+            const y = listTop + i * (rowH + rowGap);
+            const selected = (i === sleepSel);
+            const bg     = selected ? '#ffd070' : '#171122';
+            const border = selected ? '#fff3d0' : '#3a3348';
+            const fg     = selected ? '#1c1400' : '#eae4f2';
+            const dim    = selected ? '#5c4400' : '#948ca8';
+
+            ctx.fillStyle = bg;
+            ctx.fillRect(rowX, y, rowW, rowH);
+            ctx.strokeStyle = border;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(rowX + 0.5, y + 0.5, rowW - 1, rowH - 1);
+
+            ctx.textBaseline = 'middle';
+            const cy = Math.round(y + rowH / 2) + 1;
+            ctx.textAlign = 'left';
+            ctx.font = nameFs + 'px "Courier New", monospace';
+            ctx.fillStyle = fg;
+            ctx.fillText((selected ? '▶ ' : '   ') + rows[i].label, rowX + 8, cy);
+            ctx.textAlign = 'right';
+            ctx.fillStyle = dim;
+            ctx.fillText(rows[i].note, rowX + rowW - 8, cy);
+        }
+        ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = 'center';
+        ctx.font = Math.max(10, Math.min(nameFs - 1, 13)) + 'px Arial, sans-serif';
+        ctx.fillStyle = '#e9e9ef';
+        ctx.fillText('▲/▼ = valitse   ⚡/Space = vahvista', 400, hintY);
+        ctx.textAlign = 'left';
+
+        // 4) Sänky sivusta: pääty, paksu patja, tyyny, peitto ja jalat
+        const bedW  = Math.min(340, panelW - 16);
+        const bedL  = Math.round(400 - bedW / 2);
+        const bedR  = bedL + bedW;
+        const bedFoot = GROUND_Y - 2;              // 308 – jalkojen pohja
+        const legH = 10, frameH = 12, mattH = 38;
+        const legTop   = bedFoot - legH;           // 298
+        const frameTop = legTop - frameH;          // 286
+        const mattTop  = frameTop - mattH;         // 248
+        const headTop  = mattTop - 34;             // 214 – päädyn yläreuna
+        const headW    = 13;
+        const pillowW  = Math.round(bedW * 0.24);
+
+        // Jalat
+        ctx.fillStyle = '#241812';
+        ctx.fillRect(bedL + 16, legTop, 9, legH);
+        ctx.fillRect(bedR - 27, legTop, 9, legH);
+
+        // Runko (patjan alla)
+        ctx.fillStyle = '#2e2019';
+        ctx.fillRect(bedL + 4, frameTop, bedW - 8, frameH);
+        ctx.fillStyle = '#3d2a1d';
+        ctx.fillRect(bedL + 4, frameTop, bedW - 8, 3);
+
+        // Pääty (vasemmassa reunassa)
+        ctx.fillStyle = '#33241a';
+        ctx.fillRect(bedL, headTop, headW, frameTop - headTop + 6);
+        ctx.fillStyle = '#48321f';
+        ctx.fillRect(bedL + 3, headTop + 6, 7, frameTop - headTop - 14);
+
+        // Tyyny
+        ctx.fillStyle = '#efe6d2';
+        ctx.fillRect(bedL + 18, mattTop - 12, pillowW, 20);
+        ctx.fillStyle = '#fbf5e6';
+        ctx.fillRect(bedL + 18, mattTop - 12, pillowW, 3);
+        ctx.fillStyle = '#d8ceb6';
+        ctx.fillRect(bedL + 18, mattTop + 4, pillowW, 4);
+
+        // Paksu patja (yläreuna, runko, keskiviiva, alavarjo)
+        ctx.fillStyle = '#cfc6b2';
+        ctx.fillRect(bedL + 8, mattTop, bedW - 16, mattH);
+        ctx.fillStyle = '#e7dfcb';
+        ctx.fillRect(bedL + 8, mattTop, bedW - 16, 5);
+        ctx.fillStyle = '#b8af9b';
+        ctx.fillRect(bedL + 8, mattTop + Math.round(mattH / 2), bedW - 16, 1);
+        ctx.fillStyle = '#a89f8c';
+        ctx.fillRect(bedL + 8, mattTop + mattH - 5, bedW - 16, 5);
+
+        // Peitto (jalkopää peittyy, tyyny jää näkyviin)
+        const blkL = bedL + 24 + pillowW;
+        const blkR = bedR - 8;
+        ctx.fillStyle = '#3b4c86';
+        ctx.fillRect(blkL, mattTop - 6, blkR - blkL, mattH + 8);
+        ctx.fillStyle = '#4d61a6';
+        ctx.fillRect(blkL, mattTop - 6, blkR - blkL, 4);
+        ctx.fillStyle = '#2f3c6c';
+        ctx.fillRect(blkL, mattTop + 12, blkR - blkL, 2);
+        ctx.fillRect(blkL, mattTop + 24, blkR - blkL, 2);
+
+        // 5) Ikkuna (vain kun sille jää tilaa): näyttää tämänhetkisen tilan
+        if (wide) {
+            const wx = 626, wy = 204, ww = 92, wh = 72;
+            ctx.fillStyle = '#241d2e';
+            ctx.fillRect(wx - 4, wy - 4, ww + 8, wh + 8);
+            const sky = ctx.createLinearGradient(0, wy, 0, wy + wh);
+            if (isDay) { sky.addColorStop(0, '#4b8fd0'); sky.addColorStop(1, '#a8d4f0'); }
+            else       { sky.addColorStop(0, '#0a1030'); sky.addColorStop(1, '#1b2352'); }
+            ctx.fillStyle = sky;
+            ctx.fillRect(wx, wy, ww, wh);
+
+            if (isDay) {
+                // Aurinko: tasainen keltainen kiekko (ei valkoista palloa keskellä)
+                ctx.fillStyle = '#ffe066';
+                ctx.beginPath(); ctx.arc(wx + ww * 0.7, wy + wh * 0.34, 11, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,224,120,0.85)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 8; i++) {
+                    const a = i * Math.PI / 4 + 0.3;
+                    ctx.beginPath();
+                    ctx.moveTo(wx + ww * 0.7 + Math.cos(a) * 15, wy + wh * 0.34 + Math.sin(a) * 15);
+                    ctx.lineTo(wx + ww * 0.7 + Math.cos(a) * 20, wy + wh * 0.34 + Math.sin(a) * 20);
+                    ctx.stroke();
+                }
+            } else {
+                // Sirppikuu + pari tähteä
+                ctx.fillStyle = '#fff8cc';
+                ctx.beginPath(); ctx.arc(wx + ww * 0.7, wy + wh * 0.34, 11, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#0a1030';
+                ctx.beginPath(); ctx.arc(wx + ww * 0.7 + 5, wy + wh * 0.34 - 1, 9, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(wx + 12, wy + 14, 2, 2);
+                ctx.fillRect(wx + 27, wy + 24, 2, 2);
+                ctx.fillRect(wx + 16, wy + 50, 2, 2);
+            }
+
+            // Ikkunaristikko + verhojen varjot reunoissa
+            ctx.strokeStyle = '#2b2438';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(wx + ww / 2, wy); ctx.lineTo(wx + ww / 2, wy + wh);
+            ctx.moveTo(wx, wy + wh / 2); ctx.lineTo(wx + ww, wy + wh / 2);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.fillRect(wx, wy, 5, wh);
+            ctx.fillRect(wx + ww - 5, wy, 5, wh);
+        }
+
+        // 6) Nukkumisen pimennys: tila vaihtuu vasta kun ruutu on musta
+        if (sleepPhase > 0) {
+            const fade = Math.max(0, Math.min(1, 1 - sleepPhase / SLEEP_FADE_FRAMES));
+            ctx.fillStyle = 'rgba(0,0,0,' + fade.toFixed(3) + ')';
+            ctx.fillRect(0, 0, W, H);
+            if (fade > 0.3) {
+                ctx.textAlign = 'center';
+                ctx.font = 'bold ' + needPx(20, 16, 22) + 'px "Courier New", monospace';
+                ctx.fillStyle = '#ffe9a8';
+                ctx.fillText('Zzz…', 400, 250 + Math.round(Math.sin(now / 300) * 3));
+                ctx.textAlign = 'left';
+            }
+        }
+
+        ctx.restore();
     }
 
     /* ── Jukebox-huone (talo 5) ────────────────────
@@ -4181,7 +4459,7 @@ const Street = (() => {
         const poleTop = by - LAMP_POST_H + 15; // tolpan yläpää
         const bulbY = poleTop - 8;             // lampun kupu (lähempänä tolppaa)
         // Päivällä hehku himmenee (LAMP_DAY_DIM). HUOM: lamp.lit ei muutu
-        // mihinkään → ovet, pelit ja palkintohuone aukeavat kuten ennenkin.
+        // mihinkään → ovet, pelit ja makuuhuone aukeavat kuten ennenkin.
         const dayDim = 1 - LAMP_DAY_DIM * dayT;
 // Ylikuumentuneen lampun punainen hehku + savu
         if (lamp.overheat) {
@@ -4350,7 +4628,9 @@ const Street = (() => {
         // Jukebox-talo (5): ovi näkyy auki vasta kun ikkunat on potkaistu valaistuiksi
         const isJukebox = (bldgIdx === JUKEBOX_BLDG_IDX);
         const jukeboxOpen = isJukebox && !!(smallHouseLights[bldgIdx] && smallHouseLights[bldgIdx].lit);
-        const isActive = (isBar || jukeboxOpen) ? true : (ownerLamp && ownerLamp.lit);
+        // Makuuhuone (talo 7): kun kaikki 3 avainta on koossa, ovi on aina auki
+        const sleepOpen = (bldgIdx === SLEEP_BLDG_IDX) && allKeysCollected();
+        const isActive = (isBar || jukeboxOpen || sleepOpen) ? true : (ownerLamp && ownerLamp.lit);
         const doorType = bldg.doorType || 0;
 
         // Syvyysefekti: ovi skaalautuu talon etäisyyden mukaan (pohjan keskipisteen ympäri)

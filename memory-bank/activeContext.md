@@ -17,21 +17,42 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.32` (`index.html` → `#version-tag`) · **Git:** **v4.32 committattu ja pushattu
-  20.9.2026** (`f8fc96f`, origin/main) · työpuu puhdas.
+- **Versio:** `v4.33` (`index.html` → `#version-tag`) · **Git:** v4.32 committattu ja pushattu
+  20.9.2026 (`f8fc96f` + muistipankki `9c38310`, origin/main). **v4.33 on työpuussa** (ei committia, sääntö 03).
 - **Tila:** pääportaali + 4 alipeliä (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️, `fruitgame` 🍒) valmiit ja pelattavat.
-- **Kadun canvas-huoneet (ei iframe):** palkintohuone `buildings[7]` · BAR (talo 9) · jukebox
-  (`buildings[4]`, ovi x 410) · hedelmäpelitalo `buildings[6]` (iframe, aina auki).
-- **Lopputila (v4.32):** kun kaikki 3 avainta on koossa, kadulle nousee **päivä** (kuu → aurinko,
-  valoisuus päivätasolle, **~20 s auringonnousu**). Päivä on johdettu avaimista → reloadissa heti täysi;
-  `✕`-reset palauttaa yön. Testityökalu `?day=1`.
+- **Kadun canvas-huoneet (ei iframe):** **makuuhuone** (ex-palkintohuone, `buildings[7]`, Nuku/Poistu) · BAR (talo 9) ·
+  jukebox (`buildings[4]`, ovi x 410) · hedelmäpelitalo `buildings[6]` (iframe, aina auki).
+- **Päivä/yö (v4.33):** 3 avainta nostaa päivän kerran (`state.isDay` null → true, v4.32-käytös) →
+  sen jälkeen **makuuhuoneen Nuku vaihtaa päivä ⇄ yö** ja tila on tallennettu; Poistu ei muuta mitään.
+  Huoneeseen pääsee **vain 3 avaimella** (kolikkoreitti poistettu) – silloin ovi on aina auki ilman lamppua.
+- **Aurinko:** valkoinen sisäkiekko poistettu; tasainen keltainen kiekko + lämmin hehku.
 - **Lukossa:** talous (sääntö 04) ja inventaario · **vapaasti säädettävissä:** testityökalut
-  (`COIN_CHEAT_*`, `?coins`, `?debug`, `?day`, `MUSIC_SOURCE`, `bm`-debug).
-- **Avoinna:** ks. "🔜 Seuraavaksi" – työpuussa ei ole keskeneräistä koodia.
+  (`COIN_CHEAT_*`, `?coins`, `?debug`, `?day=0` / `?day=1`, `MUSIC_SOURCE`, `bm`-debug).
+- **Avoinna:** ks. "🔜 Seuraavaksi" – työpuussa ei ole muuta keskeneräistä kuin v4.33.
 
 ---
 
 ## 🆕 Tuoreimmat versiot (20.9.2026)
+
+**v4.33 – Talo 7: palkintohuone → makuuhuone (Nuku / Poistu) + päivä/yö vaihdettavaksi + aurinko siistitty.**
+Pääsy: **vain 3 avainta** (kolikkoreitti poistettu käyttäjän pyynnöstä: *"3 avainta on se lukko tässä"*),
+ja kun avaimet ovat koossa **ovi on aina auki ilman lampun sytytystä** (myös oven/kynnyksen valo-ulkoasu:
+`drawDoor` 4452–4454, kynnysvalo 3275–3277). Vanha pokaali + "To be continued…" poistuivat: tilalla
+`drawSleepRoom()` (ex-`drawDarkRoom`): **paksu sänky sivusta** (pääty, patja, tyyny, peitto, jalat),
+tumma huone + ikkuna jossa kuu/aurinko tilan mukaan, paneelissa otsikko `MAKUUHUONE`, tila `Nyt: ☀️ Päivä`
+/ `Nyt: 🌙 Yö` ja rivit **Nuku** / **Poistu** (▲/▼ valinta, `(o)`/Space/Enter/⚡ vahvistus) – sama
+mobiilisovitus kuin jukeboxissa (`winW`, `vs`, `needPx`, paneeli ≤ `winW − 24`).
+**Poistu ei muuta mitään.** **Nuku** = pimennys ~1,5 s (`SLEEP_FADE_FRAMES 90`) + "Zzz…" → tila vaihtuu
+(`isDay = !(dayT >= 0.5)` → päivä → yö TAI yö → päivä) → tallennus → huone kiinni → liuku näkyy kadulla.
+**Päivä/yö on nyt tallennettu:** `gameState.js` `defaultState` sai **`isDay: null`** (`null` = ratkaisematon,
+`true` = päivä, `false` = yö). 3 avainta nostaa päivän **kerran** (v4.32-käytös säilyy, myös avain-cheatilla)
+ja tallentaa `true`; sen jälkeen vain Nuku vaihtaa tilaa. `update()` liukuu **molempiin suuntiin**
+(`DAY_FADE_FRAMES` nousuun, uusi `NIGHT_FADE_FRAMES` laskuun) ja odottaa kadulle paluuta kuten ennen
+(`iframeOpen` / huoneet). Testityökalut: `?day=1` ja uusi **`?day=0`** (pakotettu tila, ei tallenna).
+**Aurinko:** valkoinen `#fff6c4`-sisäkiekko poistettu ja hehku lämmitetty keltaiseksi
+(`rgba(255,224,120,.55)`) – ei enää valkoista palloa.
+**Talous:** vain yksi kolikoiden käyttökohde poistui (3 kolikkoa taloon 7); nukkuminen on ilmaista →
+kirjattu sääntöön 04 + `docs/economy-balance-memo.md`:hen. Versio `v4.33`, ei committia.
 
 **v4.32 – Päivä (lopputila): kaikki 3 avainta → kuu vaihtuu auringoksi ja valoisuus nousee.**
 Uusi liukuva arvo `dayT` (0 = yö … 1 = päivä) ohjaa kaikki muutokset; auringonnousu ~20 s
@@ -222,10 +243,14 @@ katuun (v4.11 ✅).
   `KERB_GAP_EXTRA`, laatan korko (`slab.h`).
 - **Pelaajan syvyys:** `PLAYER_DEPTH_AMOUNT 0.10` (±10 %) · `PLAYER_DEPTH_MID 315` (koko 1,00 tässä Y:ssä) ·
   `PLAYER_DEPTH_MAX_Y = WORLD_H - 50` (350, sama kuin `update()`in `PLAYER_Y_MAX`).
-- **Päivä (lopputila):** `DAY_FADE_FRAMES 1200` (~20 s) · `DAY_SKY_TOP '#3f7fc0'` · `DAY_SKY_MID '#78b4e0'` ·
-  `DAY_SKY_HORIZON '#ffd9a0'` · `SUN_X 660` / `SUN_Y 62` / `SUN_R 26` · `DAY_LIGHT_RGB [70,58,40]` ·
-  `DAY_LIGHT_ALPHA 0.30` (washin voimakkuus) · `LAMP_DAY_DIM 0.15` (jäljelle jäävä lampun hehku) ·
-  `DAY_DEBUG` = `?day=1` (testityökalu: päivä heti, ei avaimia tarvita).
+- **Päivä/yö:** `DAY_FADE_FRAMES 1200` (nousu ~20 s) · `NIGHT_FADE_FRAMES 1200` (lasku) · `DAY_SKY_TOP '#3f7fc0'` ·
+  `DAY_SKY_MID '#78b4e0'` · `DAY_SKY_HORIZON '#ffd9a0'` · `SUN_X 660` / `SUN_Y 62` / `SUN_R 26` ·
+  `DAY_LIGHT_RGB [70,58,40]` · `DAY_LIGHT_ALPHA 0.30` (washin voimakkuus) · `LAMP_DAY_DIM 0.15` (jäljelle
+  jäävä lampun hehku) · testityökalut `DAY_PARAM`/`DAY_FORCE` = `?day=1` (päivä heti) ja `?day=0`
+  (pakota yö) – eivät tallenna mitään.
+- **Makuuhuone (talo 7):** `SLEEP_BLDG_IDX 7` · `SLEEP_FADE_FRAMES 90` (~1,5 s nukkumisen pimennys) ·
+  `sleepSel` (0 = Nuku, 1 = Poistu) · sängyn koko paneelista (`bedW = min(340, panelW − 16)`),
+  paneeli ≤ `winW − 24`, sivuikkuna vasta kun `winW ≥ 560`.
 - **Notifikaatiot:** `showNotification(text, durationMs = 2500)` + 0,5 s fade; `showSpawnHint` 4500 ms.
 
 ## 🔒 Lukitut osa-alueet
@@ -252,6 +277,10 @@ katuun (v4.11 ✅).
   pienet talot, satunnaiset ikkunat, taustasiluetin ikkuna) · lämmin maagradientti kadulle · pilvien
   kirkastus · `style.css`:n tumma canvas-kehys + scanline päiväversiona · auringonnousun jingle.
   Washin voimakkuus ja päivätaivaan sävyt = nupit (`DAY_LIGHT_ALPHA`, `DAY_SKY_*`).
+- **Makuuhuone (v4.33) – lisäsäädöt jos silmä vaatii:** peiton väri ja sängyn koko (`bedW`), yöpöytä/lamppu
+  sängyn viereen, nukkumisen pimennys (`SLEEP_FADE_FRAMES`) ja auringonlaskun kesto (`NIGHT_FADE_FRAMES`),
+  heräämisteksti ("Uusi päivä" / "Hyvää yötä") tai pimennys myös kadulle palatessa.
+  Huoneen värit (`isDay ? … : …` -sävyt) ja rivien valintaväri (`#ffd070`) ovat vapaita nuppeja.
 - **Jatkoideat (ei tehty):** potkun 1 px screen shake · pää ja nyrkit recteinä `arc()`:n sijaan ·
   hengityksen syvyys 2 px / hitaampi sykli.
 
@@ -268,11 +297,17 @@ katuun (v4.11 ✅).
 - **Pelaajan syvyysskaalaus (v4.31):** `s ≠ 1` tekee hahmon pikselikoordinaateista murto-osaisia → 1 px
   reunat voivat pehmentyä ja skaalautuessa hitaasti ohuet yksityiskohdat väristä. Jos silmä havaitsee:
   kvantisoi skaala portaisiin (esim. 0,025 välein) tai vaihda offscreen-blittiin (lähin naapuri).
-- **Päivä (v4.32):** päivä luetaan avaimista joka ruudulla (`allKeysCollected()`), joten se ei tarvitse
-  tallennusta eikä uusia localStorage-avaimia. Sivuvaikutus: **avain-cheat** (vitoslamppu 5 potkua →
-  kaikki avaimet) sytyttää myös päivän – se on sama "läpäisty"-tila, joten käytös on johdonmukainen.
-  Päivänvalo on additive-kerros (`'lighter'`), eli se ei muuta yhtään väripalettia: jos kadun pitää
-  näyttää vielä valoisammalta, nosta `DAY_LIGHT_ALPHA` (0.30) tai vaalenna `DAY_SKY_*`-sävyjä.
+- **Päivä/yö (v4.33):** tila on **tallennettu** (`state.isDay`: `null` = ratkaisematon, `true` = päivä,
+  `false` = yö). 3 avainta nostaa päivän kerran (v4.32-käytös) ja tallentaa `true`; sen jälkeen vain
+  makuuhuoneen **Nuku** vaihtaa tilaa. Sivuvaikutus: **avain-cheat** (vitoslamppu 5 potkua → kaikki avaimet)
+  sytyttää myös päivän – sama "läpäisty"-tila, joten käytös on johdonmukainen. Vanha tallennus ilman
+  `isDay`-kenttää → `deepMerge` tuo `null`in → päivä nousee kuten ennen. Päivänvalo on additive-kerros
+  (`'lighter'`), eli se ei muuta yhtään väripalettia: jos kadun pitää näyttää vielä valoisammalta,
+  nosta `DAY_LIGHT_ALPHA` (0.30) tai vaalenna `DAY_SKY_*`-sävyjä.
+- **Makuuhuone (v4.33):** liuku on pysähdyksissä huoneessa (`!sleepRoom`), joten nukahduksen jälkeen
+  auringonnousu/-lasku näkyy vasta kadulle palatessa – sama portti kuin iframe-peleillä. Huone piirretään
+  `render()`issa ennen päivänvalo-washiä → sisätila ei kirkastu. Nukkuminen **ei** kosketa taloutta,
+  🍔-ajastinta, lamppuja, ovia eikä avaimia.
 - `handleAction()` palaa heti osumasta → hit pause asetetaan haaroissa, `actionJustPressed` nollataan
   framen lopussa (ei tuplapotkua). `KICK_DURATION` ja törmäyslogiikka ennallaan.
 - `street.js` `lamps[].label` on **kuollutta dataa** – kadun kyltit eivät näytä pelien nimiä (vain BAR

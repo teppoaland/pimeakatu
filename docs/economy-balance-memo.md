@@ -18,7 +18,7 @@
    │ BAR:        1 kolikko = 1 🍔 (katto 10)            │
    │ Jukebox:    1 kolikko = 1 koko kappale             │
    │ Hedelmäpeli:1 kolikko / pyöräytys, RTP 78,5 %      │
-   │ Palkintohuone: 3 kolikkoa (tai kaikki avaimet)     │
+   │ Makuuhuone: 3 avainta (Nuku/Poistu ilmaisia)      │
    └────────────────────────┬───────────────────────────┘
                             ▼
    ┌──────────── paine (pakko pitää huolta) ────────────┐
@@ -56,7 +56,7 @@ ihan kuin oikeassa elämässä".
 | Hampurilaiset | alussa **5**, +1 / **40 s** (`hamburgerTimer = 2400` framet) |
 | BAR | **1 kolikko = 1 🍔** (katto 10, ▼ peruu vain vierailun ostot) |
 | Jukebox | **1 kolikko = 1 koko kappale** |
-| Palkintohuone (talo 7) | kaikki avaimet **tai** 3 kolikkoa |
+| Makuuhuone (ex-palkintohuone, talo 7) | **3 avainta** = lukko (kolikkoreitti poistettu v4.33). Nuku/Poistu **ilmaisia** → ei vaikutusta talouteen |
 | Oviukko / kukkaruukku / sähkökaappi | osuma = tainnutus + **−1 🍔** (🍔 0 → kuolema) |
 | Syntymäpaketti | uusi peli / reset: **2 kolikkoa + 5 🍔** |
 
@@ -88,3 +88,11 @@ vapaasti (esim. `COIN_CHEAT_COOLDOWN = 0` nopeampaan testaukseen) ilman versiono
 3. Aja: `%TEMP%\ftest.cjs` (maksutaulukko 125/125 + RTP-simulaatio), `%TEMP%\street-fruit-test.cjs`,
    `%TEMP%\street-bar-test.cjs`, `%TEMP%\street-cheat-test.cjs` + street-regressiot → 0 löydöstä.
 4. Versionosto +0.01 ja muistipankki.
+
+---
+
+## 6. Muutoshistoria (ennen → jälkeen)
+
+| Pvm | Versio | Ennen | Jälkeen |
+|-----|--------|-------|---------|
+| 20.9.2026 | v4.33 | Palkintohuone (talo 7): pääsy **kaikki avaimet tai 3 kolikkoa**; huoneessa pokaali | Makuuhuone (talo 7): pääsy **vain 3 avainta** (kolikkoreitti poistettu); Nuku/Poistu ilmaisia. **Kolikko-/🍔-talous ei muutu** – poistui vain yksi kolikoiden käyttökohde |
