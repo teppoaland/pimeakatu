@@ -1,4 +1,6 @@
 // renderer.js – Hedelmäpeli: canvas-piirto (kone, rullat, symbolit, efektit)
+let wallPicFailed = false;   // seinäkuva ei latautunut → pysyy piilossa
+
 class Renderer {
     constructor(canvas, game) {
         this.canvas = canvas;
@@ -10,6 +12,15 @@ class Renderer {
         this.resize();
         window.addEventListener('resize', () => this.resize());
         window.addEventListener('orientationchange', () => this.resize());
+
+        // Seinäkuva: kun lataus valmistuu (tai epäonnistuu), mitat ovat
+        // tiedossa → asettelu lasketaan uudelleen.
+        const pic = (typeof document !== 'undefined' && document.getElementById)
+            ? document.getElementById('wall-pic') : null;
+        if (pic && pic.addEventListener) {
+            pic.addEventListener('load', () => this.resize());
+            pic.addEventListener('error', () => { wallPicFailed = true; this.resize(); });
+        }
     }
 
     /** Skaalaa canvas käytettävissä olevaan tilaan (toimii pysty- ja vaaka-asennossa) */
@@ -21,6 +32,44 @@ class Renderer {
         const scale = Math.min(availW / CANVAS_W, availH / CANVAS_H);
         this.canvas.style.width = Math.floor(CANVAS_W * scale) + 'px';
         this.canvas.style.height = Math.floor(CANVAS_H * scale) + 'px';
+        this.placeWallPicture(wrap, parseFloat(this.canvas.style.width),
+                              parseFloat(this.canvas.style.height));
+    }
+
+    /* ── Pelihuoneen seinäkuva ───────────────────────────
+       Kuva on HTML-elementti canvasin ulkopuolella, joten koneen kokoon
+       ei kosketa. Se sijoitetaan vapaaseen seinäkaistaan koneen viereen
+       (PC) tai yläpuolelle (pystymobiili); jos tilaa ei ole, kuva pysyy
+       piilossa. Mobiilin vaakatasossa se piilotetaan aina. */
+    placeWallPicture(wrap, canvasW, canvasH) {
+        const pic = (typeof document !== 'undefined' && document.getElementById)
+            ? document.getElementById('wall-pic') : null;
+        if (!pic || !pic.classList) return;
+        if (wallPicFailed) { pic.classList.remove('visible'); return; }
+
+        const landMobile = (typeof window.matchMedia === 'function')
+            && window.matchMedia('(orientation: landscape) and (max-height: 500px) and (pointer: coarse)').matches;
+        if (landMobile) { pic.classList.remove('visible'); return; }
+
+        const gap = 12;                        // marginaali seinään
+        pic.classList.add('visible');          // mitattava: display:none → 0
+        const picW = Number(pic.offsetWidth) || 0;
+        const picH = Number(pic.offsetHeight) || 0;
+        if (!picW || !picH) { pic.classList.remove('visible'); return; }
+
+        const freeX = (wrap.clientWidth - canvasW) / 2;
+        const freeY = (wrap.clientHeight - canvasH) / 2;
+        if (freeX >= picW + gap * 2) {
+            // Koneen vieressä oleva seinäkaista (tyypillisesti PC)
+            pic.style.left = Math.round((freeX - picW) / 2) + 'px';
+            pic.style.top = Math.round(Math.max(gap, freeY + gap)) + 'px';
+        } else if (freeY >= picH + gap * 2) {
+            // Koneen yläpuolinen seinäkaista (tyypillisesti pystymobiili)
+            pic.style.left = Math.round((wrap.clientWidth - picW) / 2) + 'px';
+            pic.style.top = Math.round((freeY - picH) / 2) + 'px';
+        } else {
+            pic.classList.remove('visible');   // ei mahdu → piiloon
+        }
     }
 
     /* ═══ PÄÄPIIRTO ═══════════════════════════════════ */
