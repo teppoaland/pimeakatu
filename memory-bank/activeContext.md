@@ -17,10 +17,11 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.43` (`index.html` → `#version-tag`) · **Git:** v4.39–v4.42 committattu ja
-  pushattu 20.9.2026 (`2ffcd94`, origin/main) · **työpuu: v4.43 muutokset odottavat committia** ·
-  käyttäjän testaus OK
-  ("Tuli hieno" – led-valot syttyvät naksahdellen, vanhat lamput olivat dramaattisempia).
+- **Versio:** `v4.43` (`index.html` → `#version-tag`) · **Git:** v4.39–v4.43 committattu ja
+  pushattu 20.9.2026 (`2ffcd94`, `e941778`, origin/main) · **työpuu puhdas**.
+- **Testaus:** v4.39–v4.42 käyttäjän testaus OK ("Tuli hieno" – led-valot syttyvät naksahdellen,
+  vanhat lamput olivat dramaattisempia). **v4.43 odottaa käyttäjän testausta** (sääntö 05):
+  makuuhuoneen oven pitää aueta ilman avaimia ja lamppua sekä yöllä (`?day=0`) että päivällä (`?day=1`).
 - **Katuvalot (v4.42):** kun yö on laskeutunut **täyteen** (`dayT === 0`) ja pelaaja on jo edennyt
   (`state.isDay === false` = päivä/yö on ratkaistu ja Nuku vei yöhön – avaimet tai v4.43:n vapaa
   makuuhuone), katuvalot **syttyvät itsestään
@@ -75,7 +76,7 @@
   alpha-ristihäivytys, **ei liukua** (v4.41).
 - **Lukossa:** talous (sääntö 04) ja inventaario · **vapaasti säädettävissä:** testityökalut
   (`COIN_CHEAT_*`, `?coins`, `?debug`, `?day=0` / `?day=1`, `MUSIC_SOURCE`, `bm`-debug).
-- **Avoinna:** v4.39–v4.43 odottavat committia (ks. yllä) · muuten ks. "🔜 Seuraavaksi".
+- **Avoinna:** työpuu puhdas – v4.43 committattu ja pushattu (`e941778`) · muuten ks. "🔜 Seuraavaksi".
 
 ---
 
