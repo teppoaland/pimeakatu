@@ -47,3 +47,14 @@ ovat aina ajan tasalla.
 - IDE-asetukset (`.vscode/`, `.idea/`)
 - Käyttöjärjestelmän roskat (`.DS_Store`, `Thumbs.db`)
 - Väliaikaiset tiedostot (`tmp/`, `*.log`)
+
+## Tekijänoikeudet / Copyright
+
+**Copyright (c) 2024–2026 Teppo Aland. Kaikki oikeudet pidätetään.**
+
+Peli kokonaisuudessaan (lähdekoodi, grafiikka, äänet ja musiikki) on tekijänsä
+omaisuutta. Sitä **ei saa** kopioida, muokata, julkaista uudelleen, levittää eikä
+käyttää omissa projekteissa tai kaupallisesti ilman tekijän kirjallista lupaa.
+Tarkemmat ehdot: [`LICENSE`](LICENSE).
+
+`jukebox/`-kansion kappaleet ovat tekijän omia teoksia (Knived).

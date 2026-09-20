@@ -1,6 +1,6 @@
 # 🎵 Jukebox – memo (talo 5)
 
-> Päivitetty 20.9.2026 – versio **v4.20**. Talo 5 (`buildings[4]`) on jukebox-huone,
+> Päivitetty 20.9.2026 – versio **v4.21**. Talo 5 (`buildings[4]`) on jukebox-huone,
 > josta voi soittaa koko kappaleita 1 kolikolla. Kappaleet ovat `jukebox/`-kansiossa.
 
 ---
@@ -37,9 +37,34 @@
 | Ääntä ei saada lainkaan | kolikko palautetaan + `🔇 Ääntä ei saatu – kolikko palautettiin.` |
 
 - Kappale soitetaan **aina kokonaan loppuun** (`loop = false`, ei katkaisua).
-- Valinta: **▲ / W** = +1, **▼ / S** = −1 (0…3, reunanilmaisu → ei toistoa pohjassa).
+- Valinta: **▲ / W** = valitse **ylös** (−1), **▼ / S** = valitse **alas** (+1)
+  (0…3, reunanilmaisu → ei toistoa pohjassa). Rivi 0 ("ei valintaa") on listan
+  ylimpänä, joten ▲ pienentää ja ▼ kasvattaa valintaa – **korjattu v4.21**
+  (v4.20:ssä nuolet olivat väärinpäin).
 - Poistuminen: **(o) / Space / Enter / ⚡-nappi**. Uusi vierailu alkaa aina valinnasta 0.
 - Kappale soi myös alapelien (iframe) aikana; kuolema (`StreetAudio.stop()`) hiljentää sen.
+
+---
+
+## Taustamusiikki = syntikkalooppi (v4.21)
+
+- Kadun taustamusiikki on **proseduraalinen syntikkalooppi** (`audio.js`: rummut +
+  basso + särökitara + melodia, Web Audio) – sama ääni, joka oli aiemmin vain
+  fallback. Aidot äänitteet ovat **vain** jukeboxissa.
+- Kytkin: `MUSIC_SOURCE = 'synth'` (oletus) | `'mp3'`. `'synth'`-tilassa
+  `loadMusic()` ei lataa äänitiedostoa lainkaan → `playPhase()` valitsee syntikan;
+  `'mp3'` palauttaa aidon äänitteen (`MUSIC_FILE = 'knived_unafraid.mp3'`, alku +
+  häivytys) yhden rivin muutoksella.
+- Sykli: **30 s soittoa** (`SYNTH_PLAY_DURATION`) + **0,6 s häivytys**
+  (`fadeOutSynth()` ramppaa `synthGain` 1 → 0, `SONG_FADE_OUT`) + **30–90 s tauko**
+  (`getSilenceDuration`) → sykli 60–120 s. Satunnainen BPM 110–142 ja melodian
+  suunta säilyivät.
+- Jukebox-kappaleen aikana taustamusiikin sykli on peruttu (`playJukebox` →
+  `cancelCycle`, myös `synthFadeTimer` nollataan); kappaleen päätyttyä taustalle
+  palaa syntikka `JUKEBOX_GAP` 2,5 s jälkeen.
+- **`running.mp3` (15,5 s lo-fi looppi) ei palaa:** se ja `docs/running.mpeg`
+  poistettiin v4.16:ssa eikä niitä käytetä enää mistään polusta. Juuren
+  `knived_unafraid.mp3` (tekijän oma teos) jää repoon `'mp3'`-varatien tiedostoksi.
 
 ---
 

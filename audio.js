@@ -1,13 +1,15 @@
 /* ═══════════════════════════════════════════════════════════
    audio.js – Pimeä Katu -taustamusiikki
-   Täysi bändisoundi (fallback kun MP3 ei soi)
-   Web Audio API: rummut + basso + särökitara + melodia
+   Taustamusiikki = proseduraalinen syntikkalooppi (Web Audio):
+   rummut + basso + särökitara + melodia, soi 30 s jaksoissa.
+   MUSIC_SOURCE = 'mp3' ottaa tilalle aidon äänitteen (varatie).
+   Aidot koko kappaleet soi vain kadun jukebox-huoneesta.
    ═══════════════════════════════════════════════════════════ */
 
 const StreetAudio = (() => {
     let ctx = null;
     let masterGain = null;
-    let synthGain = null;    // syntikan oma väylä – mykistetään MP3:n ajaksi
+    let synthGain = null;    // syntikan oma väylä (mykistetään jukeboxin/MP3:n ajaksi)
     let drumGain = null;
     let bassGain = null;
     let guitarGain = null;
@@ -16,12 +18,20 @@ const StreetAudio = (() => {
     let started = false;
     let melodyReverse = false;
 
+    // ── Taustamusiikin lähde ─────────────────────────────────
+    // 'synth' = proseduraalinen syntikkalooppi (oletus – soi aina)
+    // 'mp3'   = aito äänite MUSIC_FILE (alku + häivytys, varatie)
+    const MUSIC_SOURCE = 'synth';
+    const MUSIC_FILE = 'knived_unafraid.mp3';
+
     // ── MP3-kappale (aito äänite, soitetaan vain alku) ────────
+    // Käytössä vain kun MUSIC_SOURCE === 'mp3'
     let musicEl = null;       // <audio>-elementti, soi suoraan (ei Web Audio -reititystä)
     let musicReady = false;   // tiedosto ladattu ja soitettavissa (canplay)
     let musicPlayed = 0;      // montako kertaa soitettu tässä syklissä (1 = kertasoitto)
     let musicBlocked = false; // autoplay estetty (NotAllowedError) – yritetään uudelleen eleessä
-    let fadeTimer = null;     // häivytyksen interval-tunniste (soiton lopetus)
+    let fadeTimer = null;     // MP3-häivytyksen interval-tunniste (soiton lopetus)
+    let synthFadeTimer = null; // syntikan häivytyksen interval-tunniste
 
     const MUSIC_VOLUME = 0.05; // kappaleen perusvoimakkuus (vastaa masterGain 0.05025)
 
@@ -112,9 +122,12 @@ const StreetAudio = (() => {
        sekä http:// että file://-protokollalla.
        ═══════════════════════════════════════════════════ */
     function loadMusic() {
+        // Syntikkatausta (oletus): aitoa äänitettä ei ladata lainkaan, jolloin
+        // playPhase() valitsee syntikan. Koko kappaleet ovat jukebox-huoneessa.
+        if (MUSIC_SOURCE !== 'mp3') { musicReady = false; return; }
         if (musicEl || !ctx) return;
         try {
-            musicEl = new Audio('knived_unafraid.mp3');
+            musicEl = new Audio(MUSIC_FILE);
             musicEl.loop = false;
             musicEl.preload = 'auto';
             musicEl.volume = MUSIC_VOLUME; // vastaa aiempaa masterGain-tasoa (0.05025)
@@ -148,6 +161,7 @@ const StreetAudio = (() => {
         started = true;
         // Pysäytä syntikka heti, ettei se soi MP3:n päällä
         if (loopId) { clearInterval(loopId); loopId = null; }
+        if (synthFadeTimer) { clearInterval(synthFadeTimer); synthFadeTimer = null; }
         if (synthGain) synthGain.gain.value = 0;
         try { musicEl.currentTime = 0; } catch (e) {}
         try { musicEl.volume = MUSIC_VOLUME; } catch (e) {} // varmistus keskeytyneen häivytyksen varalle
@@ -186,6 +200,7 @@ const StreetAudio = (() => {
         if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
         if (loopId) { clearInterval(loopId); loopId = null; }
         if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
+        if (synthFadeTimer) { clearInterval(synthFadeTimer); synthFadeTimer = null; }
         started = false;
         stopMusicLoop();                            // MP3 tauolle + currentTime = 0 + volume takaisin
         if (synthGain) synthGain.gain.value = 0;    // syntikka ei soi päällekkäin
@@ -551,11 +566,30 @@ const StreetAudio = (() => {
         }, stepMs);
     }
 
-    /* Soittovaiheen ajastin: kappale (alku + häivytys) tai syntikka (30s). */
+    /* Syntikan häivytys: synthGain 1 → 0 (SONG_FADE_OUT ms), sitten tauko.
+       Sama rytmi kuin MP3:lla – soitto ei katkea kovalla leikkauksella. */
+    function fadeOutSynth() {
+        if (synthFadeTimer) { clearInterval(synthFadeTimer); synthFadeTimer = null; }
+        if (!synthGain || SONG_FADE_OUT <= 0) { silencePhase(); return; }
+        const STEPS = 12;
+        const stepMs = Math.max(20, Math.round(SONG_FADE_OUT / STEPS));
+        let i = 0;
+        synthFadeTimer = setInterval(() => {
+            i++;
+            try { synthGain.gain.value = Math.max(0, 1 - (1 / STEPS) * i); } catch (e) {}
+            if (i >= STEPS) {
+                clearInterval(synthFadeTimer);
+                synthFadeTimer = null;
+                silencePhase();
+            }
+        }, stepMs);
+    }
+
+    /* Soittovaiheen ajastin: kappale (alku + häivytys) tai syntikka (30 s + häivytys). */
     function armPlayTimer(useSong) {
         if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
         if (!useSong) {
-            cycleTimer = setTimeout(silencePhase, SYNTH_PLAY_DURATION);
+            cycleTimer = setTimeout(fadeOutSynth, Math.max(0, SYNTH_PLAY_DURATION - SONG_FADE_OUT));
             return;
         }
         cycleTimer = setTimeout(fadeOutSong, Math.max(0, songPlayLength() - SONG_FADE_OUT));
@@ -567,6 +601,7 @@ const StreetAudio = (() => {
         phase = 'silent';
         if (loopId) { clearInterval(loopId); loopId = null; }
         if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
+        if (synthFadeTimer) { clearInterval(synthFadeTimer); synthFadeTimer = null; }
         started = false;
         stopMusicLoop();
         const delay = getSilenceDuration();
@@ -576,6 +611,7 @@ const StreetAudio = (() => {
     function startSynth() {
         if (!ctx) return;
         started = true;
+        if (synthFadeTimer) { clearInterval(synthFadeTimer); synthFadeTimer = null; }
         if (synthGain) synthGain.gain.value = 1; // syntikka kuuluviin
         melodyReverse = Math.random() < 0.5;
         BPM = BPM_MIN + Math.random() * (BPM_MAX - BPM_MIN);
@@ -597,7 +633,7 @@ const StreetAudio = (() => {
             startMusicLoop();
             armPlayTimer(true);
         } else {
-            // Fallback: proseduraalinen synteesi
+            // Syntikkatausta (oletus): proseduraalinen synteesi
             startSynth();
             armPlayTimer(false);
         }
@@ -707,10 +743,12 @@ const StreetAudio = (() => {
         if (loopId) { clearInterval(loopId); loopId = null; }
         if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
         if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
+        if (synthFadeTimer) { clearInterval(synthFadeTimer); synthFadeTimer = null; }
         started = false;
         phase = 'silent';
         stopJukebox();             // myös jukebox-kappale hiljenee (kuolema keskeyttää kaiken)
         stopMusicLoop();
+        if (synthGain) synthGain.gain.value = 0;   // syntikkatausta hiljenee heti (kuolema)
     }
 
     function getCtx() { init(); return ctx; }

@@ -52,7 +52,7 @@ peli/
 
 **bm/** on kevyempi: `game_main.html` + `css/style.css` + `js/game.js` + `js/audio.js` (ei constants/levels/physics/enemies/renderer/input-tiedostoja).
 **fruitgame/:** `game_main.html` + `css/style.css` + `js/{constants,renderer,input,audio,game}.js`.
-**Portaalin juuressa:** `index.html`, `style.css`, `street.js`, `gameState.js` ja `audio.js` (taustamusiikki `knived_unafraid.mp3` + SFX) – ei `js/`-kansiota.
+**Portaalin juuressa:** `index.html`, `style.css`, `street.js`, `gameState.js` ja `audio.js` (taustamusiikki = proseduraalinen syntikkalooppi `MUSIC_SOURCE 'synth'` + SFX; aito äänite `knived_unafraid.mp3` vain `'mp3'`-varatiekytkimellä) – ei `js/`-kansiota.
 **`jukebox/`** (juuressa): 3 koko kappaletta 128 kbps mp3 (`our_song`, `unafraid`, `unafraid_instrumental`) – soitetaan kadun jukebox-huoneesta (talo 5); masterit `*.mpeg` ovat repon ulkopuolella (`D:\AI\Knived`, `.gitignore`).
 
 ---
@@ -113,7 +113,7 @@ peli/
 - **localStorage:** `pimeakatu_gamestate` – pääportaalin pelitila
 - **Pelien sisäinen tila:** ei tallenneta (jokainen pelikerta alusta)
 - **Avaimet:** Dig Gamen avain → `digKeyCollected`, Dig Däshin avain → `boulderKeyCollected`, Blue Mäxin avain → `bmKeyCollected`; Hedelmäpelin ilmaisen pyöräytyksen jäädytys on pelin **omassa** avaimessa `pimeakatu_fruit_free` (kadun `pimeakatu_gamestate` pysyy koskemattomana)
-- **Äänitiedostot:** gitissä vain `knived_unafraid.mp3` (pelin taustamusiikki); biisien masterit ovat repon ulkopuolella `D:\AI\Knived` (`.gitignore` estää `*.mpeg`/`*.mp4`)
+- **Äänitiedostot:** kadun taustamusiikki on **proseduraalinen syntikka** (Web Audio, ei tiedostoa; `MUSIC_SOURCE 'synth'`), `knived_unafraid.mp3` (juuressa) on `'mp3'`-varatien äänite ja `jukebox/` sisältää 3 aitoa kappaletta (tekijän omia teoksia); biisien masterit ovat repon ulkopuolella `D:\AI\Knived` (`.gitignore` estää `*.mpeg`/`*.mp4`)
 
 ---
 

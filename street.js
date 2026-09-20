@@ -833,7 +833,8 @@ const Street = (() => {
         }
 
         // JUKEBOX-huone (talo 5) – valinta nuolilla, osto + soitto poistuttaessa
-        //   ▲ / W = valitse seuraava      ▼ / S = valitse edellinen
+        //   ▲ / W = valitse YLÖS (pienempi rivi)   ▼ / S = valitse ALAS (isompi rivi)
+        //   Rivi 0 ("ei valintaa") on listan ylimpänä → ▲ = jukeSel - 1, ▼ = jukeSel + 1
         //   0 = ei valintaa → poistuminen ei veloita eikä soita mitään
         //   (o) / Space / Enter / ⚡ = poistu: valinta 1-N → 1 kolikko + koko kappale
         if (jukeboxRoom) {
@@ -844,8 +845,8 @@ const Street = (() => {
 
             // Valinta on lukossa kun kappale soi (soi aina loppuun asti)
             if (!songPlaying) {
-                if (selUp && !jukeHeldUp) jukeSel = Math.min(trackCount, jukeSel + 1);
-                if (selDown && !jukeHeldDown) jukeSel = Math.max(0, jukeSel - 1);
+                if (selUp && !jukeHeldUp) jukeSel = Math.max(0, jukeSel - 1);
+                if (selDown && !jukeHeldDown) jukeSel = Math.min(trackCount, jukeSel + 1);
             }
             jukeHeldUp = selUp;
             jukeHeldDown = selDown;
@@ -3444,7 +3445,7 @@ const Street = (() => {
         ctx.fillStyle = 'rgba(230,225,235,0.6)';
         ctx.font = '11px "Courier New", monospace';
         ctx.textAlign = 'left';
-        ctx.fillText('1 🪙 = koko kappale (soi loppuun asti)', 62, 108);
+        ctx.fillText('', 62, 108);
 
         // 3) Kappalelista: rivi 0 = ei valintaa, rivit 1..N = kappaleet
         const rowX = 62, rowW = 400, rowH = 30, rowGap = 6, rowTop = 126;
