@@ -145,10 +145,13 @@ const Street = (() => {
        (1. painallus ovella = potku → valot 20 s, 2. painallus = sisään).
        1 kolikko = 1 kappale, joka soi kokonaan loppuun asti. */
     const JUKEBOX_BLDG_IDX = 4;
+    /* Tiedostonimet vastaavat sisältöä (korjattu 20.9.2026, v4.27): aiemmin
+       `our_song.mp3` ja `unafraid.mp3` olivat ristissä keskenään → raita 1 ja 2
+       soivat valitun nimen vastaisesti. Älä "korjaa" nimiä takaisin ristiin. */
     const JUKEBOX_TRACKS = [
-        { url: 'jukebox/our_song.mp3',              title: 'Knived - Our Song' },
-        { url: 'jukebox/unafraid.mp3',              title: 'Knived - Unafraid' },
-        { url: 'jukebox/unafraid_instrumental.mp3', title: 'Knived - Unafraid (inst.)' }
+        { url: 'jukebox/Knived_Our_song.mp3',              title: 'Knived - Our Song' },
+        { url: 'jukebox/Knived_Unafraid.mp3',              title: 'Knived - Unafraid' },
+        { url: 'jukebox/Knived_Unafraid_instrumental.mp3', title: 'Knived - Unafraid (inst.)' }
     ];
     let jukeboxRoom = false;
     let jukeSel = 0;               // 0 = ei valintaa, 1..N = kappale

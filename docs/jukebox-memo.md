@@ -1,6 +1,6 @@
 # 🎵 Jukebox – memo (talo 5)
 
-> Päivitetty 20.9.2026 – versio **v4.22**. Talo 5 (`buildings[4]`) on jukebox-huone,
+> Päivitetty 20.9.2026 – versio **v4.27**. Talo 5 (`buildings[4]`) on jukebox-huone,
 > josta voi soittaa koko kappaleita 1 kolikolla. Kappaleet ovat `jukebox/`-kansiossa.
 
 ---
@@ -103,26 +103,31 @@ koko asettelu sovitetaan näkyvään ikkunaan:
 
 ## Äänitiedostot (`jukebox/`)
 
-| Tiedosto | Kesto | Kanavat | Koko |
-|---|---|---|---|
-| `our_song.mp3` | 4:44 | mono | 4,3 MB |
-| `unafraid.mp3` | 4:24 | stereo | 4,0 MB |
-| `unafraid_instrumental.mp3` | 2:08 | stereo | 2,0 MB |
+| Tiedosto | Kesto | Kanavat | Koko | Raita |
+|---|---|---|---|---|
+| `Knived_Our_song.mp3` | 4:24 | stereo | 4,0 MB | 1 |
+| `Knived_Unafraid.mp3` | 4:44 | mono | 4,3 MB | 2 |
+| `Knived_Unafraid_instrumental.mp3` | 2:08 | stereo | 2,0 MB | 3 |
 
+- **Nimet korjattu 20.9.2026 (v4.27):** tiedostot nimettiin uudelleen `Knived_`-etuliitteellä, koska
+  nimet olivat ristissä sisällön kanssa – raita 1 soitti Unafraidin ja raita 2 Our Songin
+  (`unafraid.mp3` kantoi jopa ID3-otsikkoa "Our Song with bass"). Nimien ja `street.js`:n
+  `JUKEBOX_TRACKS`-urlien on vastattava toisiaan: `Knived_Unafraid.mp3` = ennen `our_song.mp3`
+  ja `Knived_Our_song.mp3` = ennen `unafraid.mp3`.
 - Masterit ovat repon ulkopuolella `D:\AI\Knived` (`*.mpeg` on `.gitignore`ssa);
   repo sisältää vain pakatut 128 kbps mp3-versiot.
 - Koodaus: `ffmpeg … -ar 44100 -b:a 128k`, taso normalisoitu **≈ −13,5 LUFS**
   (sama kuin taustamusiikki `knived_unafraid.mp3`, −12,9 LUFS):
-  - `our_song`: `-af volume=-3.2dB` (mitattu −13,5 LUFS, TP −1,6 dBFS)
-  - `unafraid`: `-af volume=4dB,alimiter=limit=0.891:level=disabled`
+  - `Knived_Our_song`: `-af volume=4dB,alimiter=limit=0.891:level=disabled`
     (masterin true peak +1,6 dBFS → limitteri tarvitaan; mitattu −13,6 LUFS, TP −0,8 dBFS)
-  - `unafraid_instrumental`: `-af volume=-7.5dB` (mitattu −13,4 LUFS, TP −5,2 dBFS)
+  - `Knived_Unafraid`: `-af volume=-3.2dB` (mitattu −13,5 LUFS, TP −1,6 dBFS)
+  - `Knived_Unafraid_instrumental`: `-af volume=-7.5dB` (mitattu −13,4 LUFS, TP −5,2 dBFS)
 - **UI:ssa näkyvät nimet:** `1 Knived - Our Song` · `2 Knived - Unafraid` ·
   `3 Knived - Unafraid (inst.)` (järjestysnumero tulee rivin numerosarakkeesta;
   bändin nimi on mukana jokaisen kappaleen nimessä).
 - **Huom `alimiter`:** oletus `level=true` normalisoi outputin takaisin 0 dB:hen, joten
   vahvistus ei pidä → käytä aina `level=disabled`.
-- **Huom:** `unafraid_instrumental` on sama äänite kuin pelin taustamusiikki
+- **Huom:** `Knived_Unafraid_instrumental` on sama äänite kuin pelin taustamusiikki
   (`knived_unafraid.mp3`, 128,05 s vs. 128,02 s). Jos 2 MB halutaan säästää, raita 3
   voi osoittaa juuritiedostoon `knived_unafraid.mp3`.
 - Säädettävät nupit `audio.js`:ssä: `JUKEBOX_VOLUME = MUSIC_VOLUME` (0,05) ja
