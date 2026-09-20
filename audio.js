@@ -16,11 +16,14 @@ const StreetAudio = (() => {
     let started = false;
     let melodyReverse = false;
 
-    // ── MP3-kappale (aito äänite, kertasoitto) ────────
+    // ── MP3-kappale (aito äänite, soitetaan vain alku) ────────
     let musicEl = null;       // <audio>-elementti, soi suoraan (ei Web Audio -reititystä)
     let musicReady = false;   // tiedosto ladattu ja soitettavissa (canplay)
     let musicPlayed = 0;      // montako kertaa soitettu tässä syklissä (1 = kertasoitto)
     let musicBlocked = false; // autoplay estetty (NotAllowedError) – yritetään uudelleen eleessä
+    let fadeTimer = null;     // häivytyksen interval-tunniste (soiton lopetus)
+
+    const MUSIC_VOLUME = 0.05; // kappaleen perusvoimakkuus (vastaa masterGain 0.05025)
 
     const BPM_MIN = 110;
     const BPM_MAX = 142;
@@ -106,13 +109,7 @@ const StreetAudio = (() => {
             musicEl = new Audio('knived_unafraid.mp3');
             musicEl.loop = false;
             musicEl.preload = 'auto';
-            musicEl.volume = 0.05; // vastaa aiempaa masterGain-tasoa (0.05025)
-            musicEl.addEventListener('loadedmetadata', () => {
-                if (musicEl.duration && isFinite(musicEl.duration)) {
-                    // Kertasoitto: soitetaan kerran loppuun + 1s häntä (ei x2-toistoa)
-                    PLAY_DURATION = Math.round(musicEl.duration * 1000) + 1000;
-                }
-            });
+            musicEl.volume = MUSIC_VOLUME; // vastaa aiempaa masterGain-tasoa (0.05025)
             // Merkitse valmiiksi vasta kun selain oikeasti pystyy soittamaan tiedostoa
             musicEl.addEventListener('canplay', () => {
                 musicReady = true;
@@ -120,12 +117,12 @@ const StreetAudio = (() => {
                 if (phase === 'playing' && started && loopId) {
                     if (loopId) { clearInterval(loopId); loopId = null; }
                     startMusicLoop();
-                    armPlayTimer(true); // syntikan 30s ajastin → kappaleen mittaiseksi
+                    armPlayTimer(true); // syntikan 30s ajastin → kappaleen alun mittaiseksi
                 }
             });
             musicEl.addEventListener('canplaythrough', () => { musicReady = true; });
             musicEl.addEventListener('error', () => { musicReady = false; });
-            // Kappale päättyy → kertasoitto täyttyi, siirry taukoon
+            // Kappale päättyy → turvaverkko: vain jos tiedosto on lyhyempi kuin SONG_PLAY_LIMIT
             musicEl.addEventListener('ended', () => {
                 musicPlayed++;
                 if (phase === 'playing' && musicPlayed === 1) silencePhase();
@@ -145,6 +142,7 @@ const StreetAudio = (() => {
         if (loopId) { clearInterval(loopId); loopId = null; }
         if (synthGain) synthGain.gain.value = 0;
         try { musicEl.currentTime = 0; } catch (e) {}
+        try { musicEl.volume = MUSIC_VOLUME; } catch (e) {} // varmistus keskeytyneen häivytyksen varalle
         const p = musicEl.play();
         if (p && typeof p.catch === 'function') {
             p.catch(() => {
@@ -163,6 +161,7 @@ const StreetAudio = (() => {
         if (musicEl) {
             try { musicEl.pause(); } catch (e) {}
             try { musicEl.currentTime = 0; } catch (e) {}
+            try { musicEl.volume = MUSIC_VOLUME; } catch (e) {} // palauta perustaso seuraavaa soittoa varten
         }
     }
 
@@ -418,24 +417,53 @@ const StreetAudio = (() => {
         }, LOOP * 1000);
     }
 
-    // ── Syklin ajastimet: kappale kerran, sitten 30–90s tauko ──
+    // ── Syklin ajastimet: kappaleen alku, sitten 30–90s tauko ──
     let cycleTimer = null;       // setTimeout-tunniste
     let phase = 'silent';        // 'playing' | 'silent'
-    let PLAY_DURATION = 30000;   // kappaleen kesto (ms) + 1s häntä – päivittyy loadedmetadata
+    const SONG_PLAY_LIMIT = 30000;     // kappaleesta soitetaan vain alku (ms)
+    const SONG_FADE_OUT = 600;         // häivytyksen kesto lopussa (ms, 0 = kova katkaisu)
     const SYNTH_PLAY_DURATION = 30000; // syntikka-fallbackin soittoaika (ms)
 
     function getSilenceDuration() {
         return 30000 + Math.random() * 60000; // 30–90s taukoa
     }
 
-    /* Soittovaiheen ajastin: kappale (kertasoitto) tai syntikka (30s).
-       Kesto luetaan elementistä, jotta 30s oletus ei katkaise pitkää kappaletta. */
+    /* Kappaleen soittoaika: vain alku (SONG_PLAY_LIMIT), mutta ei koskaan
+       tiedoston kestoa pidemmälle – jos biisi joskus vaihtuu lyhyemmäksi. */
+    function songPlayLength() {
+        if (musicEl && musicEl.duration && isFinite(musicEl.duration))
+            return Math.min(SONG_PLAY_LIMIT, Math.round(musicEl.duration * 1000) + 1000);
+        return SONG_PLAY_LIMIT;
+    }
+
+    /* Häivytys lopussa: volume MUSIC_VOLUME → 0 (SONG_FADE_OUT ms), sitten tauko.
+       Soitto katkeaa aina alusta lasketun ajan jälkeen – ei koko kappaleen mittaa. */
+    function fadeOutSong() {
+        if (!musicEl || SONG_FADE_OUT <= 0) { silencePhase(); return; }
+        if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
+        const STEPS = 12;
+        const stepMs = Math.max(20, Math.round(SONG_FADE_OUT / STEPS));
+        const stepVol = MUSIC_VOLUME / STEPS;
+        let i = 0;
+        fadeTimer = setInterval(() => {
+            i++;
+            try { musicEl.volume = Math.max(0, MUSIC_VOLUME - stepVol * i); } catch (e) {}
+            if (i >= STEPS) {
+                clearInterval(fadeTimer);
+                fadeTimer = null;
+                silencePhase();
+            }
+        }, stepMs);
+    }
+
+    /* Soittovaiheen ajastin: kappale (alku + häivytys) tai syntikka (30s). */
     function armPlayTimer(useSong) {
         if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
-        const len = (musicEl && musicEl.duration && isFinite(musicEl.duration))
-            ? Math.round(musicEl.duration * 1000) + 1000
-            : PLAY_DURATION;
-        cycleTimer = setTimeout(silencePhase, useSong ? len : SYNTH_PLAY_DURATION);
+        if (!useSong) {
+            cycleTimer = setTimeout(silencePhase, SYNTH_PLAY_DURATION);
+            return;
+        }
+        cycleTimer = setTimeout(fadeOutSong, Math.max(0, songPlayLength() - SONG_FADE_OUT));
     }
 
     function silencePhase() {
@@ -443,6 +471,7 @@ const StreetAudio = (() => {
         if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
         phase = 'silent';
         if (loopId) { clearInterval(loopId); loopId = null; }
+        if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
         started = false;
         stopMusicLoop();
         const delay = getSilenceDuration();
@@ -571,6 +600,7 @@ const StreetAudio = (() => {
     function stop() {
         if (loopId) { clearInterval(loopId); loopId = null; }
         if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
+        if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
         started = false;
         phase = 'silent';
         stopMusicLoop();
