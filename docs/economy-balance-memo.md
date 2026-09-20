@@ -58,6 +58,7 @@ ihan kuin oikeassa elämässä".
 | BAR | **1 kolikko = 1 🍔** (katto 10, ▼ peruu vain vierailun ostot) |
 | Jukebox | **1 kolikko = 1 koko kappale**, auki vain öisin (v4.34) |
 | Makuuhuone (ex-palkintohuone, talo 7) | **3 avainta** = lukko (kolikkoreitti poistettu v4.33). Nuku/Poistu **ilmaisia** → ei vaikutusta talouteen |
+| Nukkuminen – nälkä jäissä (v4.41) | Nälkäajastin ei tikitä makuuhuoneessa eikä Zzz-pimennyksen aikana (`hungerOnHold()`), joten pelaaja **ei kuole nukkuessaan**. Herätessä ajastin jatkuu siitä mihin jäi, mutta vähintään **10 s** (`HUNGER_WAKE_GRACE = 600`). Tahti 1/40 s (2400 framet) ennallaan |
 | Oviukko / kukkaruukku / sähkökaappi | osuma = tainnutus + **−1 🍔** (🍔 0 → kuolema) |
 | Syntymäpaketti | uusi peli / reset: **2 kolikkoa + 5 🍔** |
 
@@ -72,6 +73,20 @@ ovesta (`CLOSED_SIGN = 'Avoinna\nKlo 20 - 06'`) eikä huone/peli aukea (`street.
 - Muutos koskee vain **sitä, milloin kolikoita voi käyttää**. Yö (= pelin normaali tila)
   toimii täsmälleen kuten ennen; päivä on **lopputila** (3 avainta kerätty), jolloin raha
   jää käyttämättä – se ei lisää tuloja eikä muuta RTP:tä.
+
+### Nukkuminen – nälkä jäissä (v4.41) – ei lukittu talousarvo
+
+Käyttäjän linjaus 20.9.2026: *"Pelaaja kun menee nukkumaan = yöhuoneeseen, hampurilaisten kulutus
+pitää mennä onholdiin. Pelaaja ei saa kuolla nukkuessa."* Rajaus: **vain nukkuminen** – muualla
+(BAR, jukebox, iframe-pelit) pelaaja huolehtii itse, ettei pelaa tai käy "ostoksilla" nälissään.
+
+- **Nyt:** `hungerOnHold()` pitää nälkäajastimen jäissä makuuhuoneessa ja Zzz-pimennyksen ajan →
+  pelaaja ei voi kuolla nukkuessaan.
+- **Herätysrauha:** herätessä `hamburgerTimer = Math.max(hamburgerTimer, 600)` → vähintään **10 s**
+  aikaa reagoida. Ajastin **ei nollaudu täyteen** (ei ilmaista 40 s:ää eikä sängyssä käynnin
+  hyväksikäyttöä).
+- **Lukitut arvot ennallaan:** 2400 framet (1 🍔 / 40 s), katto 10, BAR 1 kolikko = 1 🍔,
+  RTP ≈ 78,5 %. Muutos koskee vain *sitä, milloin* ajastin käy – ei sen tahtia eikä hintoja.
 
 ---
 
@@ -110,3 +125,5 @@ vapaasti (esim. `COIN_CHEAT_COOLDOWN = 0` nopeampaan testaukseen) ilman versiono
 |-----|--------|-------|---------|
 | 20.9.2026 | v4.33 | Palkintohuone (talo 7): pääsy **kaikki avaimet tai 3 kolikkoa**; huoneessa pokaali | Makuuhuone (talo 7): pääsy **vain 3 avainta** (kolikkoreitti poistettu); Nuku/Poistu ilmaisia. **Kolikko-/🍔-talous ei muutu** – poistui vain yksi kolikoiden käyttökohde |
 | 20.9.2026 | v4.34 | Jukebox ja Hedelmäpeli olivat auki aina (yöllä ja päivällä) | Auki **vain öisin (klo 20–06)**; päivällä ovesta teksti-popup `Avoinna` / `Klo 20 - 06` (`street.js`: `CLOSED_SIGN`, `CLOSED_AT_DAYT 0.5`). **Panos, painot, maksut, RTP, 🍔-tahti ja hinnat ennallaan** – muuttui vain aukioloaika |
+| 20.9.2026 | v4.41 | Nälkäajastin tikitti myös nukkuessa – herätessä se jatkui täsmälleen siitä mihin jäi, joten 1 🍔:lla nukkuja saattoi kuolla heti herätessään | Nälkä **jäissä** nukkuessa (`hungerOnHold()`: makuuhuone + Zzz-pimennys) + herätysrauha 10 s (`HUNGER_WAKE_GRACE 600`). **2400 framet (1/40 s), katto 10, hinnat ja RTP ennallaan**; rajaus vain nukkumiseen |
+

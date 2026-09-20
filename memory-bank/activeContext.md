@@ -17,8 +17,33 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.38` (`index.html` → `#version-tag`) · **Git:** **v4.38 committattu ja pushattu
-  20.9.2026** (`7b2e593`, origin/main) · työpuu puhdas.
+- **Versio:** `v4.42` (`index.html` → `#version-tag`) · **Git:** v4.38 committattu ja pushattu
+  20.9.2026 (`7b2e593`, origin/main) · **v4.39–v4.42 työpuussa, ei committia**
+  (odottaa käyttäjän testausta ja "commit"-komentoa).
+- **Katuvalot (v4.42):** kun yö on laskeutunut **täyteen** (`dayT === 0`) ja pelaaja on jo edennyt
+  (`state.isDay === false` = 3 avainta + makuuhuoneen Nuku yöhön), katuvalot **syttyvät itsestään
+  yksi kerrallaan** vasemmalta oikealle (~0,3 s väli; `NIGHT_LAMP_FIRST 30`, `NIGHT_LAMP_INTERVAL 18`,
+  `NIGHT_LAMP_ORDER 'wave'`) + pehmeä syttymisnaksahdus (`playLampOn()`) ja kipinähiukkaset lampussa.
+  Uudessa pelissä (`isDay === null`) ja sivunlatauksessa yöllä valot pitää yhä **potkia itse**
+  (`nightShowArmed` herää vain aidosta päivä→yö-siirtymästä). `kickCount` **ei kasva** → avain-cheat
+  (5 potkua), 20 potkun kolikkopalkkio ja ylikuumeneminen ennallaan; talous ennallaan (sääntö 04).
+  Näytös pysähtyy huoneissa/iframeissa ja tallentaa tilan per lamppu. Seuraus: yöllä ovet aukeavat
+  ilman potkua **vasta kun päivä/yö on ratkaistu**. Testityökalu `?day=0` näyttää efektin heti.
+  **Käyttäjän testaus 20.9.2026: "Tuli hieno" – sopivasti pikkuisen liioiteltu; syttymisnaksahdus on
+  terävämpi kuin vanhojen dramaattisten lamppujen (led-ajan valot) → hyväksytty.**
+- **Nukkuminen (v4.41):** nälkä on **jäissä** makuuhuoneessa ja Zzz-pimennyksen ajan
+  (`hungerOnHold()`) → pelaaja ei voi kuolla nukkuessaan; herätessä ajastimelle jää vähintään
+  `HUNGER_WAKE_GRACE 600` (10 s). Rajaus: **vain nukkuminen** – muualla (BAR, jukebox,
+  iframe-pelit) nälkä tikittää ennallaan.
+- **Taivas (v4.41):** kuu ja aurinko **eivät liu'u** – kumpikin seisoo paikallaan omalla
+  puolellaan ja vain häivytetään ristikkäin: yöllä kuu oikealla (`MOON_X 680`), päivällä aurinko
+  vasemmalla (`SUN_X 140`); `dayT` ohjaa pelkkää alphaa. Yö → päivä häivyttää kuun pois ja tuo
+  auringon näkyviin, päivä → yö täsmälleen toisinpäin.
+- **Päivä (v4.40):** pilvet tummenevat päivällä – muoto ja määrä ovat yön ennallaan, väri liukuu
+  `CLOUD_NIGHT_*` → `CLOUD_DAY_*` ja peittävyys `CLOUD_DAY_ALPHA 5×` (`dayT = 0` = entinen yökuva).
+- **HUD (v4.39):** 🍔-ilmaisin vilkkuu punaisena heti kun `hamburgerCount <= HUNGER_WARN (3)` –
+  3 on oikea syömisraja. **Käyttäjän testaus 20.9.2026: päivä ⇄ yö -vaihdos "toimii HELVETIN
+  hienosti", "kylmät väreet" – hyväksytty (yön vaihtumisen testaus vielä kesken).**
 - **Päivä (v4.38):** ovet aukeavat **ilman lampun potkaisua** kun `dayT >= 0.5` (`lampFreeOpen()`,
   `DOOR_NO_LAMP_AT_DAY`), moskiitot **häipyvät päivällä kokonaan** (`MOSQUITO_DAY_DIM 1`) ja
   **täydellä päivällä (`dayT === 1`) kaikki katuvalot sammutetaan kerran** (`dayLampsOff`) –
@@ -35,14 +60,41 @@
 - **Päivä/yö (v4.33):** 3 avainta nostaa päivän kerran (`state.isDay` null → true, v4.32-käytös) →
   sen jälkeen **makuuhuoneen Nuku vaihtaa päivä ⇄ yö** ja tila on tallennettu; Poistu ei muuta mitään.
   Huoneeseen pääsee **vain 3 avaimella** (kolikkoreitti poistettu) – silloin ovi on aina auki ilman lamppua.
-- **Aurinko:** valkoinen sisäkiekko poistettu; tasainen keltainen kiekko + lämmin hehku.
+- **Aurinko:** valkoinen sisäkiekko poistettu; tasainen keltainen kiekko + lämmin hehku. Päivällä
+  aurinko seisoo **vasemmalla** (`SUN_X 140`) ja yöllä kuu oikealla (`MOON_X 680`) – vain
+  alpha-ristihäivytys, **ei liukua** (v4.41).
 - **Lukossa:** talous (sääntö 04) ja inventaario · **vapaasti säädettävissä:** testityökalut
   (`COIN_CHEAT_*`, `?coins`, `?debug`, `?day=0` / `?day=1`, `MUSIC_SOURCE`, `bm`-debug).
-- **Avoinna:** ks. "🔜 Seuraavaksi" – työpuussa ei ole muuta keskeneräistä kuin v4.33.
+- **Avoinna:** v4.39–v4.42 odottavat committia (ks. yllä) · muuten ks. "🔜 Seuraavaksi".
 
 ---
 
 ## 🆕 Tuoreimmat versiot (20.9.2026)
+
+**v4.41 – Nälkä jäihin nukkuessa + kuu ⇄ aurinko -ristihäivytys.** Kaksi pientä parannusta:
+(1) `hungerOnHold()` (`sleepRoom || sleepPhase > 0`) pitää nälkäajastimen jäissä makuuhuoneessa ja
+Zzz-pimennyksen aikana → **pelaaja ei voi kuolla nukkuessaan**; herätessä
+`hamburgerTimer = Math.max(hamburgerTimer, HUNGER_WAKE_GRACE 600)` antaa vähintään 10 s aikaa
+reagoida (ajastin ei nollaudu täyteen → ei ilmaista 40 s:ää eikä sängyssä käynnin hyväksikäyttöä).
+Rajaus käyttäjän linjauksen mukaan: **vain nukkuminen** – BAR, jukebox ja iframe-pelit tikittävät
+ennallaan. (2) Taivas: kuu seisoo yöllä oikealla (`MOON_X 680`) ja aurinko päivällä vasemmalla
+(`SUN_X 140`) – **liukua ei ole**, vain alpha-ristihäivytys (`1 − dayT` / `dayT`), joten yö → päivä
+häivyttää kuun pois ja tuo auringon näkyviin (ja päivä → yö toisinpäin). Y-koordinaatit ennallaan →
+`dayT = 0` antaa bitilleen entisen yökuvan. Talouslukko: **ei lukittujen arvojen muutoksia** (kirjattu
+sääntöön 04 + `docs/economy-balance-memo.md`:hen).
+
+**v4.40 – Päivällä pilvet tummenevat.** Pilvijärjestelmä sai kaksi väriparia: yön
+`CLOUD_NIGHT_CIRRUS [190,200,225]` / `CLOUD_NIGHT_HAZY [180,195,215]` (ennallaan) ja päivän
+`CLOUD_DAY_CIRRUS [96,104,124]` / `CLOUD_DAY_HAZY [62,68,84]` (selvästi tummempi) sekä
+peittävyyskertoimen `CLOUD_DAY_ALPHA 5`. `drawClouds()` liu'uttaa värin ja alphan `dayT`:n mukana,
+joten pilvet tummenevat ja vahvistuvat saumattomasti kesken auringonnousun/-laskun; `dayT = 0`
+antaa täsmälleen entisen yökuvan (ei regressiota). **Muoto, määrä, kaistale (y 40–80), tuuli ja
+piirtojärjestys ovat ennallaan** → aurinko kuultaa pilvien läpi (alpha ≤ 0,25). Versio `v4.40`.
+
+**v4.39 – HUD:n 🍔-varoitus kolmesta hampurilaisesta.** Uusi nuppi `HUNGER_WARN 3`:
+`updateHUD()` käärii hampurilaiset `burger-warning`-luokkaan heti kun `hamburgerCount <= HUNGER_WARN`
+(aiemmin raja oli 2) → olemassa oleva `burgerBlink`-animaatio (0,8 s, punainen) alkaa, kun jäljellä
+on kolme – eli juuri siinä raja, jossa kannattaa käydä syömässä. `style.css` ennallaan. Versio `v4.39`.
 
 **v4.38 – Päivällä ovet auki ilman lamppua + moskiitot pois päivältä.** Uusi `lampFreeOpen()`
 (`DOOR_NO_LAMP_AT_DAY true`, raja `CLOSED_AT_DAYT 0.5`): päivällä `handleAction()` päästää sisään
@@ -301,7 +353,9 @@ katuun (v4.11 ✅).
 - **Pelaajan syvyys:** `PLAYER_DEPTH_AMOUNT 0.10` (±10 %) · `PLAYER_DEPTH_MID 315` (koko 1,00 tässä Y:ssä) ·
   `PLAYER_DEPTH_MAX_Y = WORLD_H - 50` (350, sama kuin `update()`in `PLAYER_Y_MAX`).
 - **Päivä/yö:** `DAY_FADE_FRAMES 1200` (nousu ~20 s) · `NIGHT_FADE_FRAMES 1200` (lasku) · `DAY_SKY_TOP '#3f7fc0'` ·
-  `DAY_SKY_MID '#78b4e0'` · `DAY_SKY_HORIZON '#ffd9a0'` · `SUN_X 660` / `SUN_Y 62` / `SUN_R 26` ·
+  `DAY_SKY_MID '#78b4e0'` · `DAY_SKY_HORIZON '#ffd9a0'` · **kuu/aurinko (v4.41):** `SUN_X 140` (päiväpaikka,
+  vasen) / `SUN_Y 62` / `SUN_R 26` · `MOON_X 680` / `MOON_Y 60` / `MOON_R 28` (yöpaikka, oikea) ·
+  **ei liukua** – pelkkä alpha-ristihäivytys (`dayT` / `1 − dayT`) ·
   `DAY_LIGHT_RGB [70,58,40]` · `DAY_LIGHT_ALPHA 0.30` (washin voimakkuus) · `LAMP_DAY_DIM 0.15` (jäljelle
   jäävä lampun hehku) · testityökalut `DAY_PARAM`/`DAY_FORCE` = `?day=1` (päivä heti) ja `?day=0`
   (pakota yö) – eivät tallenna mitään.
@@ -319,8 +373,14 @@ katuun (v4.11 ✅).
   `MOSQUITO_DAY_DIM 1` (1 = moskiitot häviävät päivällä, 0 = ei muutosta) –
   `drawLampPost()`in moskiittolohko (r. ~4625) · `dayLampsOff`-lippu: `dayT === 1` sammuttaa
   kaikki lamput kerran (`state.litLamps` tallennetaan), nollautuu `dayT === 0`.
+- **Pilvien päivätummuus (v4.40):** `CLOUD_NIGHT_CIRRUS [190,200,225]` · `CLOUD_NIGHT_HAZY [180,195,215]`
+  (yön arvot) · `CLOUD_DAY_CIRRUS [96,104,124]` · `CLOUD_DAY_HAZY [62,68,84]` ·
+  `CLOUD_DAY_ALPHA 5` (peittävyyskerroin päivällä, 1 = ei muutosta) – `drawClouds()` (r. ~2001).
+- **HUD 🍔-varoitus (v4.39):** `HUNGER_WARN 3` (r. ~189) – `updateHUD()` lisää `burger-warning`-luokan
+  (`style.css`: `burgerBlink` 0,8 s, punainen), kun hampurilaisia on tämä määrä tai vähemmän.
 - **Makuuhuone (talo 7):** `SLEEP_BLDG_IDX 7` · `SLEEP_DARK_FRAMES 45` (~0,75 s pimennys) ·
   `SLEEP_ZZZ_FRAMES 180` (Zzz ~3 s) · `SLEEP_FADE_FRAMES = DARK + ZZZ` (~3,75 s yhteensä) ·
+  `hungerOnHold()` (`sleepRoom || sleepPhase > 0`) · `HUNGER_WAKE_GRACE 600` (10 s herätysrauha, v4.41) ·
   `sleepSel` (0 = Nuku, 1 = Poistu) · sängyn koko paneelista (`bedW = min(340, panelW − 16)`),
   paneeli ≤ `winW − 24`, sivuikkuna vasta kun `winW ≥ 560`.
 - **Notifikaatiot:** `showNotification(text, durationMs = 2500)` + 0,5 s fade; `showSpawnHint` 4500 ms.

@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> **v4.38 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
+> **v4.42 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -34,6 +34,13 @@
 | 🚪 Päivällä ovet auki ilman lamppua | ✅ v4.38 – `lampFreeOpen()` (`DOOR_NO_LAMP_AT_DAY`, raja `CLOSED_AT_DAYT 0.5`): päivällä ovi aukeaa ilman potkaistua katuvaloa; sama ehto ohjaa oven ulkoasua (`isActive`, kynnysvalo). Avainportit, makuuhuoneen 3 avainta, BAR, yöaukiolo ja potkumekaniikka ennallaan |
 | 🦟 Moskiitot pois päivältä | ✅ v4.38 – `MOSQUITO_DAY_DIM 1`: moskiitot vain kun `1 - MOSQUITO_DAY_DIM * dayT > 0.01` → yöllä piirto bitilleen ennallaan, päivällä ei näy |
 | 💡 Päivä sammuttaa katuvalot | ✅ v4.38 – `dayLampsOff`: kun `dayT === 1`, kaikkien lamppujen `lit` → false + `state.litLamps` tallennetaan; lippu nollautuu vasta `dayT === 0` → sammutus kerran per auringonnousu. Valot voi yhä potkaista päälle päivällä. **Käyttäjän testaus 20.9.2026: "kuin tosielämän valoisuustunnistimet" → hyväksytty** |
+| 🍔 HUD:n 🍔-varoitus | ✅ v4.39 – `HUNGER_WARN 3`: vilkkuva punainen (`burger-warning` / `burgerBlink` 0,8 s) heti kun hampurilaisia on ≤ 3 (aiemmin ≤ 2); `style.css` ennallaan |
+| ☁️ Päiväpilvet tummenevat | ✅ v4.40 – `drawClouds()` liu'uttaa värin (`CLOUD_NIGHT_*` → `CLOUD_DAY_*`) ja alphan (`CLOUD_DAY_ALPHA 5×`) `dayT`:n mukaan; muoto, määrä, kaistale y 40–80, tuuli ja piirtojärjestys ennallaan; `dayT = 0` = entinen yökuva. **Käyttäjän testaus: päivä ⇄ yö -vaihdos "toimii HELVETIN hienosti", "kylmät väreet"** |
+| 🛏️ Nälkä jäihin nukkuessa | ✅ v4.41 – `hungerOnHold()` (`sleepRoom || sleepPhase > 0`) pysäyttää nälkäajastimen makuuhuoneessa ja Zzz-pimennyksessä → pelaaja **ei voi kuolla nukkuessaan**; herätessä `HUNGER_WAKE_GRACE 600` (väh. 10 s aikaa reagoida, ajastin ei nollaudu täyteen). Rajaus: vain nukkuminen – BAR/jukebox/iframe-pelit ennallaan. **Lukitut arvot (2400, katto 10, hinnat, RTP) ennallaan** |
+| 🌙☀️ Kuu ↔ aurinko | ✅ v4.41 – kuu seisoo yöllä oikealla (`MOON_X 680`) ja aurinko päivällä vasemmalla (`SUN_X 140`); vaihdossa **ei liukua** – pelkkä alpha-ristihäivytys (`1 − dayT` / `dayT`), joten kuu häipyy pois ja aurinko tulee näkyviin (päivä → yö toisinpäin). `dayT = 0` = entinen yökuva bitilleen |
+| 💡 Yö sytyttää katuvalot yksi kerrallaan | ✅ v4.42 – kun `dayT === 0` ja pelaaja on edennyt (`state.isDay === false`), lamput syttyvät itsestään vasemmalta oikealle (~0,3 s väli: `NIGHT_LAMP_FIRST 30` / `NIGHT_LAMP_INTERVAL 18` / `NIGHT_LAMP_ORDER 'wave'`) + `playLampOn()`-naksahdus + kipinähiukkaset. `nightShowArmed` herää vain aidosta päivä→yö-siirtymästä → uudessa pelissä ja sivunlatauksessa valot potkitaan yhä itse. `kickCount` ei kasva (cheatit/ylikuumeneminen ennallaan), ovet aukeavat ilman potkua vain kun päivä/yö on ratkaistu. `?day=0` näyttää efektin heti. **Käyttäjän testaus 20.9.2026: "Tuli hieno" – sopivasti pikkuisen liioiteltu (led-valot vs. vanhat dramaattiset lamput) → hyväksytty** |
+
+
 
 ## 🍒 Hedelmäpeli (fruitgame/) – talo 7, auki vain öisin (v4.34)
 

@@ -59,6 +59,32 @@ avata; jukeboxin ovea ei päivällä potkita eikä valoja sytytetä. `#notificat
 (`VEHICLE_HEADLIGHT_DIM 1` → pois päältä päivällä, `headlightDim`/`headlightOn` `drawVehicle()`issa);
 takavalot ja ambulanssin kattovilkku eivät muutu. Puhtaasti visuaalinen – ei pelimekaniikkaa.
 
+**Päivällä ovet ilman lamppua (v4.38):** kun `dayT >= 0.5` (`lampFreeOpen()`, nuppi
+`DOOR_NO_LAMP_AT_DAY`), lamppuovet aukeavat **ilman potkaistua katuvaloa** ja sama ehto ohjaa oven
+ulkoasua (`drawDoor()`in `isActive`, kynnysvalo) – ettei ovi näytä lukitulta mutta aukea. Avainportit
+(Dig Däsh `digKeyCollected`, Blue Mäx `boulderKeyCollected`) ja makuuhuoneen 3 avainta pysyvät;
+yöllä lamppu pitää yhä potkaista ("💡 Sytytä lamppu ensin!"). Täydellä päivällä (`dayT === 1`)
+`update()` sammuttaa **kaikki katuvalot kerran** (`dayLampsOff`-lippu, nollautuu `dayT === 0`) –
+valot voi silti potkaista päälle myös päivällä, ja moskiitot (`MOSQUITO_DAY_DIM`) ovat poissa päivältä.
+
+**Pilvet (v4.40):** yksi `clouds[]`-joukko (18 kpl, kaistale y 40–80, tyypit cirrus/hazy,
+`initClouds()`) jonka **väri ja peittävyys liukuvat `dayT`:n mukaan**: yön `CLOUD_NIGHT_CIRRUS/HAZY`
+→ päivän tummemmat `CLOUD_DAY_CIRRUS/HAZY`, alpha `CLOUD_DAY_ALPHA 5×` (`drawClouds()`).
+`dayT = 0` antaa bitilleen entisen yökuvan; muoto, määrä, kaistale ja tuuli (`windDir`/`windSpeed`,
+joka ohjaa myös puiden huojuntaa) eivät muutu. HUD:ssa 🍔-varoitus vilkkuu, kun hampurilaisia on
+≤ `HUNGER_WARN 3` (v4.39).
+
+**Kuu ja aurinko (v4.41):** kumpikin piirretään **kiinteästä paikastaan** – kuu
+`MOON_X 680 / MOON_Y 60 / MOON_R 28` (yö, oikea) ja aurinko `SUN_X 140 / SUN_Y 62 / SUN_R 26`
+(päivä, vasen). Vaihdossa **ei liukua**: vain alpha-ristihäivytys (`1 − dayT` / `dayT`) piirtää kuun
+pois ja auringon näkyviin (päivä → yö toisinpäin) → `dayT = 0` on bitilleen entinen yökuva ja
+`dayT = 1` jättää auringon vasemmalle. Makuuhuoneen ikkunan oma aurinko/kuu säilyy ennallaan.
+
+**Nälkä jäissä nukkuessa (v4.41):** `hungerOnHold()` (`sleepRoom || sleepPhase > 0`) portittaa
+`hamburgerTimer`in (`street.js`) → pelaaja ei voi kuolla nukkuessaan; herätessä
+`HUNGER_WAKE_GRACE 600` (väh. 10 s). Muualla (BAR, jukebox, iframe-pelit) nälkä tikittää
+ennallaan – pelaaja huolehtii itse, ettei pelaa eikä käy "ostoksilla" nälissään. Ks. sääntö 04.
+
 **Liikenne (v4.37):** ajoneuvojen spawn-väli puolittuu päivällä (`TRAFFIC_DAY_MULT 2`, kerroin
 `1 + (MULT − 1) · dayT`) → yö 20–40 s/kaista, täysi päivä 10–20 s/kaista. Kaistat (`LANE_DEFS`),
 ajoneuvotyypit, nopeudet ja törmäyslogiikka ovat ennallaan (edelleen 1 ajoneuvo/kaista).

@@ -152,6 +152,12 @@ const Street = (() => {
     const SLEEP_DARK_FRAMES = 45;   // ~0,75 s: ruutu ehtii mustaksi ennen Zzziä
     const SLEEP_ZZZ_FRAMES  = 280;  // ~3 s: itse Zzz-efekti mustalla taustalla
     const SLEEP_FADE_FRAMES = SLEEP_DARK_FRAMES + SLEEP_ZZZ_FRAMES;  // ~3,75 s yhteensä
+    /* ── Nälkä on jäissä vain nukkuessa (v4.41, käyttäjän linjaus) ──
+       Makuuhuone ja nukkumisen Zzz-pimennys pysäyttävät nälkäajastimen,
+       joten pelaaja ei voi kuolla nukkuessaan. Muualla (BAR, jukebox,
+       iframe-pelit) nälkä tikittää ennallaan – pelaaja huolehtii itse,
+       ettei pelaa tai käy "ostoksilla" nälissään. */
+    function hungerOnHold() { return sleepRoom || sleepPhase > 0; }
     let isDay = false;             // tallennettu päivä/yö-tila (state.isDay)
     let barRoom = false;
     let barBuyQty = 0;             // BAR: tämän vierailun ostetut (▼ peruu vain nämä)
@@ -183,6 +189,15 @@ const Street = (() => {
     let coinRespawnTimer = 0;
     let hamburgerCount = 5;
     let hamburgerTimer = 2400;  // 40s @ ~60fps
+    /* Herätysrauha (v4.41): nukkumisen jälkeen nälkäajastimelle jää vähintään
+       tämä aika, ettei 1 🍔:lla nukkunut voi kuolla heti sängystä noustuaan.
+       Ajastin ei nollaudu täyteen → ei ilmaista 40 s:ää eikä sängyssä
+       käymisen hyväksikäyttöä. */
+    const HUNGER_WAKE_GRACE = 600;  // 10 s @ ~60fps
+    /* HUD:n 🍔-varoitus (v4.39): vilkkuva punainen, kun tämä määrä tai
+       vähemmän on jäljellä. 3 on oikea raja – siinä kannattaa jo syödä,
+       ettei henki lähde seuraavasta osumasta. */
+    const HUNGER_WARN = 3;
     let firstHouseWindowsLit = false;
     let firstHouseKickCount = 0;
     let firstHouseKickTarget = 0;    // random 3-6, arvotaan ekan potkun yhteydessä
@@ -270,11 +285,26 @@ const Street = (() => {
     const DAY_SKY_TOP     = '#3f7fc0';     // päivätaivaan yläosa
     const DAY_SKY_MID     = '#78b4e0';     // keskikohta
     const DAY_SKY_HORIZON = '#ffd9a0';     // lämmin horisontti
-    const SUN_X = 660, SUN_Y = 62, SUN_R = 26;
+    /* Kuu ja aurinko (v4.41): kumpikin **pysyy paikallaan** omalla puolellaan ja
+       vain häivytetään ristikkäin (alpha = dayT / 1 − dayT) – ei liukua.
+       Yöllä kuu seisoo oikealla (MOON_X 680) ja päivällä aurinko vasemmalla
+       (SUN_X 140): yö → päivä häivyttää kuun pois ja tuo auringon näkyviin,
+       päivä → yö täsmälleen toisinpäin. */
+    const SUN_X = 140, SUN_Y = 62, SUN_R = 26;    // auringon päiväpaikka (vasen)
+    const MOON_X = 680, MOON_Y = 60, MOON_R = 28; // kuun yöpaikka (oikea)
     const DAY_LIGHT_RGB   = [70, 58, 40];  // additive-päivänvalon sävy
     const DAY_LIGHT_ALPHA = 0.30;          // 0 = ei valoa … ~0.35 = kirkas päivä
     const LAMP_DAY_DIM    = 0.15;          // paljonko lampun hehkusta jää päivällä
     const MOSQUITO_DAY_DIM = 1;            // 1 = moskiitot häviävät päivällä (yöllä ennallaan), 0 = ei muutosta
+    /* ── Pilvien päivätummuus (v4.40) ──
+       Muoto ja määrä ovat yön ennallaan (initClouds) – vain väri tummenee ja
+       peittävyys kasvaa dayT:n mukana, jotta pilvet erottuvat päivätaivaalta.
+       dayT = 0 → väri ja alpha ovat täsmälleen yön ennallaan. */
+    const CLOUD_NIGHT_CIRRUS = [190, 200, 225];  // yön ohuet juovat
+    const CLOUD_NIGHT_HAZY   = [180, 195, 215];  // yön hunnut
+    const CLOUD_DAY_CIRRUS   = [96, 104, 124];   // päivä: tummanharmaa juova
+    const CLOUD_DAY_HAZY     = [62, 68, 84];     // päivä: selvästi tummempi huntu
+    const CLOUD_DAY_ALPHA    = 5;                // peittävyyskerroin päivällä (1 = ei muutosta)
     const VEHICLE_HEADLIGHT_DIM = 1;       // ajovalot: 1 = kokonaan pois päivällä, 0 = ei muutosta
     /* Testityökalut (eivät tallenna mitään): ?day=1 = päivä heti,
        ?day=0 = pakota yö. Pakotettu tila ohittaa tallennetun tilan eikä
@@ -288,6 +318,43 @@ const Street = (() => {
        silti potkaista uudelleen päälle myös päivällä. Lippu nollautuu vasta
        kun yö on palannut → seuraava auringonnousu sammuttaa taas kerran. */
     let dayLampsOff = false;
+
+    /* ── Yö sytyttää katuvalot yksi kerrallaan (v4.42) ──
+       Päivän peilikuva: kun aurinko on laskenut täyteen (dayT === 0) ja
+       pelaaja on jo edennyt (päivä/yö ratkaistu = state.isDay === false,
+       ts. 3 avainta + makuuhuoneen Nuku yöhön), katuvalot syttyvät itsestään
+       yksi kerrallaan vasemmalta oikealle – pieni "wow" auringonlaskun päälle.
+       Uudessa pelissä (state.isDay === null) valot pitää yhä potkia itse.
+       HUOM: kickCount ei kasva → avain-cheat (5 potkua), kolikkopalkkio
+       (20 potkua) ja ylikuumeneminen (5 potkua) pysyvät täysin ennallaan.
+       Testityökalu ?day=0 näyttää efektin heti. */
+    const NIGHT_LAMP_FIRST    = 30;      // ~0,5 s ennen ensimmäistä lamppua
+    const NIGHT_LAMP_INTERVAL = 18;      // ~0,3 s lamppujen välissä (5 lamppua ≈ 1,7 s)
+    const NIGHT_LAMP_ORDER    = 'wave';  // 'wave' = x-järjestys · 'near' = lähin ensin
+    let nightShowArmed = (DAY_FORCE === 'night');  // laukeaa vain aidosta päivä→yö-siirtymästä
+    let nightShowQueue = [];             // syttymättömien lamppujen indeksit
+    let nightShowTimer = 0;              // frameä seuraavaan lamppuun
+
+    /* Saako yön lamppushow laueta? Vain kun päivä/yö on jo ratkaistu
+       (pelaaja on edennyt). Testityökalu ?day=0 ohittaa portin. */
+    function nightLampsAllowed() {
+        if (DAY_FORCE) return DAY_FORCE === 'night';
+        return state.isDay === false;
+    }
+
+    /* Kasaa yön lamppushow: mukaan vain sammuneet lamput, järjestys nupin
+       mukaan. Jos kaikki jo palavat, jono jää tyhjäksi (ei ääntä/hiukkasia). */
+    function startNightLampShow() {
+        const idx = [];
+        for (let i = 0; i < lamps.length; i++) { if (!lamps[i].lit) idx.push(i); }
+        if (idx.length === 0) return;
+        if (NIGHT_LAMP_ORDER === 'near') {
+            const px = player.x + player.w / 2;
+            idx.sort((a, b) => Math.abs(lamps[a].x - px) - Math.abs(lamps[b].x - px));
+        }
+        nightShowQueue = idx;
+        nightShowTimer = NIGHT_LAMP_FIRST;
+    }
 
     /* ── Aukiolo (v4.34): Jukebox ja Hedelmäpeli auki vain öisin ──
        Päivällä ovesta tulee sama teksti-popup kuin lukitusta ovesta.
@@ -624,6 +691,40 @@ const Street = (() => {
         } catch(e) {}
     }
 
+    /* ── Katuvalon syttyminen (yön lamppushow, v4.42) ──
+       Pehmeä naksahdus: lyhyt korkea kohinapiikki + lämmin humahdus.
+       Sama tyyli kuin muilla kadun SFX:illä (Web Audio, ei tiedostoja). */
+    function playLampOn() {
+        try {
+            initAudio();
+            if (!audioCtx || audioCtx.state !== 'running') return;
+            const now = audioCtx.currentTime;
+            // Naksahdus: lyhyt kohina, korkea suodatus → "klik"
+            const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.045), audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.006));
+            }
+            const src = audioCtx.createBufferSource(); src.buffer = buf;
+            const hp = audioCtx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1200;
+            const ngain = audioCtx.createGain();
+            ngain.gain.setValueAtTime(0.32, now);
+            ngain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+            src.connect(hp).connect(ngain).connect(audioCtx.destination);
+            src.start(now); src.stop(now + 0.045);
+            // Lämmin humahdus: hehkulanka syttyy (hillitty, ei peitä musiikkia)
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(420, now);
+            osc.frequency.exponentialRampToValueAtTime(200, now + 0.14);
+            const ogain = audioCtx.createGain();
+            ogain.gain.setValueAtTime(0.10, now);
+            ogain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+            osc.connect(ogain).connect(audioCtx.destination);
+            osc.start(now); osc.stop(now + 0.16);
+        } catch(e) {}
+    }
+
     /* ── Ajoneuvon moottoriääni ────────────────────── */
     function startVehicleEngine(v) {
         try {
@@ -914,6 +1015,10 @@ const Street = (() => {
             if (Math.abs(dayWanted - dayT) < step) dayT = dayWanted;  // ei jää värähtelyä
         }
 
+        // Päivänvalo on näkynyt tässä istunnossa → yön lamppushow saa laueta
+        // (v4.42). Näin efekti ei laukea pelkästä sivunlatauksesta yöllä.
+        if (dayT > 0) nightShowArmed = true;
+
         // ── Päivä sammuttaa katuvalot kerran (v4.38) ──
         // Kynnys on täysi päivä (dayT === 1): hehku on siihen mennessä jo
         // hiipunut LAMP_DAY_DIM:iin, joten sammutus ei poksahda silmään.
@@ -934,6 +1039,30 @@ const Street = (() => {
             }
         } else if (dayT === 0) {
             dayLampsOff = false;
+            // Yö laskeutui täyteen → katuvalot syttyvät itsestään yksi
+            // kerrallaan (v4.42), mutta vain kun pelaaja on jo edennyt
+            // (päivä/yö ratkaistu). Uudessa pelissä valot potkitaan yhä itse.
+            if (nightShowArmed && nightLampsAllowed()) {
+                nightShowArmed = false;
+                startNightLampShow();
+            }
+            // Näytös etenee vain kadulla: huoneet ja iframet pysäyttävät
+            // ajastimen (kuten päivän liukukin), ja tila tallennetaan per
+            // lamppu, jotta reload kesken shown ei hukkaa jo syttyneitä.
+            // HUOM: kickCount ei kasva → cheatit ja ylikuumeneminen ennallaan.
+            if (nightShowQueue.length && !iframeOpen && !sleepRoom && !barRoom &&
+                !jukeboxRoom && !playerDead) {
+                nightShowTimer -= dt;
+                if (nightShowTimer <= 0) {
+                    const i = nightShowQueue.shift();
+                    lamps[i].lit = true;
+                    state.litLamps[i] = true;
+                    GameState.save(state);
+                    spawnParticles(lamps[i].x, GROUND_Y + 19 - LAMP_POST_H, '#ffff88', 8);
+                    playLampOn();
+                    nightShowTimer = NIGHT_LAMP_INTERVAL;
+                }
+            }
         }
 
         // ── Kuolemasekvenssi ─────────────────────────
@@ -965,6 +1094,10 @@ const Street = (() => {
                         state.isDay = isDay;
                         GameState.save(state);
                     }
+                    // Herätysrauha (v4.41): ajastin jatkuu siitä mihin se jäi,
+                    // mutta vähintään HUNGER_WAKE_GRACE-verran – muuten 1 🍔:lla
+                    // nukkunut voisi kuolla heti herätessään.
+                    hamburgerTimer = Math.max(hamburgerTimer, HUNGER_WAKE_GRACE);
                     sleepRoom = false;
                     sleepSel = 0;
                     sleepHeldUp = false;
@@ -1254,7 +1387,10 @@ const Street = (() => {
         }
 
         // ── Hampurilaisajastin (1/60s) ──────────
-        if (hamburgerCount > 0) {
+        // Nukkuminen pitää nälän jäissä (v4.41): makuuhuone ja Zzz-pimennys
+        // pysäyttävät ajastimen → pelaaja ei voi kuolla nukkuessaan.
+        // Muualla (BAR, jukebox, iframe-pelit) ajastin tikittää ennallaan.
+        if (hamburgerCount > 0 && !hungerOnHold()) {
             hamburgerTimer -= dt;
             if (hamburgerTimer <= 0) {
                 hamburgerCount--;
@@ -1934,9 +2070,9 @@ const Street = (() => {
             status = ' 🔑 Avaimia: ' + keys + '/3';
         }
         status += ' | 💰 Kolikoita: ' + coinCount;
-        // Hampurilaiset (lives)
+        // Hampurilaiset (lives) – vilkkuva varoitus kun jäljellä <= HUNGER_WARN (3)
         var burgerStr = '';
-        if (hamburgerCount <= 2) {
+        if (hamburgerCount <= HUNGER_WARN) {
             for (var bi = 0; bi < hamburgerCount; bi++) burgerStr += '🍔';
             burgerStr = '<span class="burger-warning">' + burgerStr + '</span>';
         } else {
@@ -1986,11 +2122,22 @@ const Street = (() => {
     }
 
     function drawClouds() {
+        /* Pilvien väri ja peittävyys liukuvat yön vaaleasta päivän tummaan
+           (v4.40). dayT = 0 → arvot ovat täsmälleen yön ennallaan. */
+        const dayMix = dayT;
+        const mix = (n, d) => Math.round(n + (d - n) * dayMix);
+        const cirrusRGB = mix(CLOUD_NIGHT_CIRRUS[0], CLOUD_DAY_CIRRUS[0]) + ',' +
+                          mix(CLOUD_NIGHT_CIRRUS[1], CLOUD_DAY_CIRRUS[1]) + ',' +
+                          mix(CLOUD_NIGHT_CIRRUS[2], CLOUD_DAY_CIRRUS[2]);
+        const hazyRGB   = mix(CLOUD_NIGHT_HAZY[0], CLOUD_DAY_HAZY[0]) + ',' +
+                          mix(CLOUD_NIGHT_HAZY[1], CLOUD_DAY_HAZY[1]) + ',' +
+                          mix(CLOUD_NIGHT_HAZY[2], CLOUD_DAY_HAZY[2]);
+        const alphaMul = 1 + (CLOUD_DAY_ALPHA - 1) * dayMix;   // päivällä pilvet vahvistuvat
         for (const c of clouds) {
             const x = c.x, y = c.y;
             if (x < -c.w || x > WORLD_W + c.w) continue;
 
-            const a = c.opacity;
+            const a = c.opacity * alphaMul;
             ctx.save();
 
             if (c.type === 'cirrus') {
@@ -2001,14 +2148,14 @@ const Street = (() => {
                     const oy = (i % 3 - 1) * 1.0;
                     const sw = c.w * 0.5 * (0.6 + 0.4 * (1 - Math.abs(i - (streaks - 1) / 2) / (streaks / 2)));
                     const fa = a * (0.35 + 0.65 * (1 - Math.abs(i - (streaks - 1) / 2) / (streaks / 2)));
-                    ctx.fillStyle = 'rgba(190,200,225,' + fa + ')';
+                    ctx.fillStyle = 'rgba(' + cirrusRGB + ',' + fa + ')';
                     ctx.beginPath();
                     ctx.ellipse(x + ox, y + oy, sw, 1.0, 0.015 * (i - 1), 0, Math.PI * 2);
                     ctx.fill();
                 }
             } else {
                 // Hazy: vaakasuoria päällekkäisiä hattaraellipsejä
-                const baseClr = '180,195,215';
+                const baseClr = hazyRGB;
                 const parts = 4 + Math.floor(c.w * 0.012);
                 for (let i = 0; i < parts; i++) {
                     const ox = (i - (parts - 1) / 2) * (c.w * 0.14);
@@ -2431,11 +2578,11 @@ const Street = (() => {
             ctx.restore();
         }
 
-        // Sirppikuu (häipyy päivän tullessa)
+        // Sirppikuu (häipyy paikallaan päivän tullessa)
         if (dayT < 1) {
             ctx.save();
             ctx.globalAlpha = 1 - dayT;
-            const moonX = 680, moonY = 60, moonR = 28;
+            const moonX = MOON_X, moonY = MOON_Y, moonR = MOON_R;
             const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 2.8);
             moonGlow.addColorStop(0, 'rgba(255,250,210,0.18)');
             moonGlow.addColorStop(0.4, 'rgba(255,250,210,0.06)');
@@ -2451,7 +2598,7 @@ const Street = (() => {
             ctx.restore();
         }
 
-        // Aurinko (päivä) – kuun tilalla samassa kohdassa, ristihäivytys
+        // Aurinko (päivä) – ilmestyy paikalleen vasemmalle (SUN_X), ristihäivytys
         if (dayT > 0) {
             ctx.save();
             ctx.globalAlpha = dayT;

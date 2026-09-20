@@ -42,6 +42,7 @@
 | Jukebox | **1 kolikko = 1 koko kappale** | `street.js`, `docs/jukebox-memo.md` |
 | Jukebox / Hedelmäpeli: aukiolo | **Vain öisin** (klo 20–06); päivällä (`dayT >= 0.5`) ovesta teksti-popup `Avoinna` / `Klo 20 - 06` – ei potkua, ei valoja, ei sisään (v4.34) | `street.js` (`CLOSED_SIGN`, `CLOSED_AT_DAYT`) |
 | Makuuhuone (ex-palkintohuone, talo 7) | **3 avainta** = lukko (kolikkoreitti **poistettu** 20.9.2026/v4.33) · Nuku / Poistu = **ilmainen**, ei vaikuta talouteen | `street.js` |
+| Nukkuminen: nälkä jäissä (v4.41) | Nälkäajastin **ei tikitä** makuuhuoneessa eikä Zzz-pimennyksen aikana → pelaaja ei voi kuolla nukkuessaan; herätessä ajastimelle jää vähintään **10 s** (`HUNGER_WAKE_GRACE = 600`). Tahti (1/40 s, 2400 framet) ja katto 10 **ennallaan** | `street.js` (`hungerOnHold()`) |
 | Oviukko / kukkaruukku / sähkökaappi | osuma = tainnutus + **−1 🍔** (0 → kuolema) | `street.js` |
 | Syntymäpaketti (uusi peli / reset) | **2 kolikkoa + 5 🍔** (`defaultState.inventory`) | `gameState.js` |
 
@@ -72,3 +73,4 @@
 |-----|--------|--------|-------|---------|
 | 20.9.2026 | v4.33 | Talo 7: palkintohuone → **makuuhuone** (Nuku/Poistu). Pääsy vain 3 avaimella, kolikkoreitti poistettu (käyttäjän pyyntö: *"3 avainta on se lukko tässä, kolikko-lukituksen saa poistaa"*) | Pääsy: kaikki avaimet **tai 3 kolikkoa**; huoneessa pokaali + "To be continued…" | Pääsy: **vain 3 avainta** (ovi aina auki avaimilla, lamppua ei tarvita); huoneessa sänky + Nuku/Poistu. **Nukkuminen ja poistuminen ovat ilmaisia** → ei vaikutusta kolikko-/🍔-talouteen |
 | 20.9.2026 | v4.34 | Jukebox + Hedelmäpeli auki aina | Auki **vain öisin (klo 20–06)**; päivällä ovesta teksti-popup `Avoinna` / `Klo 20 - 06`. **Ei muutoksia panokseen, painoihin, maksuihin, RTP:hen, 🍔-tahtiin eikä hintoihin** – vain aukioloaika |
+| 20.9.2026 | v4.41 | Hampurilaisajastin tikitti myös nukkuessa – herätessä se jatkui täsmälleen siitä mihin jäi, joten 1 🍔:lla nukkuja saattoi kuolla heti herätessään | Nälkä on **jäissä** makuuhuoneessa ja Zzz-pimennyksen aikana (`hungerOnHold()`), eikä pelaaja voi kuolla nukkuessaan. Herätessä ajastimelle jää vähintään **10 s** (`HUNGER_WAKE_GRACE 600`). **Lukitut arvot ennallaan:** 2400 framet (1/40 s), katto 10, hinnat, RTP. Rajaus: **vain nukkuminen** – BAR/jukebox/iframe-pelit tikittävät ennallaan |
