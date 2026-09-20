@@ -17,9 +17,9 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.42` (`index.html` → `#version-tag`) · **Git:** v4.38 committattu ja pushattu
-  20.9.2026 (`7b2e593`, origin/main) · **v4.39–v4.42 työpuussa, ei committia**
-  (odottaa käyttäjän testausta ja "commit"-komentoa).
+- **Versio:** `v4.42` (`index.html` → `#version-tag`) · **Git:** v4.39–v4.42 committattu ja
+  pushattu 20.9.2026 (`2ffcd94`, origin/main) · **työpuu puhdas** · käyttäjän testaus OK
+  ("Tuli hieno" – led-valot syttyvät naksahdellen, vanhat lamput olivat dramaattisempia).
 - **Katuvalot (v4.42):** kun yö on laskeutunut **täyteen** (`dayT === 0`) ja pelaaja on jo edennyt
   (`state.isDay === false` = 3 avainta + makuuhuoneen Nuku yöhön), katuvalot **syttyvät itsestään
   yksi kerrallaan** vasemmalta oikealle (~0,3 s väli; `NIGHT_LAMP_FIRST 30`, `NIGHT_LAMP_INTERVAL 18`,
