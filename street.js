@@ -3402,12 +3402,105 @@ const Street = (() => {
 
     /* ── Jukebox-huone (talo 5) ────────────────────
        Valinta: 0 = ei valintaa (ei veloitusta), 1..N = kappale (1 kolikko,
-       soi kokonaan loppuun). HUOM: jukebox ei muuta peliääniä mitenkään. */
+       soi kokonaan loppuun). HUOM: jukebox ei muuta peliääniä mitenkään.
+
+       SELKEYS (v4.22): kaikki tekstit piirretään terävinä (ei
+       shadowBlur-sumennusta eikä läpinäkyvää tekstiä) ja koko asettelu
+       sovitetaan siihen ikkunaan, joka ruudulla oikeasti näkyy. Mobiilissa
+       canvas on vain `viewW` leveä ja kamera keskittää huoneen (camX), joten
+       kiinteä 800 px:n asettelu (tekstit x 62…) jäi kankaan ulkopuolelle –
+       kapealla kännykällä näkyi vain listan keskikohta. Sisältö on nyt
+       keskitetty x = 400:n ympärille ja enintään `winW − 24` leveäksi. */
     function drawJukeboxRoom() {
         const W = WORLD_W, H = WORLD_H;
         const now = Date.now();
         const playing = StreetAudio.isJukeboxPlaying();
         const trackCount = JUKEBOX_TRACKS.length;
+
+        ctx.save();
+        // Ei pehmennystä: nollataan kadulta mahdollisesti periytynyt hehku
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'rgba(0,0,0,0)';
+        ctx.textBaseline = 'alphabetic';
+
+        /* Sovitus näkyvään ikkunaan (ks. selitys yllä) */
+        const winW = Math.round(Math.min(WORLD_W, Math.max(VIEWW_MIN, viewW)));
+        const wide = winW >= 620;                 // jukebox-kaappi mahtuu viereen
+        const CAB_W = 176, CAB_GAP = 26, PANEL_MAX = 520;
+        const panelW = Math.round(wide
+            ? Math.min(PANEL_MAX, winW - CAB_W - CAB_GAP - 26)
+            : Math.max(196, winW - 24));
+        const panelX = Math.round(400 - (wide ? panelW + CAB_GAP + CAB_W : panelW) / 2);
+        const padX = 12;
+        const rowX = panelX + padX;
+        const rowW = panelW - padX * 2;
+
+        /* Näytön skaala (canvas CSS-px / puskurin px): kapea kännykkä
+           zoomataan 1:1:tä suuremmaksi → fontin maailmakoko voi olla
+           pienempi ja näkyä silti isona. `needPx` valitsee fontin
+           maailmakoon niin, että ruudulla näkyy vähintään `target` px. */
+        const vs = (canvas && canvas.height && canvas.clientHeight)
+            ? canvas.clientHeight / canvas.height : 1;
+        const vsafe = (vs > 0.25) ? vs : 1;
+        const needPx = (target, base, max) =>
+            Math.round(Math.max(base, Math.min(max, target / vsafe)));
+
+        /* Sarakeleveydet paneelin leveydestä; pisin kappalenimi on 25 merkkiä
+           → fonttikoko ei koskaan ylitä nimen saraketta */
+        const numW     = Math.max(20, Math.round(rowW * 0.055));
+        const priceW   = Math.max(46, Math.round(rowW * 0.14));
+        const nameMaxW = rowW - numW - priceW - 16;
+        const nameFs = Math.max(9, Math.min(needPx(16, 13, 16),
+                             Math.floor(nameMaxW / (0.62 * 25))));
+
+        /* Pystyasettelu */
+        const titleY   = 82;
+        const stacked  = panelW < 470;            // kolikkosaldo omalle rivilleen
+        const balY     = stacked ? titleY + 22 : titleY;
+        const listTop  = stacked ? balY + 20 : titleY + 22;
+        const rowGap   = 6;
+        const rowH     = Math.max(18, Math.round(nameFs * 1.9));
+        const listH    = (trackCount + 1) * (rowH + rowGap) - rowGap;
+
+        /* Tilatekstit: yksi rivi = yksi fillText, jotta rivi ei koskaan
+           katkea keskeltä (luettavuus + testit nojaavat kokonaisiin riveihin) */
+        const info = [];
+        if (playing) {
+            const t = (jukeTrack > 0) ? JUKEBOX_TRACKS[jukeTrack - 1].title : '';
+            info.push({ text: '🔊 SOI NYT: ' + t, color: '#ffdd88' });
+            info.push({ text: 'Soi loppuun asti – valinta lukossa', color: '#c9a95f' });
+        } else if (jukeSel > 0) {
+            info.push({ text: 'Valinta: ' + jukeSel + ' – ' + JUKEBOX_TRACKS[jukeSel - 1].title,
+                        color: '#ffffff' });
+            if (coinCount > 0) {
+                info.push({ text: 'Poistu (⚡/Space) = soita (1 🪙)', color: '#8ce88c' });
+            } else {
+                info.push({ text: '💰 Ei kolikoita!', color: '#ff8080' });
+            }
+        } else {
+            info.push({ text: 'Ei valintaa – poistuminen ei maksa mitään', color: '#d8d2e2' });
+        }
+        const infoFs     = Math.max(9, Math.min(nameFs - 2, 15));
+        const infoLineH  = infoFs + 4;
+        const infoTop    = listTop + listH + 10;
+        const infoH      = info.length * infoLineH + 10;
+        const infoBottom = infoTop + infoH;
+
+        /* Yksi yhtenäinen tumma paneeli koko sisällölle = paras kontrasti
+           (ei läpinäkyvyyttä eikä seinän kohinaa tekstin alla) */
+        const panelTop    = titleY - 24;
+        const panelBottom = infoBottom + 8;
+
+        /* Fontin asetus + koon sovitus: asettaa `ctx.font`in ja palauttaa
+           käytetyn koon, jolla teksti mahtuu enintään maxW:iin (≥ minFs) */
+        const setFitFont = (text, maxW, baseFs, minFs, family) => {
+            ctx.font = baseFs + 'px ' + family;
+            const w = ctx.measureText(text).width;
+            let fs = baseFs;
+            if (w > maxW) fs = Math.max(minFs, Math.floor(baseFs * maxW / w));
+            ctx.font = fs + 'px ' + family;
+            return fs;
+        };
 
         // 1) Tausta + lämminvioletti seinä
         ctx.fillStyle = '#08060e';
@@ -3432,108 +3525,114 @@ const Street = (() => {
         }
         ctx.stroke();
 
-        // 2) Otsikko
-        const glow = 0.7 + Math.sin(now / 500) * 0.3;
-        ctx.save();
-        ctx.font = '13px "Press Start 2P", monospace';
-        ctx.textAlign = 'left';
-        ctx.shadowColor = '#FF0055';
-        ctx.shadowBlur = 8 + glow * 8;
-        ctx.fillStyle = '#FF66A3';
-        ctx.fillText('♪ JUKEBOX', 62, 90);
-        ctx.restore();
-        ctx.fillStyle = 'rgba(230,225,235,0.6)';
-        ctx.font = '11px "Courier New", monospace';
-        ctx.textAlign = 'left';
-        ctx.fillText('', 62, 108);
+        // 2) Paneeli: yksi tumma laatta listalle ja tilateksteille
+        ctx.fillStyle = '#0b0710';
+        ctx.fillRect(panelX, panelTop, panelW, panelBottom - panelTop);
+        ctx.strokeStyle = '#3a3348';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(panelX + 0.5, panelTop + 0.5, panelW - 1, panelBottom - panelTop - 1);
+        // Ohut neonreuna (terävä viiva, ei hehkua)
+        ctx.fillStyle = '#ff4f96';
+        ctx.fillRect(panelX, panelTop, panelW, 2);
 
-        // 3) Kappalelista: rivi 0 = ei valintaa, rivit 1..N = kappaleet
-        const rowX = 62, rowW = 400, rowH = 30, rowGap = 6, rowTop = 126;
+        // 3) Otsikko + kolikkosaldo (yksiväriset, ei hehkua)
+        ctx.textAlign = 'left';
+        setFitFont('♪ JUKEBOX', stacked ? rowW : Math.round(rowW * 0.5),
+                   needPx(16, 12, 16), 10, '"Press Start 2P", monospace');
+        ctx.fillStyle = '#ff4f96';
+        ctx.fillText('♪ JUKEBOX', rowX, titleY);
+
+        const balText = '💰 Kolikoita: ' + coinCount;
+        setFitFont(balText, rowW * (stacked ? 1 : 0.5),
+                   Math.max(11, Math.min(nameFs, 14)), 10, '"Courier New", monospace');
+        ctx.fillStyle = '#ffd700';
+        ctx.textAlign = stacked ? 'left' : 'right';
+        ctx.fillText(balText, stacked ? rowX : rowX + rowW, balY);
+
+        // 4) Kappalelista: rivi 0 = ei valintaa, rivit 1..N = kappaleet
         for (let i = 0; i <= trackCount; i++) {
-            const y = rowTop + i * (rowH + rowGap);
+            const y = listTop + i * (rowH + rowGap);
             const selected = (i === jukeSel);
             const playingRow = playing && i > 0 && i === jukeTrack;
-            if (selected) {
-                ctx.fillStyle = 'rgba(255,0,85,0.16)';
-                ctx.fillRect(rowX, y, rowW, rowH);
-                ctx.strokeStyle = '#FF0055';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(rowX + 0.5, y + 0.5, rowW - 1, rowH - 1);
-            } else {
-                ctx.fillStyle = 'rgba(255,255,255,0.035)';
-                ctx.fillRect(rowX, y, rowW, rowH);
-                ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(rowX + 0.5, y + 0.5, rowW - 1, rowH - 1);
-            }
+            // Tausta: valittu = kirkas pinkki (tumma teksti), soitossa = kulta
+            const bg     = selected ? '#ff3d7f' : (playingRow ? '#2b2410' : '#171122');
+            const border = selected ? '#ffd0e2' : (playingRow ? '#ffdd88' : '#3a3348');
+            const fg     = selected ? '#1c000a' : (playingRow ? '#ffe9a8' : '#eae4f2');
+            const dim    = selected ? '#5c1230' : (playingRow ? '#c9a95f' : '#948ca8');
+
+            ctx.fillStyle = bg;
+            ctx.fillRect(rowX, y, rowW, rowH);
+            ctx.strokeStyle = border;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(rowX + 0.5, y + 0.5, rowW - 1, rowH - 1);
+
+            ctx.textBaseline = 'middle';
+            const cy = Math.round(y + rowH / 2) + 1;
+            const sideFs = Math.max(11, nameFs - 1);
+
             // Numero
             ctx.textAlign = 'left';
-            ctx.fillStyle = selected ? '#FF66A3' : 'rgba(255,255,255,0.45)';
-            ctx.font = '9px "Press Start 2P", monospace';
-            ctx.fillText(String(i), rowX + 14, y + 20);
-            // Nimi
-            ctx.fillStyle = selected ? '#ffffff' : 'rgba(230,225,235,0.75)';
-            ctx.font = '14px "Courier New", monospace';
-            ctx.fillText((i === 0) ? 'ei valintaa' : JUKEBOX_TRACKS[i - 1].title, rowX + 42, y + 20);
-            // Oikea reuna: soitossa ♪ SOI, kappaleilla 1 🪙, rivillä 0 viiva
+            ctx.fillStyle = fg;
+            ctx.font = Math.max(8, Math.min(10, Math.round(nameFs * 0.62))) +
+                       'px "Press Start 2P", monospace';
+            ctx.fillText(String(i), rowX + 10, cy);
+
+            // Kappaleen nimi (leikataan vain jos ei mahdu sarakkeeseen)
+            let trackName = (i === 0) ? 'ei valintaa' : JUKEBOX_TRACKS[i - 1].title;
+            ctx.font = nameFs + 'px "Courier New", monospace';
+            while (trackName.length > 4 && ctx.measureText(trackName).width > nameMaxW) {
+                trackName = trackName.slice(0, -2) + '…';
+            }
+            ctx.fillStyle = fg;
+            ctx.fillText(trackName, rowX + 10 + numW, cy);
+
+            // Oikea reuna: soitossa ♪ SOI, kappaleilla hinta, rivillä 0 viiva
             ctx.textAlign = 'right';
             if (playingRow) {
-                ctx.fillStyle = '#ffdd88';
-                ctx.font = 'bold 13px "Courier New", monospace';
-                ctx.fillText('♪ SOI', rowX + rowW - 12, y + 20);
+                ctx.font = 'bold ' + sideFs + 'px "Courier New", monospace';
+                ctx.fillStyle = selected ? fg : '#ffdd88';
+                ctx.fillText('♪ SOI', rowX + rowW - 10, cy);
             } else if (i > 0) {
-                ctx.fillStyle = selected ? '#FFD700' : 'rgba(255,215,0,0.65)';
-                ctx.font = '13px "Courier New", monospace';
-                ctx.fillText('1 🪙', rowX + rowW - 12, y + 20);
+                ctx.font = sideFs + 'px "Courier New", monospace';
+                ctx.fillStyle = selected ? fg : '#ffd700';
+                ctx.fillText('1 🪙', rowX + rowW - 10, cy);
             } else {
-                ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                ctx.font = '13px "Courier New", monospace';
-                ctx.fillText('–', rowX + rowW - 12, y + 20);
+                ctx.font = sideFs + 'px "Courier New", monospace';
+                ctx.fillStyle = dim;
+                ctx.fillText('–', rowX + rowW - 10, cy);
             }
         }
-        ctx.textAlign = 'left';
-        // 4) Tilatekstit (soi / valinta / ei valintaa)
-        const infoY = rowTop + (trackCount + 1) * (rowH + rowGap) + 16;
-        ctx.font = '14px "Courier New", monospace';
-        if (playing) {
-            const t = (jukeTrack > 0) ? JUKEBOX_TRACKS[jukeTrack - 1].title : '';
-            ctx.fillStyle = '#ffdd88';
-            ctx.fillText('🔊 SOI NYT: ' + t, 62, infoY);
-            ctx.font = '12px "Courier New", monospace';
-            ctx.fillText('Kappale soi loppuun asti – valinta vapautuu sen jälkeen', 62, infoY + 17);
-        } else if (jukeSel > 0) {
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText('Valinta: ' + jukeSel + ' – ' + JUKEBOX_TRACKS[jukeSel - 1].title, 62, infoY);
-            ctx.font = '12px "Courier New", monospace';
-            if (coinCount > 0) {
-                ctx.fillStyle = '#8ce88c';
-                ctx.fillText('Poistu (⚡ / Space) = osta ja soita (1 🪙)', 62, infoY + 17);
-            } else {
-                ctx.fillStyle = '#ff8080';
-                ctx.fillText('💰 Ei kolikoita!', 62, infoY + 17);
-            }
-        } else {
-            ctx.fillStyle = 'rgba(230,225,235,0.8)';
-            ctx.fillText('Ei valintaa – poistuminen ei maksa mitään', 62, infoY);
-        }
-
-        // 5) Kolikkosaldo
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#FFD700';
-        ctx.font = '13px "Courier New", monospace';
-        ctx.fillText('💰 Kolikoita: ' + coinCount, W - 62, 90);
-        ctx.textAlign = 'left';
-
-        // 6) Jukebox-kone oikealla
-        drawJukeboxCabinet(560, GROUND_Y + 4, now, playing, jukeSel > 0);
-
-        // 7) Alaohje (BAR-huoneen tyylillä)
-        const pulse = Math.sin(now / 800) * 0.3 + 0.7;
-        ctx.fillStyle = 'rgba(255,255,255,' + pulse + ')';
-        ctx.font = '10px Arial, sans-serif';
+        ctx.textBaseline = 'alphabetic';
+        // 5) Tilatekstit omassa laatikossaan (yksivärinen, ei läpinäkyvyyttä)
+        ctx.fillStyle = '#16101f';
+        ctx.fillRect(rowX, infoTop, rowW, infoH);
+        ctx.strokeStyle = '#4a4160';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(rowX + 0.5, infoTop + 0.5, rowW - 1, infoH - 1);
         ctx.textAlign = 'center';
-        ctx.fillText('▲ = valitse   ▼ = valitse   POISTU: (o) / Space', 400, 386);
-        ctx.textAlign = 'start';
+        ctx.textBaseline = 'middle';
+        for (let i = 0; i < info.length; i++) {
+            const it = info[i];
+            setFitFont(it.text, rowW - 16, infoFs, 9, '"Courier New", monospace');
+            ctx.fillStyle = it.color;
+            ctx.fillText(it.text, 400, Math.round(infoTop + infoH / 2 +
+                         (i - (info.length - 1) / 2) * infoLineH));
+        }
+        ctx.textBaseline = 'alphabetic';
+
+        // 6) Jukebox-kone oikealla – vain kun sille jää tilaa (ei peitä listaa)
+        if (wide) {
+            drawJukeboxCabinet(panelX + panelW + CAB_GAP, GROUND_Y + 4, now, playing, jukeSel > 0);
+        }
+
+        // 7) Alaohje (kiinteä ja terävä – ei vilkkumista)
+        ctx.textAlign = 'center';
+        setFitFont('▲/▼ = valitse   POISTU: (o) / Space', winW - 16, 12, 10, 'Arial, sans-serif');
+        ctx.fillStyle = '#e9e9ef';
+        ctx.fillText('▲/▼ = valitse   POISTU: (o) / Space', 400, 380);
+        ctx.textAlign = 'left';
+
+        ctx.restore();
     }
 
     /* Jukebox-kone: Wurlitzer-henkinen kaappi (proseduraalinen, ei kuvatiedostoja) */
@@ -3619,20 +3718,18 @@ const Street = (() => {
             ctx.fillRect(x + 16, gy, w - 32, 2);
         }
 
-        // Kolikkoluukku + hinta (hehkuu kun valinta on tehty)
+        // Kolikkoluukku + hinta (terävä: yksivärinen teksti, ei läpinäkyvyyttä)
         const slotW = 46, slotH = 14;
         const sx = x + w - slotW - 12, sy = top + 62;
         ctx.fillStyle = '#2b2b34';
         ctx.fillRect(sx, sy, slotW, slotH);
-        if (armed) { ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 6; }
-        ctx.strokeStyle = armed ? '#FFD700' : 'rgba(255,255,255,0.25)';
+        ctx.strokeStyle = armed ? '#FFD700' : '#8a7a2a';
         ctx.lineWidth = 1;
         ctx.strokeRect(sx + 0.5, sy + 0.5, slotW - 1, slotH - 1);
-        ctx.fillStyle = armed ? '#FFD700' : 'rgba(255,215,0,0.6)';
+        ctx.fillStyle = armed ? '#FFD700' : '#c8a000';
         ctx.font = '10px "Courier New", monospace';
         ctx.textAlign = 'center';
         ctx.fillText('1 🪙', sx + slotW / 2, sy + 10);
-        ctx.shadowBlur = 0;
         ctx.textAlign = 'start';
 
         // Jalusta
@@ -4110,21 +4207,27 @@ const Street = (() => {
         }
 
         // Jukebox-kyltti oven yllä (talo 5) – kiinni yläkarmissa (alareuna 1 px
-        // oviaukon yläreunan yläpuolella), hehkuu kirkkaammin kun valot palavat
+        // oviaukon yläreunan yläpuolella). Terävä neoni: tumma ääriviiva
+        // pitää tekstin luettavana, hehku on pieni (ei sumeaa massaa).
         if (isJukebox) {
             ctx.fillStyle = '#2a1030';
-            ctx.fillRect(dx - 10, dy - 19, DOOR_W + 20, 16);
+            ctx.fillRect(dx - 12, dy - 19, DOOR_W + 24, 16);
             ctx.fillStyle = '#3d1846';
-            ctx.fillRect(dx - 8, dy - 17, DOOR_W + 16, 12);
+            ctx.fillRect(dx - 10, dy - 17, DOOR_W + 20, 12);
             const jkBlink = Math.sin(Date.now() / 420);
-            const jkLight = (jukeboxOpen ? 58 : 34) + jkBlink * 20;
+            const jkLight = (jukeboxOpen ? 62 : 46) + jkBlink * 14;
+            ctx.font = 'bold 9px "Courier New", monospace';
+            ctx.textAlign = 'center';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(18,4,22,0.9)';
+            ctx.strokeText('♪JUKEBOX', dc.x, dy - 7);
             ctx.fillStyle = 'hsl(318, 100%, ' + jkLight + '%)';
             ctx.shadowColor = ctx.fillStyle;
-            ctx.shadowBlur = (jukeboxOpen ? 10 : 4) + Math.abs(jkBlink) * 12;
-            ctx.font = 'bold 8px "Courier New", monospace';
-            ctx.textAlign = 'center';
+            ctx.shadowBlur = 3 + Math.abs(jkBlink) * 5;
             ctx.fillText('♪JUKEBOX', dc.x, dy - 7);
             ctx.shadowBlur = 0;
+            ctx.lineWidth = 1;
             ctx.textAlign = 'start';
         }
 

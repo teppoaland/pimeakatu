@@ -12,7 +12,10 @@ const GameState = (() => {
         litLamps: [false, false, false, false, false],
         inventory: {
             coin: false,
-            coinCount: 0,
+            // Syntymäpaketti: uusi peli (tai reset) alkaa 2 kolikolla
+            // – sama ajatus kuin 5 hampurilaisessa. Tallennettu tila voittaa
+            // aina tämän (esim. 0 kolikkoa pysyy 0:na, ei ilmaista rahaa).
+            coinCount: 2,
             hamburgerCount: 5
         },
         // Onko Dig Game -pelin avain kerätty (avaa Dig Däshin)

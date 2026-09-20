@@ -8,7 +8,7 @@
 
 Versionumero näkyy pääsivun (`index.html`) oikeassa alakulmassa elementissä `#version-tag`.
 
-**Nykyinen versio:** `v4.21`
+**Nykyinen versio:** `v4.22`
 
 ---
 

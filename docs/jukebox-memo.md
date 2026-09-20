@@ -1,6 +1,6 @@
 # 🎵 Jukebox – memo (talo 5)
 
-> Päivitetty 20.9.2026 – versio **v4.21**. Talo 5 (`buildings[4]`) on jukebox-huone,
+> Päivitetty 20.9.2026 – versio **v4.22**. Talo 5 (`buildings[4]`) on jukebox-huone,
 > josta voi soittaa koko kappaleita 1 kolikolla. Kappaleet ovat `jukebox/`-kansiossa.
 
 ---
@@ -17,8 +17,11 @@
 - Ovi piirretään auki (`drawDoor`: `isActive`) ja kynnysvalo syttyy (violetti neoni
   `THRESH_LIGHT_JUKEBOX '215,130,255'`) **vain kun ikkunat palavat**.
 - Neonkyltti `♪JUKEBOX` on **kiinni yläkarmissa**: kyltin alareuna 1 px oviaukon
-  yläreunan yläpuolella (ulkolaatta `dy - 19 … dy - 3`, sisälaatta `dy - 17 … dy - 5`,
-  teksti `dy - 7`). Kyltti hehkuu kirkkaammin kun valot palavat.
+  yläreunan yläpuolella (ulkolaatta `dx - 12 … +DOOR_W+24`, sisälaatta `dx - 10 … +DOOR_W+20`,
+  teksti `dy - 7`). Kyltti on **terävä neoni** (v4.22): tumma ääriviiva
+  (`strokeText`, 3 px) kannattaa tekstin, hehku on enää `3 + |blink|·5` (ennen
+  `10 + |blink|·12`) ja fontti **9 px bold** (ennen 8 px) → luettavissa myös
+  kännykässä. Kirkkaus: `62 ± 14` % kun valot palavat, muuten `46 ± 14` %.
 - **Mitä muuttui talossa 5:** action-nappi vie huoneeseen kun valot palavat, joten
   1/5 arpa (kolikko / kukkaruukku / oviukko) ei ole enää tavoitettavissa tässä
   talossa. Muut potkupaikat (talo 1 ja talo 3) ja koko potkumekaniikka säilyivät
@@ -33,7 +36,7 @@
 | Valinta 0 + poistuminen | ei veloitusta, ei soittoa |
 | Valinta 1–3 + poistuminen | **−1 kolikko** + koko kappale alkaa soida |
 | Valinta 1–3, 0 kolikkoa | ilmoitus `💰 Ei kolikoita!`, ei veloitusta, poistuminen onnistuu |
-| Kappale soi jo | valinta lukossa (`🔊 SOI NYT: <nimi>` + rivi "Kappale soi loppuun asti – valinta vapautuu sen jälkeen"), ei tuplaveloitusta |
+| Kappale soi jo | valinta lukossa (`🔊 SOI NYT: <nimi>` + rivi `Soi loppuun asti – valinta lukossa`), ei tuplaveloitusta |
 | Ääntä ei saada lainkaan | kolikko palautetaan + `🔇 Ääntä ei saatu – kolikko palautettiin.` |
 
 - Kappale soitetaan **aina kokonaan loppuun** (`loop = false`, ei katkaisua).
@@ -43,6 +46,36 @@
   (v4.20:ssä nuolet olivat väärinpäin).
 - Poistuminen: **(o) / Space / Enter / ⚡-nappi**. Uusi vierailu alkaa aina valinnasta 0.
 - Kappale soi myös alapelien (iframe) aikana; kuolema (`StreetAudio.stop()`) hiljentää sen.
+
+---
+
+## Huoneen ulkoasu ja luettavuus (v4.22)
+
+Huone piirretään maailmakoordinaateissa 0–800, mutta **mobiilissa canvas on vain
+`viewW` leveä** ja kamera keskittää huoneen (`camX = (800 − viewW) / 2`). Siksi
+koko asettelu sovitetaan näkyvään ikkunaan:
+
+- `winW = clamp(viewW, VIEWW_MIN 260, WORLD_W 800)`; sisältö on keskitetty
+  `x = 400`:n ympärille ja enintään `winW − 24` leveäksi.
+- **Yksi yhtenäinen tumma paneeli** (`#0b0710`, ohut violetti yläreuna) sisältää
+  otsikon, kolikkosaldon, kappalelistan ja tilatekstit → teksti ei koskaan ole
+  läpinäkyvän taustan tai seinän kohinan päällä.
+- **Tekstit ovat teräviä:** `shadowBlur = 0` (nollataan heti huoneen alussa),
+  ei `rgba`-tekstivärejä, ei vilkkuvaa alphaa. Valittu rivi = kirkas pinkki
+  `#ff3d7f` + tumma teksti, soitossa oleva rivi = kulta `#2b2410`/`#ffdd88`.
+- **Fonttikoko valitaan näytön mukaan:** `vs = canvas.clientHeight / canvas.height`
+  (kapea kännykkä zoomataan 1:1:tä suuremmaksi) ja `needPx(target, base, max)`
+  takaa, että ruudulla näkyy vähintään ~13–16 px. Kappalenimen fontti rajataan
+  lisäksi sarakeleveyteen (`nameMaxW / (0.62 · 25)`), joten nimet eivät valu
+  hintasarakkeen päälle.
+- **Jukebox-kaappi piirretään vain kun sille jää tilaa** (`winW >= 620`), muuten
+  lista saa koko leveyden (kaappi ei peitä eikä kutista tekstiä).
+- Tilatekstit: `Ei valintaa – poistuminen ei maksa mitään` ·
+  `Valinta: N – <nimi>` + `Poistu (⚡/Space) = soita (1 🪙)` tai `💰 Ei kolikoita!` ·
+  soidessa `🔊 SOI NYT: <nimi>` + `Soi loppuun asti – valinta lukossa`.
+- Alaohje: `▲/▼ = valitse   POISTU: (o) / Space` (kiinteä, ei vilkkumista).
+- Kaapin kolikkoluukun `1 🪙` on yksivärinen (`#c8a000` / valittuna `#FFD700`),
+  ei enää 60 % läpinäkyvyyttä eikä hehkua.
 
 ---
 
@@ -121,8 +154,12 @@
 - `handleAction()`: oma oviblokki **ennen** lamppusilmukkaa ja potkusilmukkaa
   (ehto: `smallHouseLights[4].lit` + `DOOR_RADIUS`).
 - `update()`: oma huonehaara BAR-haaran mallilla; `render()`:
-  `drawJukeboxRoom()` (rivilista + Wurlitzer `drawJukeboxCabinet`, proseduraalinen,
-  ei kuvatiedostoja, koko piirto kankaan sisällä).
+  `drawJukeboxRoom()` (paneeli + rivilista + tilalaatikko + Wurlitzer
+  `drawJukeboxCabinet`, proseduraalinen, ei kuvatiedostoja).
+- `drawJukeboxRoom()` sovittaa sisällön näkyvään ikkunaan (`viewW`) ja valitsee
+  fonttikoot näytön skaalan mukaan – ks. **Huoneen ulkoasu ja luettavuus (v4.22)**.
+  Koko piirto on `ctx.save()`/`restore()`-parin sisällä, joten huone ei vuoda
+  fontti-/hehkutilaa kadulle.
 - `closeGame()` nollaa `jukeboxRoom`/`jukeSel`; potku- ja lamppulogiikka sekä muut
   talot ovat ennallaan.
 
@@ -139,6 +176,15 @@
 - **`audio-jukebox-test.cjs`** – fake-kello + `<audio>`-stubi: syklin peruutus,
   `ended` → 2,5 s → taustamusiikki palaa, `start()`/ele-suojat, `stop()`,
   autoplay-eston uudelleenyritys.
+- **`street-jukebox-layout-test.cjs`** (v4.22) – selkeys kolmella näyttökoolla:
+  pysty-kännykkä 390×700, pieni kännykkä 320×568, vaaka-kännykkä 844×390 ja
+  työpöytä 1024×700 (touch / ei touch). Tarkistaa että **kaikki huoneen tekstit mahtuvat näkyvään ikkunaan**
+  (tekstin x-rajat vs. `camX … camX + viewW`, leveys lasketaan fontin koon ja
+  perheen mukaan), että tekstit piirretään **ilman hehkua** (`shadowBlur 0`) ja
+  **ilman `rgba`-väriä**, että paneeli/rivit pysyvät ikkunan sisällä, että 4
+  kappaleriviä löytyvät ja ettei kappalenimi osu hintaan. Lisäksi syntymäpaketti:
+  `defaultState` = **2 kolikkoa + 5 hampurilaista**, tuore peli alkaa samoilla
+  luvuilla ja tallennettu 0 / 5 kolikkoa pysyvät ennallaan (ei ilmaista rahaa).
 - **Regressiot (kaikki 0 löydöstä 20.9.2026):** `street-bar-test.cjs`,
   `street-fruit-test.cjs`, `street-avenger-test.cjs`, `street-threshold-test.cjs`,
   `street-winframe-test.cjs`, `street-bm-path-test.cjs`, `audio-music-test.cjs`.
