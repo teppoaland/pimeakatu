@@ -134,6 +134,10 @@ const Street = (() => {
     let digKeyCollected = false;
     let boulderKeyCollected = false;
     let bmKeyCollected = false;
+    // Sama ehto kuin palkintohuoneessa (handleAction) ja HUD:issa – yksi lähde.
+    function allKeysCollected() {
+        return digKeyCollected && boulderKeyCollected && bmKeyCollected;
+    }
     let darkRoom = false;
     let barRoom = false;
     let barBuyQty = 0;             // BAR: tämän vierailun ostetut (▼ peruu vain nämä)
@@ -210,6 +214,7 @@ const Street = (() => {
     let isTouchDevice = false;
     let animClock = 0;                // animaatiokello (~frameä): hengitys + silmän vilkahdus
     let hitPauseTimer = 0;            // hit pause -laskuri: maailma jäätyy osumasta (frameä)
+    let iframeOpen = false;           // alapeli auki (overlay) → päivän liuku pysähtyy
 
     /* ── Kamera (mobiili: vaakasuuntainen seuranta) ── */
     let viewW = WORLD_W;          // näkyvä maailmanleveys (PC: koko katu)
@@ -232,6 +237,26 @@ const Street = (() => {
     const BACKDROP_WIN_OX = Math.max(2, Math.round(8 * BACKDROP_SCALE));    // 4
     const BACKDROP_WIN_OY = Math.max(3, Math.round(10 * BACKDROP_SCALE));   // 5
     let backdrop = null;                 // { blocks: [...] } – generoidaan kerran init():ssä
+
+    /* ── Päivä (lopputila: kaikki 3 avainta kerätty) ──
+       Kun pelaaja on läpäissyt kaikki kolme peliä, kadulle nousee päivä:
+       kuu vaihtuu auringoksi ja valoisuus nousee päivätasolle. Yksi liukuva
+       arvo dayT (0 = yö … 1 = päivä) ohjaa kaikki muutokset, joten yö-tila
+       piirtyy täsmälleen kuten ennen (kaikki lisäykset ovat ehtoja dayT > 0).
+       VISUAALINEN VAIN: hitboxit, törmäykset, kamera, avaimet, ovet ja
+       talous eivät muutu mihinkään. */
+    let dayT = 0;                          // 0 = yö … 1 = päivä (liukuva)
+    const DAY_FADE_FRAMES = 1200;          // ~20 s auringonnousu
+    const DAY_SKY_TOP     = '#3f7fc0';     // päivätaivaan yläosa
+    const DAY_SKY_MID     = '#78b4e0';     // keskikohta
+    const DAY_SKY_HORIZON = '#ffd9a0';     // lämmin horisontti
+    const SUN_X = 660, SUN_Y = 62, SUN_R = 26;
+    const DAY_LIGHT_RGB   = [70, 58, 40];  // additive-päivänvalon sävy
+    const DAY_LIGHT_ALPHA = 0.30;          // 0 = ei valoa … ~0.35 = kirkas päivä
+    const LAMP_DAY_DIM    = 0.15;          // paljonko lampun hehkusta jää päivällä
+    // Testityökalu: ?day=1 näyttää päivän heti ilman avainten keräämistä
+    const DAY_DEBUG = (typeof location !== 'undefined' && typeof URLSearchParams !== 'undefined')
+        ? new URLSearchParams(location.search).get('day') === '1' : false;
 
     // Kaksisuuntainen liikenne: kaksi ajorataa (kaistaa)
     // 0 = alempi (lahempana kameraa), vasemmalta oikealle
@@ -650,6 +675,9 @@ const Street = (() => {
         digKeyCollected = state.digKeyCollected || false;
         boulderKeyCollected = state.boulderKeyCollected || false;
         bmKeyCollected = state.bmKeyCollected || false;
+        // Päivä on johdettu avaimista (ei uusia localStorage-kenttiä):
+        // valmiiksi läpäisty peli avautuu suoraan päivänä.
+        dayT = (DAY_DEBUG || allKeysCollected()) ? 1 : 0;
         stars = [];
         for (let i = 0; i < 80; i++) {
             stars.push({
@@ -793,6 +821,19 @@ const Street = (() => {
 
         // Animaatiokello (hengitys, silmän vilkahdus)
         animClock += dt;
+
+        // ── Päivä (lopputila): kaikki 3 avainta → auringonnousu ──
+        // dayT nousee 0 → 1 (~20 s). Visuaalinen vain: mikään pelimekaniikka
+        // ei riipu tästä. Yöefektit nollataan, ettei taivaalle jää
+        // tähdenlentoa eikä satelliittia päivän aikana.
+        // Liuku pysäytetään, kunnes pelaaja on taas kadulla: avain saadaan
+        // alapelistä (iframe) ja huoneista → auringonnousu näkyy kadulle
+        // palatessa eikä jää taustalla näkymättömiin.
+        if (dayT < 1 && allKeysCollected() && !iframeOpen && !darkRoom && !barRoom && !jukeboxRoom) {
+            const wasNight = dayT === 0;
+            dayT = Math.min(1, dayT + (DAY_DEBUG ? 1 : dt / DAY_FADE_FRAMES));
+            if (wasNight) { shootingStar = null; satellite = null; }
+        }
 
         // ── Kuolemasekvenssi ─────────────────────────
         if (playerDead) {
@@ -1299,50 +1340,53 @@ const Street = (() => {
             }
         }
 
-        // ── Tähdenlento ─────────────────────────────
-        if (!shootingStar || !shootingStar.active) {
-            if (shootingStar) { shootingStar.timer -= dt; }
-            if (!shootingStar || shootingStar.timer <= 0) {
-                const ang = -0.3 - Math.random() * 0.5;
-                const spd = 1.5 + Math.random() * 2.5;
-                shootingStar = {
-                    x: -10 + Math.random() * WORLD_W * 0.4,
-                    y: 15 + Math.random() * 100,
-                    vx: Math.cos(ang) * spd,
-                    vy: Math.sin(ang) * spd,
-                    active: true, life: 120 + Math.random() * 180,
-                    trail: [], timer: 600 + Math.random() * 2100
-                };
+        // ── Tähdenlento + satelliitti (vain yöllä) ────
+        // Päivällä (dayT > 0) niitä ei enää spawnata; update() nollaa
+        // kesken lennon olleet oliot päivän alkaessa.
+        if (dayT <= 0) {
+            if (!shootingStar || !shootingStar.active) {
+                if (shootingStar) { shootingStar.timer -= dt; }
+                if (!shootingStar || shootingStar.timer <= 0) {
+                    const ang = -0.3 - Math.random() * 0.5;
+                    const spd = 1.5 + Math.random() * 2.5;
+                    shootingStar = {
+                        x: -10 + Math.random() * WORLD_W * 0.4,
+                        y: 15 + Math.random() * 100,
+                        vx: Math.cos(ang) * spd,
+                        vy: Math.sin(ang) * spd,
+                        active: true, life: 120 + Math.random() * 180,
+                        trail: [], timer: 600 + Math.random() * 2100
+                    };
+                }
+            } else {
+                shootingStar.x += shootingStar.vx * dt;
+                shootingStar.y -= shootingStar.vy * dt;
+                shootingStar.trail.push({x: shootingStar.x, y: shootingStar.y});
+                if (shootingStar.trail.length > 18) shootingStar.trail.shift();
+                shootingStar.life -= dt;
+                if (shootingStar.life <= 0 || shootingStar.x > WORLD_W + 30 || shootingStar.y < -30 || shootingStar.y > GROUND_Y) {
+                    shootingStar.active = false;
+                }
             }
-        } else {
-            shootingStar.x += shootingStar.vx * dt;
-            shootingStar.y -= shootingStar.vy * dt;
-            shootingStar.trail.push({x: shootingStar.x, y: shootingStar.y});
-            if (shootingStar.trail.length > 18) shootingStar.trail.shift();
-            shootingStar.life -= dt;
-            if (shootingStar.life <= 0 || shootingStar.x > WORLD_W + 30 || shootingStar.y < -30 || shootingStar.y > GROUND_Y) {
-                shootingStar.active = false;
-            }
-        }
 
-        // ── Satelliitti ─────────────────────────────
-        if (!satellite || !satellite.active) {
-            if (satellite) { satellite.timer -= dt; }
-            if (!satellite || satellite.timer <= 0) {
-                const dir = Math.random() < 0.5 ? 1 : -1;
-                satellite = {
-                    x: dir > 0 ? -10 : WORLD_W + 10,
-                    y: 25 + Math.random() * 70,
-                    vx: dir * (0.25 + Math.random() * 0.5),
-                    active: true, blinkPhase: Math.random() * Math.PI * 2,
-                    timer: 400 + Math.random() * 900
-                };
-            }
-        } else {
-            satellite.x += satellite.vx * dt;
-            satellite.blinkPhase += 0.08 * dt;
-            if ((satellite.vx > 0 && satellite.x > WORLD_W + 15) || (satellite.vx < 0 && satellite.x < -15)) {
-                satellite.active = false;
+            if (!satellite || !satellite.active) {
+                if (satellite) { satellite.timer -= dt; }
+                if (!satellite || satellite.timer <= 0) {
+                    const dir = Math.random() < 0.5 ? 1 : -1;
+                    satellite = {
+                        x: dir > 0 ? -10 : WORLD_W + 10,
+                        y: 25 + Math.random() * 70,
+                        vx: dir * (0.25 + Math.random() * 0.5),
+                        active: true, blinkPhase: Math.random() * Math.PI * 2,
+                        timer: 400 + Math.random() * 900
+                    };
+                }
+            } else {
+                satellite.x += satellite.vx * dt;
+                satellite.blinkPhase += 0.08 * dt;
+                if ((satellite.vx > 0 && satellite.x > WORLD_W + 15) || (satellite.vx < 0 && satellite.x < -15)) {
+                    satellite.active = false;
+                }
             }
         }
     }
@@ -1400,7 +1444,7 @@ const Street = (() => {
                     if (lamp.gameUrl) { enterGame(lamp.gameUrl); }
                     else if (i === 3) {
                         // Talo 7: Palkintohuone – vaatii kaikki avaimet tai 3 kolikkoa
-                        const allKeys = digKeyCollected && boulderKeyCollected && bmKeyCollected;
+                        const allKeys = allKeysCollected();
                         if (allKeys || coinCount >= 3) {
                             darkRoom = true;
                         } else {
@@ -1555,6 +1599,7 @@ const Street = (() => {
         // Näytä overlay ENSIN, sitten vasta lataa iframe
         // (estää 0×0 canvas -bugin pelien käynnistyessä)
         overlay.classList.add('active');
+        iframeOpen = true;   // päivän liuku odottaa, että pelaaja palaa kadulle
         // StreetAudio.stop(); – musiikki jatkaa soimista pelien aikana (sykli hoitaa tauot)
         iframe.onload = () => {
             try { iframe.contentWindow.focus(); } catch(e) {}
@@ -1615,6 +1660,7 @@ const Street = (() => {
 
         overlay.classList.remove('active');
         iframe.src = '';
+        iframeOpen = false;   // takaisin kadulla → päivän liuku jatkuu
 
         if (window._streetReturn) {
             window.removeEventListener('message', window._streetReturn);
@@ -1714,7 +1760,7 @@ const Street = (() => {
         if (coinEl) coinEl.classList.toggle('has', state.inventory.coin);
         // Inventaario HUD-palkkiin (ei muuta alkuperäistä tekstiä, lisää vain statuksen)
         const hudBar = document.getElementById('hud-bar');
-        const allKeys = digKeyCollected && boulderKeyCollected && bmKeyCollected;
+        const allKeys = allKeysCollected();
         let status = '';
         if (allKeys) status = ' 🗝️ Kaikki avaimet!';
         else {
@@ -2206,40 +2252,93 @@ const Street = (() => {
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, WORLD_W, GROUND_Y);
 
-        // Sirppikuu
-        const moonX = 680, moonY = 60, moonR = 28;
-        const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 2.8);
-        moonGlow.addColorStop(0, 'rgba(255,250,210,0.18)');
-        moonGlow.addColorStop(0.4, 'rgba(255,250,210,0.06)');
-        moonGlow.addColorStop(1, 'rgba(255,250,210,0)');
-        ctx.fillStyle = moonGlow;
-        ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.8, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#fff8cc';   // keltaisempi kuu
-        ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
-        const crescentRight = true;  // sirppi aukeaa oikealle
-        const shadowOff = crescentRight ? moonR * 0.4 : -moonR * 0.4;
-        ctx.fillStyle = '#0a0a1e';
-        ctx.beginPath(); ctx.arc(moonX + shadowOff, moonY - moonR * 0.08, moonR * 0.78, 0, Math.PI*2); ctx.fill();
+        // Päivätaivas (lopputila) – liukuu yötaivaan päälle dayT:n mukaan
+        if (dayT > 0) {
+            const dayGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+            dayGrad.addColorStop(0, DAY_SKY_TOP);
+            dayGrad.addColorStop(0.55, DAY_SKY_MID);
+            dayGrad.addColorStop(1, DAY_SKY_HORIZON);
+            ctx.save();
+            ctx.globalAlpha = dayT;
+            ctx.fillStyle = dayGrad;
+            ctx.fillRect(0, 0, WORLD_W, GROUND_Y);
+            ctx.restore();
+        }
+
+        // Sirppikuu (häipyy päivän tullessa)
+        if (dayT < 1) {
+            ctx.save();
+            ctx.globalAlpha = 1 - dayT;
+            const moonX = 680, moonY = 60, moonR = 28;
+            const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 2.8);
+            moonGlow.addColorStop(0, 'rgba(255,250,210,0.18)');
+            moonGlow.addColorStop(0.4, 'rgba(255,250,210,0.06)');
+            moonGlow.addColorStop(1, 'rgba(255,250,210,0)');
+            ctx.fillStyle = moonGlow;
+            ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.8, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fff8cc';   // keltaisempi kuu
+            ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
+            const crescentRight = true;  // sirppi aukeaa oikealle
+            const shadowOff = crescentRight ? moonR * 0.4 : -moonR * 0.4;
+            ctx.fillStyle = '#0a0a1e';
+            ctx.beginPath(); ctx.arc(moonX + shadowOff, moonY - moonR * 0.08, moonR * 0.78, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+
+        // Aurinko (päivä) – kuun tilalla samassa kohdassa, ristihäivytys
+        if (dayT > 0) {
+            ctx.save();
+            ctx.globalAlpha = dayT;
+            // Hehku
+            const sunGlow = ctx.createRadialGradient(SUN_X, SUN_Y, SUN_R * 0.4, SUN_X, SUN_Y, SUN_R * 3.4);
+            sunGlow.addColorStop(0, 'rgba(255,246,190,0.55)');
+            sunGlow.addColorStop(0.4, 'rgba(255,220,120,0.20)');
+            sunGlow.addColorStop(1, 'rgba(255,210,90,0)');
+            ctx.fillStyle = sunGlow;
+            ctx.beginPath(); ctx.arc(SUN_X, SUN_Y, SUN_R * 3.4, 0, Math.PI*2); ctx.fill();
+            // Hitaasti pyörivä sädekehä
+            const spin = Date.now() * 0.00012;
+            ctx.strokeStyle = 'rgba(255,238,160,0.35)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 8; i++) {
+                const ang = spin + i * Math.PI / 4;
+                const r0 = SUN_R + 5;
+                const r1 = r0 + (i % 2 === 0 ? 9 : 5);
+                ctx.beginPath();
+                ctx.moveTo(SUN_X + Math.cos(ang) * r0, SUN_Y + Math.sin(ang) * r0);
+                ctx.lineTo(SUN_X + Math.cos(ang) * r1, SUN_Y + Math.sin(ang) * r1);
+                ctx.stroke();
+            }
+            // Kiekko: vaalea keskusta, lämmin reuna
+            ctx.fillStyle = '#ffe066';
+            ctx.beginPath(); ctx.arc(SUN_X, SUN_Y, SUN_R, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fff6c4';
+            ctx.beginPath(); ctx.arc(SUN_X - 2, SUN_Y - 2, SUN_R * 0.66, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
 
         // Pilvet (kapea cirrus/hazy-kaistale)
         drawClouds();
 
-        // Tähdet (jokaisella oma random twinkle)
-        for (const s of stars) {
-            const freq = 800 + s.blink * 3000;
-            const twinkle = Math.sin(Date.now() / freq + s.blink) * 0.5 + 0.5;
-            const a = 0.15 + twinkle * 0.7;
-            ctx.fillStyle = 'rgba(255,255,' + Math.floor(200 + twinkle * 55) + ',' + a + ')';
-            ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
-            // Kirkas pilkahdus
-            if (twinkle > 0.92) {
-                ctx.fillStyle = 'rgba(255,255,255,' + (a * 1.5) + ')';
-                ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 0.5, 0, Math.PI*2); ctx.fill();
+        // Tähdet (jokaisella oma random twinkle) – himmenevät päivän tullessa
+        if (dayT < 1) {
+            const starFade = 1 - dayT;
+            for (const s of stars) {
+                const freq = 800 + s.blink * 3000;
+                const twinkle = Math.sin(Date.now() / freq + s.blink) * 0.5 + 0.5;
+                const a = (0.15 + twinkle * 0.7) * starFade;
+                ctx.fillStyle = 'rgba(255,255,' + Math.floor(200 + twinkle * 55) + ',' + a + ')';
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+                // Kirkas pilkahdus
+                if (twinkle > 0.92) {
+                    ctx.fillStyle = 'rgba(255,255,255,' + (a * 1.5) + ')';
+                    ctx.beginPath(); ctx.arc(s.x, s.y, s.r + 0.5, 0, Math.PI*2); ctx.fill();
+                }
             }
         }
 
-        // Tähdenlento
-        if (shootingStar && shootingStar.active) {
+        // Tähdenlento (vain yöllä)
+        if (dayT <= 0 && shootingStar && shootingStar.active) {
             for (let t = 0; t < shootingStar.trail.length; t++) {
                 const tr = shootingStar.trail[t];
                 const alpha = (t / shootingStar.trail.length) * 0.5;
@@ -2255,8 +2354,8 @@ const Street = (() => {
             ctx.beginPath(); ctx.arc(shootingStar.x, shootingStar.y, 4, 0, Math.PI*2); ctx.fill();
         }
 
-        // Satelliitti (pieni vilkkuva piste)
-        if (satellite && satellite.active) {
+        // Satelliitti (pieni vilkkuva piste) – vain yöllä
+        if (dayT <= 0 && satellite && satellite.active) {
             const blink = Math.sin(satellite.blinkPhase) * 0.5 + 0.5;
             const alpha = 0.25 + blink * 0.65;
             ctx.fillStyle = 'rgba(255,255,255,' + alpha + ')';
@@ -2319,6 +2418,19 @@ const Street = (() => {
             ctx.fillRect(p.x-2, p.y-2, 4, 4);
         }
         ctx.globalAlpha = 1;
+
+        // ── Päivänvalo (lopputila: kaikki 3 avainta) ──
+        // Yksi additive-kerros kirkastaa koko kadun (asfaltti, talot, siluetti,
+        // puut, ajoneuvot, pelaaja) ilman että yhtään piirtofunktiota tai
+        // väripalettia tarvitsee säätää uudelleen. Piirretään ennen oviukon
+        // vinjettiä ja kuoleman pimennystä → ne toimivat ennallaan.
+        if (dayT > 0) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = 'rgba(' + DAY_LIGHT_RGB[0] + ',' + DAY_LIGHT_RGB[1] + ',' + DAY_LIGHT_RGB[2] + ',' + (DAY_LIGHT_ALPHA * dayT).toFixed(3) + ')';
+            ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+            ctx.restore();
+        }
 
         // ── Oviukon isku: jäädytyksen vinjetti + iskuvälähdys + tähdet ──
         if (avenger && avenger.phase === 'hold') {
@@ -4068,6 +4180,9 @@ const Street = (() => {
         const by = GROUND_Y + 15;              // tolpan juuri (y = maanpinta + 15px alempana)
         const poleTop = by - LAMP_POST_H + 15; // tolpan yläpää
         const bulbY = poleTop - 8;             // lampun kupu (lähempänä tolppaa)
+        // Päivällä hehku himmenee (LAMP_DAY_DIM). HUOM: lamp.lit ei muutu
+        // mihinkään → ovet, pelit ja palkintohuone aukeavat kuten ennenkin.
+        const dayDim = 1 - LAMP_DAY_DIM * dayT;
 // Ylikuumentuneen lampun punainen hehku + savu
         if (lamp.overheat) {
             const flicker = Math.sin(Date.now() * 0.02) * 0.4 + 0.6;
@@ -4088,11 +4203,11 @@ const Street = (() => {
             ctx.arc(bx, smokeY - 4, 7, 0, Math.PI*2); ctx.fill();
         }
 
-        // Valokeila (jos palaa)
-        if (lamp.lit) {
+        // Valokeila (jos palaa) – himmenee päivällä
+        if (lamp.lit && dayDim > 0.01) {
             const g = ctx.createRadialGradient(bx, bulbY + 10, 4, bx, bulbY + 10, 90);
-            g.addColorStop(0, 'rgba(255,240,150,0.7)');
-            g.addColorStop(0.5, 'rgba(255,200,50,0.15)');
+            g.addColorStop(0, 'rgba(255,240,150,' + (0.7 * dayDim).toFixed(3) + ')');
+            g.addColorStop(0.5, 'rgba(255,200,50,' + (0.15 * dayDim).toFixed(3) + ')');
             g.addColorStop(1, 'rgba(255,200,50,0)');
             ctx.fillStyle = g;
             ctx.beginPath(); ctx.arc(bx, bulbY + 10, 90, 0, Math.PI*2); ctx.fill();
@@ -4180,8 +4295,10 @@ const Street = (() => {
             ctx.fillRect(bx - 9, bulbY - 3, 18, 4);
         }
 
-        // Pieni valopilkku kuvun sisällä
-        if (lamp.lit) {
+        // Pieni valopilkku kuvun sisällä (himmenee päivällä)
+        if (lamp.lit && dayDim > 0.01) {
+            ctx.save();
+            ctx.globalAlpha = dayDim;
             ctx.fillStyle = '#fff';
             ctx.beginPath();
             ctx.arc(bx, bulbY + 4, 4, 0, Math.PI*2);
@@ -4211,6 +4328,7 @@ const Street = (() => {
                 ctx.arc(mx, my, mRadius, 0, Math.PI * 2);
                 ctx.fill();
             }
+            ctx.restore();
         }
         if (lamp.overheat) {
             const flicker = Math.sin(Date.now() * 0.03) * 0.4 + 0.6;

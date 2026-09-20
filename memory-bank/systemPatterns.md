@@ -37,6 +37,15 @@ pelaaja `playerDepthScale()` ±10 % (0,90 kauas … 1,10 lähelle, 1,00 keskikoh
 ankkuroituna jalkojen kosketuspisteeseen (`px + pw/2, py + ph − 1`). **Skaalaus on visuaalinen** –
 hitboxit (`player.w/h`, törmäykset, keräyssäteet) eivät skaalaudu, joten pelimekaniikat pysyvät ennallaan.
 
+**Päivä (lopputila, v4.32):** kun kaikki 3 avainta on kerätty (`allKeysCollected()`), `dayT` nousee
+0 → 1 (~20 s) ja kadulle tulee päivä: päivätaivas, aurinko kuun tilalla, tähdet/tähdenlento/satelliitti
+pois, lamppujen hehku himmenee (`lamp.lit` **ei** muutu → ovet ja pelit ennallaan) ja additive-kerros
+(`'lighter'`, `DAY_LIGHT_RGB`/`DAY_LIGHT_ALPHA`) kirkastaa koko kadun. Liuku on pysähdyksissä kun
+alapeli on auki (`iframeOpen`) tai ollaan canvas-huoneessa → auringonnousu näkyy kadulle palatessa.
+**Visuaalinen vain ja johdettu avaimista** – ei uusia localStorage-kenttiä, ei muutoksia hitboxeihin,
+törmäyksiin eikä talouteen. Yö piirtyy täsmälleen kuten ennen, koska kaikki päivähaarat ovat ehtoja
+`dayT > 0`.
+
 ## 🎮 Pelien yhteinen arkkitehtuurimalli
 
 ```
@@ -100,8 +109,8 @@ peli/
 - **Hyväksytty mittapuu (käyttäjän pelitestit):** 1 kolikko on pakko jättää ja käydä katsomassa, onko pakko
   syödä; hedelmäpeli palauttaa yleensä 1–2 kolikkoa; iso voitto (20 kolikkoa) ~kerran 30 pelikerrasta.
   **Tasapaino on empiirisesti löydetty → siksi lukossa.**
-- **Testityökalut eivät ole balanssia:** `COIN_CHEAT_*`, `?coins=N` / `?debug`, `bm`-debug, `MUSIC_SOURCE`
-  – vapaasti säädettävissä (ei lupaa, ei versionostoa).
+- **Testityökalut eivät ole balanssia:** `COIN_CHEAT_*`, `?coins=N` / `?debug`, `?day=1` (päivä heti),
+  `bm`-debug, `MUSIC_SOURCE` – vapaasti säädettävissä (ei lupaa, ei versionostoa).
 
 ## 🏷️ Nimeämiskäytännöt
 

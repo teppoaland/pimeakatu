@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> **v4.31 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
+> **v4.32 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -24,6 +24,7 @@
 | 🎵 Jukebox-huone (talo 5) | ✅ v4.20–v4.23 – ikkunat valaistuiksi → ovi auki; 3 kappaletta (`Knived - …`), 1 kolikko / koko kappale; valinta ▲/▼ 0–3, soidessa lukossa; nuolet v4.21; mobiilasettelu v4.22; **v4.27 – tiedostonimet korjattu vastaamaan sisältöä (`jukebox/Knived_*.mp3`; aiemmin raita 1 ja 2 soivat ristissä)** |
 | Palkintohuone (talo 8) | ✅ kaikki avaimet TAI 3 kolikkoa |
 | 💰 Salainen kolikkopalkkio (testityökalu) | ✅ v4.23 – vitoslamppu 20 potkua → +20 kolikkoa, hiljainen; putki katkeaa toiseen lamppuun / 2 s taukoon, cooldown 60 s; avain-cheat 5 potkusta ennallaan |
+| ☀️ Päivä (lopputila) | ✅ v4.32 – kaikki 3 avainta → `dayT` 0→1 (**~20 s**, säädetty käyttäjän pyynnöstä 4→8→20 s): päivätaivas, **kuu → aurinko** (hehku + sädekehä), tähdet/tähdenlento/satelliitti pois, lamppujen hehku himmenee (`lamp.lit` ennallaan), additive-päivänvalo-wash koko kadulle; `allKeysCollected()` yhtenä ehtona; liuku odottaa kadulle paluuta (`iframeOpen`/huoneet); testityökalu `?day=1`; **testattu käyttäjän toimesta 20.9.2026 (avain-cheat: vitoslamppu 5 potkua → päivä nousi)** |
 | Popupit | ✅ v3.99 / v4.00 – ohjeet pois HUD:sta; `showNotification(2500 ms)`, aloitusohje 4500 ms |
 
 ## 🍒 Hedelmäpeli (fruitgame/) – talo 7, aina auki

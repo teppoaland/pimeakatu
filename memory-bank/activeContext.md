@@ -17,18 +17,42 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.31` (`index.html` → `#version-tag`) · **Git:** `origin/main` (v4.31 committattu ja
-  pushattu 20.9.2026), työpuu puhdas.
+- **Versio:** `v4.32` (`index.html` → `#version-tag`) · **Git:** v4.31 on committattu ja pushattu
+  20.9.2026; **v4.32 (päivä-lopputila) on työpuussa** – ei committia ilman pyyntöä.
 - **Tila:** pääportaali + 4 alipeliä (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️, `fruitgame` 🍒) valmiit ja pelattavat.
 - **Kadun canvas-huoneet (ei iframe):** palkintohuone `buildings[7]` · BAR (talo 9) · jukebox
   (`buildings[4]`, ovi x 410) · hedelmäpelitalo `buildings[6]` (iframe, aina auki).
+- **Lopputila (v4.32):** kun kaikki 3 avainta on koossa, kadulle nousee **päivä** (kuu → aurinko,
+  valoisuus päivätasolle, **~20 s auringonnousu**). Päivä on johdettu avaimista → reloadissa heti täysi;
+  `✕`-reset palauttaa yön. Testityökalu `?day=1`.
 - **Lukossa:** talous (sääntö 04) ja inventaario · **vapaasti säädettävissä:** testityökalut
-  (`COIN_CHEAT_*`, `?coins`, `?debug`, `MUSIC_SOURCE`, `bm`-debug).
+  (`COIN_CHEAT_*`, `?coins`, `?debug`, `?day`, `MUSIC_SOURCE`, `bm`-debug).
 - **Avoinna:** ks. "🔜 Seuraavaksi" – työpuussa ei ole keskeneräistä koodia.
 
 ---
 
 ## 🆕 Tuoreimmat versiot (20.9.2026)
+
+**v4.32 – Päivä (lopputila): kaikki 3 avainta → kuu vaihtuu auringoksi ja valoisuus nousee.**
+Uusi liukuva arvo `dayT` (0 = yö … 1 = päivä) ohjaa kaikki muutokset; auringonnousu ~20 s
+(`DAY_FADE_FRAMES 1200`). Päivä on **johdettu avaimista** (`allKeysCollected()`, sama ehto kuin
+palkintohuoneessa ja HUD:issa) → **ei uusia localStorage-kenttiä**, valmiiksi läpäisty peli avautuu
+suoraan päivänä. Muutokset `street.js`:ssä: päivätaivas liukuu yötaivaan päälle (`DAY_SKY_*`),
+sirppikuu häipyy ja **aurinko** (`SUN_X 660 / SUN_Y 62 / SUN_R 26`, hehku + hitaasti pyörivä
+sädekehä) nousee kuun tilalle, tähdet himmenevät (`* (1 - dayT)`), tähdenlento ja satelliitti
+poistuvat käytöstä (`dayT <= 0` -portti + nollaus päivän alkaessa), lamppujen valokeila/valopilkku/
+moskiitot himmenevät (`LAMP_DAY_DIM 0.15`; **`lamp.lit` ei muutu** → ovet ja pelit ennallaan) ja
+**päivänvalo-wash** (`globalCompositeOperation 'lighter'`, `DAY_LIGHT_RGB`, `DAY_LIGHT_ALPHA 0.30`)
+kirkastaa koko kadun yhdellä kerroksella ilman palettimuutoksia. Wash piirretään ennen oviukon
+vinjettiä ja kuoleman pimennystä. **Visuaalinen vain:** hitboxit, törmäykset, keräyssäteet, kamera,
+avaimet, ovet ja talous eivät muutu (kaikki lisäykset ovat ehtoja `dayT > 0` → yö piirtyy kuten ennen).
+Sisätilat (`darkRoom`/`barRoom`/`jukeboxRoom`) palaavat `render()`ista ennen washiä → ennallaan.
+Auringonnousu **odottaa kadulle paluuta**: liuku on pysähdyksissä kun alapeli on auki (`iframeOpen`)
+tai ollaan canvas-huoneessa → avain saadaan alapelistä, joten päivä ei "valmistu" näkymättömissä.
+Testityökalu `?day=1` näyttää päivän heti ilman avainten keräämistä.
+**Keston säätö (käyttäjän pyynnöt 20.9.2026):** 4 s → 8 s → **20 s** (`DAY_FADE_FRAMES 240 → 480 → 1200`,
+pelkkä parametri, ei versionostoa). **Käyttäjän testaus:** avain-cheat (vitoslamppu 5 potkua) sytytti
+päivän oikein → efekti todettu toimivaksi ja "niin hienoksi", että kesto pidennettiin 20 sekuntiin.
 
 **v4.31 – Pelaajan syvyysskaalaus Y-akselilla.** Uusi `playerDepthScale()` (street.js r. ~4742): hahmo
 kasvaa liikkuessa alaspäin (lähemmäs) ja pienenee ylöspäin. **±10 %**: `PLAYER_DEPTH_MID 315` (liikeradan
@@ -198,6 +222,10 @@ katuun (v4.11 ✅).
   `KERB_GAP_EXTRA`, laatan korko (`slab.h`).
 - **Pelaajan syvyys:** `PLAYER_DEPTH_AMOUNT 0.10` (±10 %) · `PLAYER_DEPTH_MID 315` (koko 1,00 tässä Y:ssä) ·
   `PLAYER_DEPTH_MAX_Y = WORLD_H - 50` (350, sama kuin `update()`in `PLAYER_Y_MAX`).
+- **Päivä (lopputila):** `DAY_FADE_FRAMES 1200` (~20 s) · `DAY_SKY_TOP '#3f7fc0'` · `DAY_SKY_MID '#78b4e0'` ·
+  `DAY_SKY_HORIZON '#ffd9a0'` · `SUN_X 660` / `SUN_Y 62` / `SUN_R 26` · `DAY_LIGHT_RGB [70,58,40]` ·
+  `DAY_LIGHT_ALPHA 0.30` (washin voimakkuus) · `LAMP_DAY_DIM 0.15` (jäljelle jäävä lampun hehku) ·
+  `DAY_DEBUG` = `?day=1` (testityökalu: päivä heti, ei avaimia tarvita).
 - **Notifikaatiot:** `showNotification(text, durationMs = 2500)` + 0,5 s fade; `showSpawnHint` 4500 ms.
 
 ## 🔒 Lukitut osa-alueet
@@ -220,6 +248,10 @@ katuun (v4.11 ✅).
   1/2/5, symboligrafiikan hienosäätö. Testaus: `fruitgame/game_main.html?coins=100` / `?debug`.
 - **Jukebox:** `jukebox/Knived_Unafraid_instrumental.mp3` on sama äänite kuin `knived_unafraid.mp3` (128,05 vs 128,02 s)
   → raita 3 voisi osoittaa juuritiedostoon (~2 MB säästö).
+- **Päivä (v4.32) – lisäsäädöt jos silmä vaatii:** ikkunavalot eivät vielä sammu päivällä (3 kutsukohtaa:
+  pienet talot, satunnaiset ikkunat, taustasiluetin ikkuna) · lämmin maagradientti kadulle · pilvien
+  kirkastus · `style.css`:n tumma canvas-kehys + scanline päiväversiona · auringonnousun jingle.
+  Washin voimakkuus ja päivätaivaan sävyt = nupit (`DAY_LIGHT_ALPHA`, `DAY_SKY_*`).
 - **Jatkoideat (ei tehty):** potkun 1 px screen shake · pää ja nyrkit recteinä `arc()`:n sijaan ·
   hengityksen syvyys 2 px / hitaampi sykli.
 
@@ -236,6 +268,11 @@ katuun (v4.11 ✅).
 - **Pelaajan syvyysskaalaus (v4.31):** `s ≠ 1` tekee hahmon pikselikoordinaateista murto-osaisia → 1 px
   reunat voivat pehmentyä ja skaalautuessa hitaasti ohuet yksityiskohdat väristä. Jos silmä havaitsee:
   kvantisoi skaala portaisiin (esim. 0,025 välein) tai vaihda offscreen-blittiin (lähin naapuri).
+- **Päivä (v4.32):** päivä luetaan avaimista joka ruudulla (`allKeysCollected()`), joten se ei tarvitse
+  tallennusta eikä uusia localStorage-avaimia. Sivuvaikutus: **avain-cheat** (vitoslamppu 5 potkua →
+  kaikki avaimet) sytyttää myös päivän – se on sama "läpäisty"-tila, joten käytös on johdonmukainen.
+  Päivänvalo on additive-kerros (`'lighter'`), eli se ei muuta yhtään väripalettia: jos kadun pitää
+  näyttää vielä valoisammalta, nosta `DAY_LIGHT_ALPHA` (0.30) tai vaalenna `DAY_SKY_*`-sävyjä.
 - `handleAction()` palaa heti osumasta → hit pause asetetaan haaroissa, `actionJustPressed` nollataan
   framen lopussa (ei tuplapotkua). `KICK_DURATION` ja törmäyslogiikka ennallaan.
 - `street.js` `lamps[].label` on **kuollutta dataa** – kadun kyltit eivät näytä pelien nimiä (vain BAR
