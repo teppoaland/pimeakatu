@@ -16,11 +16,10 @@ const StreetAudio = (() => {
     let started = false;
     let melodyReverse = false;
 
-    // ── MP3-looppi (aito äänite) ──────────────────────
+    // ── MP3-kappale (aito äänite, kertasoitto) ────────
     let musicEl = null;       // <audio>-elementti, soi suoraan (ei Web Audio -reititystä)
     let musicReady = false;   // tiedosto ladattu ja soitettavissa (canplay)
-    let musicPlayed = 0;      // montako looppia soitettu tässä syklissä
-    let gapTimer = null;      // 3s tauko looppien välissä
+    let musicPlayed = 0;      // montako kertaa soitettu tässä syklissä (1 = kertasoitto)
     let musicBlocked = false; // autoplay estetty (NotAllowedError) – yritetään uudelleen eleessä
 
     const BPM_MIN = 110;
@@ -104,14 +103,14 @@ const StreetAudio = (() => {
     function loadMusic() {
         if (musicEl || !ctx) return;
         try {
-            musicEl = new Audio('running.mp3');
+            musicEl = new Audio('knived_unafraid.mp3');
             musicEl.loop = false;
             musicEl.preload = 'auto';
             musicEl.volume = 0.05; // vastaa aiempaa masterGain-tasoa (0.05025)
             musicEl.addEventListener('loadedmetadata', () => {
                 if (musicEl.duration && isFinite(musicEl.duration)) {
-                    // Soita 2 looppia, 3s tauko niiden välissä
-                    PLAY_DURATION = Math.round(musicEl.duration * 2 * 1000) + 3000;
+                    // Kertasoitto: soitetaan kerran loppuun + 1s häntä (ei x2-toistoa)
+                    PLAY_DURATION = Math.round(musicEl.duration * 1000) + 1000;
                 }
             });
             // Merkitse valmiiksi vasta kun selain oikeasti pystyy soittamaan tiedostoa
@@ -121,25 +120,15 @@ const StreetAudio = (() => {
                 if (phase === 'playing' && started && loopId) {
                     if (loopId) { clearInterval(loopId); loopId = null; }
                     startMusicLoop();
+                    armPlayTimer(true); // syntikan 30s ajastin → kappaleen mittaiseksi
                 }
             });
             musicEl.addEventListener('canplaythrough', () => { musicReady = true; });
             musicEl.addEventListener('error', () => { musicReady = false; });
-            // Looppi päättyy → 3s tauko, sitten toinen soitto
+            // Kappale päättyy → kertasoitto täyttyi, siirry taukoon
             musicEl.addEventListener('ended', () => {
                 musicPlayed++;
-                if (musicPlayed < 2 && phase === 'playing') {
-                    gapTimer = setTimeout(() => {
-                        gapTimer = null;
-                        if (phase === 'playing' && musicEl) {
-                            try { musicEl.currentTime = 0; } catch (e) {}
-                            const p2 = musicEl.play();
-                            if (p2 && typeof p2.catch === 'function') {
-                                p2.catch(() => { musicBlocked = true; });
-                            }
-                        }
-                    }, 3000);
-                }
+                if (phase === 'playing' && musicPlayed === 1) silencePhase();
             });
             musicEl.load();
         } catch (e) {
@@ -162,13 +151,15 @@ const StreetAudio = (() => {
                 // Autoplay estetty → älä poista MP3:a pysyvästi.
                 // Merkitse estetyksi, siirry syntikkaan ja yritä uudelleen seuraavassa eleessä.
                 musicBlocked = true;
-                if (phase === 'playing' && !loopId) startSynth();
+                if (phase === 'playing' && !loopId) {
+                    startSynth();
+                    armPlayTimer(false); // syntikka soi 30s, ei koko kappaleen mittaa
+                }
             });
         }
     }
 
     function stopMusicLoop() {
-        if (gapTimer) { clearTimeout(gapTimer); gapTimer = null; }
         if (musicEl) {
             try { musicEl.pause(); } catch (e) {}
             try { musicEl.currentTime = 0; } catch (e) {}
@@ -427,13 +418,24 @@ const StreetAudio = (() => {
         }, LOOP * 1000);
     }
 
-    // ── Syklin ajastimet: 30s soittoa, 30–90s taukoa ──
+    // ── Syklin ajastimet: kappale kerran, sitten 30–90s tauko ──
     let cycleTimer = null;       // setTimeout-tunniste
     let phase = 'silent';        // 'playing' | 'silent'
-    let PLAY_DURATION = 30000; // soittoaika (ms) – asetetaan 2× loopiksi kun musiikki latautuu
+    let PLAY_DURATION = 30000;   // kappaleen kesto (ms) + 1s häntä – päivittyy loadedmetadata
+    const SYNTH_PLAY_DURATION = 30000; // syntikka-fallbackin soittoaika (ms)
 
     function getSilenceDuration() {
         return 30000 + Math.random() * 60000; // 30–90s taukoa
+    }
+
+    /* Soittovaiheen ajastin: kappale (kertasoitto) tai syntikka (30s).
+       Kesto luetaan elementistä, jotta 30s oletus ei katkaise pitkää kappaletta. */
+    function armPlayTimer(useSong) {
+        if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
+        const len = (musicEl && musicEl.duration && isFinite(musicEl.duration))
+            ? Math.round(musicEl.duration * 1000) + 1000
+            : PLAY_DURATION;
+        cycleTimer = setTimeout(silencePhase, useSong ? len : SYNTH_PLAY_DURATION);
     }
 
     function silencePhase() {
@@ -467,13 +469,14 @@ const StreetAudio = (() => {
         if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
         phase = 'playing';
         if (musicReady && !musicBlocked) {
-            // Aito MP3-looppi
+            // Aito äänite: soitetaan kerran loppuun
             startMusicLoop();
+            armPlayTimer(true);
         } else {
             // Fallback: proseduraalinen synteesi
             startSynth();
+            armPlayTimer(false);
         }
-        cycleTimer = setTimeout(silencePhase, PLAY_DURATION);
     }
 
     function onGesture() {
@@ -485,6 +488,7 @@ const StreetAudio = (() => {
             if (phase === 'playing') {
                 if (loopId) { clearInterval(loopId); loopId = null; }
                 startMusicLoop();
+                armPlayTimer(true);
             }
         }
         // Käynnistä vain jos mikään sykli ei ole käynnissä (ensimmäinen ele)

@@ -9,7 +9,7 @@
 | Katunäkymä, hahmo, lamput, ovet | ✅ |
 | Kolikot (katu + pelit) | ✅ v3.86 – katu: kolikko jalkojen liikkuma-alalle (x 0–780, y 310–380), 120s respawn; DG1 1kpl, DG2 1/taso |
 | Hampurilaiset (lives) + BAR | ✅ v3.73 – 5 alussa, 1/40s, BAR:sta lisää, dramaattinen kuolemasekvenssi; **v4.12 – BAR-ostot: ▲/W = osta 1 (1 kolikko, katto 10), ▼/S = peru viimeisin osto (vain vierailun ostot, ei rahareikää), (o)/Space = poistu; reunanilmaisu estää toiston, tilateksti `Ostit Xx🍔 hampurilaista!`** |
-| Taustamusiikki (MP3-looppi), äänet, CRT-teema | ✅ v3.85 – aito MP3-looppi (`running.mp3`), mobiilifiksit: autoplay-esto ei poista MP3:a pysyvästi + `synthGain`-mykistys estää MP3:n ja syntikan päällekkäin soimisen |
+| Taustamusiikki (MP3), äänet, CRT-teema | ✅ v4.16 – kappale `knived_unafraid.mp3` (2:08, 128 kbps, −13,0 LUFS) soi **kerran** ja sitten 30–90 s tauko (x2-toisto + 3 s tauko poistettu, `armPlayTimer` lukee keston elementistä → 30 s oletus ei katkaise); mobiilifiksit: autoplay-esto ei poista musiikkia pysyvästi + `synthGain`-mykistys estää MP3:n ja syntikan päällekkäin soimisen |
 | Ajoneuvot, eläimet, sääefektit | ✅ |
 | Mustat lehdettömät puut (isoimmat raot) | ✅ v3.82 – 2 kpl, siluetti, eri korkeus |
 | Pienet ruohotupsut puiden juurella (1/4 koko) | ✅ v3.83 – 3 kpl per puu, random paikka raossa, huojuvat |
