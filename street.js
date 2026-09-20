@@ -308,6 +308,7 @@ const Street = (() => {
     ];
     let vehicles = [null, null];      // yksi ajoneuvo per kaista
     let spawnTimers = [300, 300];     // 5 s ekaan spawniin molemmille
+    const TRAFFIC_DAY_MULT = 2;       // päivällä liikennevirta tuplataan (v4.37, spawn-väli /2)
 
     /* ── Kukkaruukun pudotus ──────────────────────── */
     function spawnFlowerPot(bldg) {
@@ -1364,10 +1365,14 @@ const Street = (() => {
         }
 
         // ── Ajoneuvo: kaksi ajorataa ──────────────────────
+        //    Päivällä liikennevirta tuplataan (v4.37): spawn-laskuri kuluu
+        //    TRAFFIC_DAY_MULT-kertaista vauhtia ja kerroin liukuu dayT:n
+        //    mukana (1 = yö, TRAFFIC_DAY_MULT = täysi päivä). Sama 1 ajoneuvo
+        //    per kaista ja samat nopeudet/törmäykset kuin ennen.
         for (let li = 0; li < LANE_DEFS.length; li++) {
             const lane = LANE_DEFS[li];
             if (!vehicles[li]) {
-                spawnTimers[li] -= dt;
+                spawnTimers[li] -= dt * (1 + (TRAFFIC_DAY_MULT - 1) * dayT);
                 if (spawnTimers[li] <= 0) {
                     const dir = lane.direction;
                     const vehRnd = Math.random();
