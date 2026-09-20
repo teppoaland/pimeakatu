@@ -149,7 +149,9 @@ const Street = (() => {
     let sleepHeldUp = false;       // ▲ reunanilmaisu
     let sleepHeldDown = false;     // ▼ reunanilmaisu
     let sleepPhase = 0;            // > 0 = nukkumisen pimennys käynnissä (frameä)
-    const SLEEP_FADE_FRAMES = 90;  // ~1,5 s pimennys ennen tilan vaihtoa
+    const SLEEP_DARK_FRAMES = 45;   // ~0,75 s: ruutu ehtii mustaksi ennen Zzziä
+    const SLEEP_ZZZ_FRAMES  = 180;  // ~3 s: itse Zzz-efekti mustalla taustalla
+    const SLEEP_FADE_FRAMES = SLEEP_DARK_FRAMES + SLEEP_ZZZ_FRAMES;  // ~3,75 s yhteensä
     let isDay = false;             // tallennettu päivä/yö-tila (state.isDay)
     let barRoom = false;
     let barBuyQty = 0;             // BAR: tämän vierailun ostetut (▼ peruu vain nämä)
@@ -260,7 +262,8 @@ const Street = (() => {
        (state.isDay). Yksi liukuva arvo dayT (0 = yö … 1 = päivä) ohjaa kaikki
        muutokset, joten yö-tila piirtyy täsmälleen kuten ennen (kaikki lisäykset
        ovat ehtoja dayT > 0). VISUAALINEN VAIN: hitboxit, törmäykset, kamera,
-       avaimet, ovet ja talous eivät muutu mihinkään. */
+       avaimet ja talous eivät muutu mihinkään. Poikkeus: Jukebox ja
+       Hedelmäpeli ovat auki vain öisin (v4.34, ks. CLOSED_SIGN). */
     let dayT = 0;                          // 0 = yö … 1 = päivä (liukuva)
     const DAY_FADE_FRAMES   = 1200;        // ~20 s auringonnousu (yö → päivä)
     const NIGHT_FADE_FRAMES = 1200;        // ~20 s auringonlasku (päivä → yö)
@@ -271,6 +274,7 @@ const Street = (() => {
     const DAY_LIGHT_RGB   = [70, 58, 40];  // additive-päivänvalon sävy
     const DAY_LIGHT_ALPHA = 0.30;          // 0 = ei valoa … ~0.35 = kirkas päivä
     const LAMP_DAY_DIM    = 0.15;          // paljonko lampun hehkusta jää päivällä
+    const VEHICLE_HEADLIGHT_DIM = 1;       // ajovalot: 1 = kokonaan pois päivällä, 0 = ei muutosta
     /* Testityökalut (eivät tallenna mitään): ?day=1 = päivä heti,
        ?day=0 = pakota yö. Pakotettu tila ohittaa tallennetun tilan eikä
        käynnistä ensiauringonnousua → kumpaankin suuntaan voi testata. */
@@ -278,6 +282,14 @@ const Street = (() => {
         ? new URLSearchParams(location.search).get('day') : null;
     const DAY_FORCE = (DAY_PARAM === '1') ? 'day' : (DAY_PARAM === '0' ? 'night' : null);
     const DAY_DEBUG = DAY_FORCE !== null;   // pakotettu → liuku heti perille
+
+    /* ── Aukiolo (v4.34): Jukebox ja Hedelmäpeli auki vain öisin ──
+       Päivällä ovesta tulee sama teksti-popup kuin lukitusta ovesta.
+       Talousarvot eivät muutu – vain aukioloaika. Nuppi: CLOSED_AT_DAYT
+       (sama raja kuin makuuhuoneen tilanvaihdossa: dayT >= 0.5 = päivä). */
+    const CLOSED_SIGN    = 'Avoinna\nKlo 20 - 06';
+    const CLOSED_AT_DAYT = 0.5;   // tämän yli = päivä = ovet kiinni
+    function nightOnlyClosed() { return dayT >= CLOSED_AT_DAYT; }
 
     /* Päivän tavoite liu'ulle: 1 = päivä, 0 = yö. Tallennettu tila
        (isDay) ratkaisee, paitsi pakotettuna ?day=0/1. */
@@ -1490,20 +1502,25 @@ const Street = (() => {
         const px = player.x + player.w / 2;
         const py = player.y + player.h / 2;
 
-        // 0. HEDELMÄPELI (talo 7, buildings[6], x 560–610) – aina auki, ei lamppua eikä avainta
+        // 0. HEDELMÄPELI (talo 7, buildings[6], x 560–610) – ei lamppua eikä avainta,
+        //    mutta auki vain öisin (v4.34)
         const fruitDoor = doorCenter(buildings[6]);
         const fdx = px - fruitDoor.x, fdy = py - fruitDoor.y;
         if (Math.sqrt(fdx * fdx + fdy * fdy) < DOOR_RADIUS) {
+            if (nightOnlyClosed()) { showNotification(CLOSED_SIGN); return; }
             enterGame('fruitgame/game_main.html');
             return;
         }
 
-        // 0.5 JUKEBOX (talo 5, buildings[4], ovi x 410) – ovi aukeaa vasta kun talon
-        //     ikkunat palavat (1. painallus ovella = potku → valot syttyvät 20 s)
+        // 0.5 JUKEBOX (talo 5, buildings[4], ovi x 410) – auki vain öisin (v4.34);
+        //     yöllä ovi aukeaa vasta kun talon ikkunat palavat
+        //     (1. painallus ovella = potku → valot syttyvät 20 s)
         const jkDoor = doorCenter(buildings[JUKEBOX_BLDG_IDX]);
         const jkLights = smallHouseLights[JUKEBOX_BLDG_IDX];
         const jkdx = px - jkDoor.x, jkdy = py - jkDoor.y;
-        if (jkLights && jkLights.lit && Math.sqrt(jkdx * jkdx + jkdy * jkdy) < DOOR_RADIUS) {
+        const jkInReach = Math.sqrt(jkdx * jkdx + jkdy * jkdy) < DOOR_RADIUS;
+        if (jkInReach && nightOnlyClosed()) { showNotification(CLOSED_SIGN); return; }
+        if (jkLights && jkLights.lit && jkInReach) {
             jukeboxRoom = true;
             jukeSel = 0;
             jukeHeldUp = false;
@@ -3823,17 +3840,24 @@ const Street = (() => {
             ctx.fillRect(wx + ww - 5, wy, 5, wh);
         }
 
-        // 6) Nukkumisen pimennys: tila vaihtuu vasta kun ruutu on musta
+        // 6) Nukkumisen pimennys: ruutu tummuu mustaksi ~0,75 s aikana
+        //    (SLEEP_DARK_FRAMES), minkä jälkeen itse "Zzz…"-efekti näkyy ~3 s
+        //    (SLEEP_ZZZ_FRAMES) – yhteensä ~3,75 s. Tila vaihtuu vasta lopussa.
+        //    HUOM: pimennys lasketaan KULUNEESTA ajasta (ei jäljellä olevasta),
+        //    muuten musta kerros ja Zzz ehtivät mukaan vasta aivan lopussa.
         if (sleepPhase > 0) {
-            const fade = Math.max(0, Math.min(1, 1 - sleepPhase / SLEEP_FADE_FRAMES));
+            const elapsed = SLEEP_FADE_FRAMES - sleepPhase;              // kulunut aika
+            const fade = Math.max(0, Math.min(1, elapsed / SLEEP_DARK_FRAMES));
             ctx.fillStyle = 'rgba(0,0,0,' + fade.toFixed(3) + ')';
             ctx.fillRect(0, 0, W, H);
-            if (fade > 0.3) {
+            if (fade > 0.05) {
+                ctx.globalAlpha = fade;          // Zzz himmenee sisään pimennyksen mukana
                 ctx.textAlign = 'center';
                 ctx.font = 'bold ' + needPx(20, 16, 22) + 'px "Courier New", monospace';
                 ctx.fillStyle = '#ffe9a8';
                 ctx.fillText('Zzz…', 400, 250 + Math.round(Math.sin(now / 300) * 3));
                 ctx.textAlign = 'left';
+                ctx.globalAlpha = 1;
             }
         }
 
@@ -4905,6 +4929,10 @@ const Street = (() => {
     function drawVehicle(v) {
         if (!v) return;
         const vx = Math.round(v.x), vy = Math.round(v.y), dir = v.direction;
+        // Ajovalot himmenevät päivällä (v4.35) – sama liuku kuin katuvaloissa.
+        // Takavalot ja ambulanssin kattovilkku eivät muutu (eivät ole ajovaloja).
+        const headlightDim = 1 - VEHICLE_HEADLIGHT_DIM * dayT;
+        const headlightOn  = v.hasHeadlight !== false && headlightDim > 0.01;
         ctx.save();
         if (dir === -1) { ctx.translate(vx + v.w / 2, 0); ctx.scale(-1, 1); ctx.translate(-(vx + v.w / 2), 0); }
 
@@ -4918,8 +4946,12 @@ const Street = (() => {
             ctx.fillStyle = '#558899'; ctx.fillRect(cx + 26, cy + 3, 12, v.h - 18);
             ctx.fillStyle = '#cccccc'; ctx.fillRect(cx + v.w - 6, cy + v.h - 18, 6, 8);
             ctx.fillStyle = '#aaaaaa'; ctx.fillRect(cx, cy + v.h - 18, 5, 8);
-            ctx.fillStyle = '#ffee88'; ctx.fillRect(cx + v.w - 4, cy + 6, 5, 4);
-            ctx.fillStyle = 'rgba(255,240,150,0.4)'; ctx.fillRect(cx + v.w + 1, cy + 5, 3, 6);
+            if (headlightDim > 0.01) {               // ajovalo + hehku (pois päivällä, v4.35)
+                ctx.globalAlpha = headlightDim;
+                ctx.fillStyle = '#ffee88'; ctx.fillRect(cx + v.w - 4, cy + 6, 5, 4);
+                ctx.fillStyle = 'rgba(255,240,150,0.4)'; ctx.fillRect(cx + v.w + 1, cy + 5, 3, 6);
+                ctx.globalAlpha = 1;
+            }
             ctx.fillStyle = '#cc3333'; ctx.fillRect(cx - 1, cy + 6, 4, 3);
             const wr = 5;
             ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(cx + 14, cy + v.h - 4, wr, 0, Math.PI * 2); ctx.fill();
@@ -5022,17 +5054,23 @@ const Street = (() => {
             ctx.fillRect(cx + 20, cy, 12, 3);
 
             // 6. Valot
-            ctx.fillStyle = '#cc3333';                       // takavalo
+            ctx.fillStyle = '#cc3333';                       // takavalo (jää palamaan)
             ctx.fillRect(cx + 1, cy + 8, 2, 4);
-            ctx.fillStyle = '#ffee88';                       // etuvalo
-            ctx.fillRect(cx + 34, cy + 3, 3, 4);
-            ctx.fillStyle = 'rgba(255,240,150,0.4)';         // etuvalon hehku
-            ctx.fillRect(cx + 37, cy + 3, 2, 4);
+            if (headlightDim > 0.01) {                       // etuvalo pois päivällä (v4.35)
+                ctx.globalAlpha = headlightDim;
+                ctx.fillStyle = '#ffee88';                   // etuvalo
+                ctx.fillRect(cx + 34, cy + 3, 3, 4);
+                ctx.fillStyle = 'rgba(255,240,150,0.4)';     // etuvalon hehku
+                ctx.fillRect(cx + 37, cy + 3, 2, 4);
+                ctx.globalAlpha = 1;
+            }
         }
 
         // ── Ajovalot eteenpäin (kaikille ajoneuvotyypeille) ──
-        if (v.hasHeadlight !== false) {
-        {
+        //    Himmenevät päivällä (v4.35); kun kartio on kokonaan himmennyt,
+        //    sitä ei piirretä lainkaan.
+        if (headlightOn) {
+            ctx.globalAlpha = headlightDim;
             const beamY = v.type === 'motorcycle' ? vy + v.h * 0.3 : vy + v.h - 12;
             const beamLen = v.type === 'ambulance' ? 140 : v.type === 'car' ? 105 : 70;
             const beamSpread = 10;
@@ -5048,7 +5086,7 @@ const Street = (() => {
             ctx.lineTo(vx + v.w, beamY + 3);
             ctx.closePath();
             ctx.fill();
-        }
+            ctx.globalAlpha = 1;
         }
 
         ctx.restore();

@@ -279,6 +279,7 @@ body::after {
     opacity: 0;
     pointer-events: none;
     letter-spacing: 1px;
+    white-space: pre-line;   /* \n tekstissä = rivinvaihto (esim. Avoinna / Klo 20 - 06) */
 }
 
 @keyframes popIn {

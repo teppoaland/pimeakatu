@@ -1,7 +1,8 @@
 # 🎵 Jukebox – memo (talo 5)
 
-> Päivitetty 20.9.2026 – versio **v4.27**. Talo 5 (`buildings[4]`) on jukebox-huone,
+> Päivitetty 20.9.2026 – versio **v4.34**. Talo 5 (`buildings[4]`) on jukebox-huone,
 > josta voi soittaa koko kappaleita 1 kolikolla. Kappaleet ovat `jukebox/`-kansiossa.
+> **Aukiolo (v4.34): auki vain öisin (klo 20–06)** – päivällä ovesta tulee teksti-popup.
 
 ---
 
@@ -9,9 +10,13 @@
 
 - **Talo 5** = `buildings[4]` (x 380–440, h 155, **ovi x 410**) – eli BM-talon
   (`buildings[5]`, ovi x 490) **edessä**. Talossa ei ole lamppua.
-- **Kaksivaiheinen ovi** (action-nappi / välilyönti):
+- **Kaksivaiheinen ovi** (action-nappi / välilyönti) – toimii **vain öisin**:
   1. painallus ovella = **potku** → ikkunat syttyvät (`smallHouseLights[4].lit`, 20 s = 1200 f)
   2. painallus **valaistulla** ovella = **jukebox-huone aukeaa**
+- **Aukiolo (v4.34):** huone on auki **vain öisin (klo 20–06)**. Päivällä
+  (`dayT >= 0.5`, nuppi `CLOSED_AT_DAYT`) ovesta tulee sama teksti-popup kuin
+  lukitusta ovesta: `Avoinna` / `Klo 20 - 06` (`CLOSED_SIGN`, `#notification`, 2,5 s)
+  – ovea ei silloin voi potkia eikä valoja sytyttää.
 - Huoneen aikana maailma on jäissä (kuten BAR / palkintohuone) → ikkunavalojen
   ajastin ei kulu huoneen sisällä.
 - Ovi piirretään auki (`drawDoor`: `isActive`) ja kynnysvalo syttyy (violetti neoni
@@ -156,8 +161,9 @@ koko asettelu sovitetaan näkyvään ikkunaan:
 
 - Vakiot/tila: `JUKEBOX_BLDG_IDX = 4`, `JUKEBOX_TRACKS` (3 raitaa), `jukeboxRoom`,
   `jukeSel`, `jukeHeldUp/Down`, `jukeTrack`.
-- `handleAction()`: oma oviblokki **ennen** lamppusilmukkaa ja potkusilmukkaa
-  (ehto: `smallHouseLights[4].lit` + `DOOR_RADIUS`).
+- `handleAction()`: oma oviblokki **ennen** lamppusilmukkaa ja potkusilmukkaa.
+  Järjestys: ① `jkInReach && nightOnlyClosed()` → `CLOSED_SIGN`-popup + `return`
+  (päiväkiinni, v4.34) ② `smallHouseLights[4].lit && jkInReach` → huone auki.
 - `update()`: oma huonehaara BAR-haaran mallilla; `render()`:
   `drawJukeboxRoom()` (paneeli + rivilista + tilalaatikko + Wurlitzer
   `drawJukeboxCabinet`, proseduraalinen, ei kuvatiedostoja).

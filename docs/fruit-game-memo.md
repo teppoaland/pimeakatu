@@ -1,6 +1,7 @@
 # 🍒 Hedelmäpeli – memo (fruitgame/)
 
-> Päivitetty 19.9.2026 – versio v4.11 (kytketty katuun + talon ilmainen pyöräytys)
+> Päivitetty 20.9.2026 – versio v4.11 (kytketty katuun + talon ilmainen pyöräytys) /
+> **v4.34: peli auki vain öisin (klo 20–06)**
 
 ## Tiedostot
 
@@ -36,8 +37,11 @@
 
 ## Kytkentä kadulle
 
-- **Talo 7** (`buildings[6]`, x 560–610, ovi x 585) – aina auki, ei lamppua eikä avainta.
+- **Talo 7** (`buildings[6]`, x 560–610, ovi x 585) – ei lamppua eikä avainta.
   `handleAction()`: oma oviblokki **ennen** lamppusilmukkaa → ohittaa talon potku- ja 1/5-kolikkohaaran.
+- **Aukiolo (v4.34):** peli on auki **vain öisin (klo 20–06)**. Päivällä
+  (`dayT >= 0.5`, nuppi `CLOSED_AT_DAYT`) ovesta tulee `Avoinna` / `Klo 20 - 06`
+  -teksti-popup (`CLOSED_SIGN`) eikä `enterGame()`ia kutsuta.
 - `enterGame()`: `iframe.onload` → `sendFruitBalance()` (lähettää `fruitSync`in) + fokus iframeen.
 - `_streetReturn()`: `fruitBet` (−1, clamp ≥ 0) ja `fruitWin` (+n, floor + clamp) → `GameState` + HUD + echo.
 - `coinCount` on autoritatiivinen kadulla (`GameState` = totuus); peli luottaa saamaansa echo-saldoon.

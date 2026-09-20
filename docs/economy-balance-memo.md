@@ -43,6 +43,7 @@ ja samalla hedelmäpeli imee kolikoita, koska voitot eivät kata panoksia.
 | RTP | **≈ 78,5 %** (analyyttinen 78,49 %, simuloitu 1 M = 78,5–78,8 %) |
 | Osumat | kolmikko 6,85 % · pari 35,3 % · ei voittoa 57,9 % → **42,1 % pyöräytyksistä palauttaa jotain** |
 | Ilmainen pyöräytys | 1 kpl / **120 s** (`FREE_SPIN_COOLDOWN_MS`), avain `pimeakatu_fruit_free` → max **+0,785 kolikkoa / 2 min** |
+| Aukiolo (v4.34) | **Vain öisin (klo 20–06).** Päivällä (`dayT >= 0.5`) ovesta tulee teksti-popup, ei peliä. Panos/painot/maksut/RTP **ennallaan** |
 
 Talon etu ≈ **21,5 % panoksesta**: pelaaja menettää pitkässä juoksussa noin viidenneksen
 jokaisesta pyöräytyksestä – "syö rahat yleensä aina, mutta jos tuuria, voi saada hiukan enemmän,
@@ -55,10 +56,22 @@ ihan kuin oikeassa elämässä".
 | Kolikko potkusta | **1/5** (`Math.random() < 0.2`) + **30 s** cooldown (`kickCoinCooldown = 1800`) |
 | Hampurilaiset | alussa **5**, +1 / **40 s** (`hamburgerTimer = 2400` framet) |
 | BAR | **1 kolikko = 1 🍔** (katto 10, ▼ peruu vain vierailun ostot) |
-| Jukebox | **1 kolikko = 1 koko kappale** |
+| Jukebox | **1 kolikko = 1 koko kappale**, auki vain öisin (v4.34) |
 | Makuuhuone (ex-palkintohuone, talo 7) | **3 avainta** = lukko (kolikkoreitti poistettu v4.33). Nuku/Poistu **ilmaisia** → ei vaikutusta talouteen |
 | Oviukko / kukkaruukku / sähkökaappi | osuma = tainnutus + **−1 🍔** (🍔 0 → kuolema) |
 | Syntymäpaketti | uusi peli / reset: **2 kolikkoa + 5 🍔** |
+
+### Aukioloaika (v4.34) – ei lukittu talousarvo
+
+Jukebox (talo 5) ja Hedelmäpeli (talo 7) ovat auki **vain öisin (klo 20–06)**. Päivällä
+(`dayT >= 0.5`, nuppi `CLOSED_AT_DAYT`) ovesta tulee sama teksti-popup kuin lukitusta
+ovesta (`CLOSED_SIGN = 'Avoinna\nKlo 20 - 06'`) eikä huone/peli aukea (`street.js`).
+
+- **Mikään lukittu arvo ei muutu:** panos 1, painot, maksut, RTP ≈ 78,5 %, ilmainen
+  pyöräytys 1/120 s, jukeboxin 1 kolikko / kappale, 🍔-tahti ja BAR-hinnat ovat ennallaan.
+- Muutos koskee vain **sitä, milloin kolikoita voi käyttää**. Yö (= pelin normaali tila)
+  toimii täsmälleen kuten ennen; päivä on **lopputila** (3 avainta kerätty), jolloin raha
+  jää käyttämättä – se ei lisää tuloja eikä muuta RTP:tä.
 
 ---
 
@@ -96,3 +109,4 @@ vapaasti (esim. `COIN_CHEAT_COOLDOWN = 0` nopeampaan testaukseen) ilman versiono
 | Pvm | Versio | Ennen | Jälkeen |
 |-----|--------|-------|---------|
 | 20.9.2026 | v4.33 | Palkintohuone (talo 7): pääsy **kaikki avaimet tai 3 kolikkoa**; huoneessa pokaali | Makuuhuone (talo 7): pääsy **vain 3 avainta** (kolikkoreitti poistettu); Nuku/Poistu ilmaisia. **Kolikko-/🍔-talous ei muutu** – poistui vain yksi kolikoiden käyttökohde |
+| 20.9.2026 | v4.34 | Jukebox ja Hedelmäpeli olivat auki aina (yöllä ja päivällä) | Auki **vain öisin (klo 20–06)**; päivällä ovesta teksti-popup `Avoinna` / `Klo 20 - 06` (`street.js`: `CLOSED_SIGN`, `CLOSED_AT_DAYT 0.5`). **Panos, painot, maksut, RTP, 🍔-tahti ja hinnat ennallaan** – muuttui vain aukioloaika |
