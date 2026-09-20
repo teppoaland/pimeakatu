@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> v3.x – 17.9.2026
+> v4.17 – 20.9.2026
 
 ## 🏮 Pääportaali – Pimeä Katu
 
