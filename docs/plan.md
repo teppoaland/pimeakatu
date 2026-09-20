@@ -35,7 +35,7 @@ Koko sivusto käyttää kevyttä, selaimen muistiin pohjautuvaa tilanhallintaa (
 - **Jekku (Kenttä 5)**: Reitti maaliin on täysin kivilohkareiden saartama (ei vielä koodattu)
   - Ratkaisu: Pelaajan täytyy siirtyä "Level Editor" -kohtaan, raivata reitti, tallentaa ja palata
 
-### Peli 3: Blue Max (`bluemax_c64/`)
+### Peli 3: Blue Max (`bm/`)
 - **Mekaniikka**: Isometrinen lentely- ja pommituspeli
 - **Status**: ❌ Ei aloitettu
 - **Jekku**: Bensaa vain 30 sekunniksi

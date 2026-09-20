@@ -28,11 +28,9 @@ kerää timantteja. Leveys ~77 ruutua. [Lisätiedot →](docs/dig-game-memo.md)
 Klassinen 4 tason Boulder Dash -tyylinen timanttienkeruupeli aikarajalla.
 [Lisätiedot →](docs/boulder-dash-memo.md)
 
-### ✈️ Blue Max (`bluemax_c64/`) – *tulossa*
+### ✈️ Blue Max (`bm/`) – *tulossa*
 Isometrinen lentely- ja pommituspeli.
-
-### 🔫 Commando (`commando_c64/`) – *tulossa*
-Ylhäältä kuvattu sotapeli.
+[Lisätiedot →](docs/bm.md)
 
 ## 📁 Projektin rakenne
 
@@ -57,15 +55,15 @@ D:\AI\Main\
 │   ├── js/ (8 tiedostoa)
 │   └── game_main.html    Kehitysversio (ainoa versio)
 │
-├── bluemax_c64/          ✈️ Blue Max (tulossa)
-├── commando_c64/         🔫 Commando (tulossa)
+├── bm/                   ✈️ Blue Max (tulossa)
 ├── entrance/             Varakansio
 │
 └── docs/
     ├── plan.md            Alkuperäinen arkkitehtuurisuunnitelma
     ├── dig-game-memo.md   Dig Game -muistio
     ├── dig-game-roadmap.md Dig Game -kehityssuunnitelma
-    └── boulder-dash-memo.md Boulder Däsh -muistio
+    ├── boulder-dash-memo.md Boulder Däsh -muistio
+    └── bm.md              Blue Max -muistio
 ```
 
 ## 🔧 Tekninen toteutus

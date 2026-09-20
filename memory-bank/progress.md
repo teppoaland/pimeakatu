@@ -42,6 +42,7 @@
 | Pimeiden ikkunoiden syvennys (3 rivin talot) | ✅ v4.10 – kehyksen poiston jälkeen ikkunat katosivat seinään; nyt `flatWindows` → täyttö `#05050d` + 1 px tumma ylävarjo `rgba(0,0,0,0.35)` + 1 px vaalea alaparre `lightenHex(bodyC, 0x06)` (`wy+14`) = ikkuna näyttää upotukselta. Muut talot ennallaan (`#0a0a15` + kehys). Valaistuihin ikkunoihin ei koskettu; potku sytyttää näiden kolmen talon kaikki 6 ikkunaa (`smallHouseLights`) |
 | Ovikynnykset: kynnyslinja + laatta + **yksi pieni kivirivi** + laskettu reunakivi | ✅ v4.13 – kaikkiin 9 oveen; kiveys rajattu `GROUND_Y+7…+14` (y 317–324, puolileveys ovi+5) → **ei valu autotielle** (kaistat y 328/340); reunakivien + kadun viivojen katko oviaukon kohdalta (±ovi/2+5) + 2 px viisteet; vinot saumat kohti kynnystä + V-painuma, kynnysvalo vain aktiivisille oville |
 | Kiveysrivien saumavaihe taloittain | ✅ v4.13 – `housePhase`/`houseDrift` (`initForeground`): saumavaihe 0–6 px ja sävy −1…+1 per talo (deterministinen LCG) → sama kiveysruudukko ei jatku yhtenä "barina" laidasta laitaan |
+| 🧹 Siivous: commando_c64 pois git-historiasta + alipelikansion uudelleennimeäminen | ✅ v4.17 – `git filter-branch --index-filter` (vain `main`, Cline-checkpointit säilyivät) → 4 tiedostoa pois historiasta, 3 tyhjäksi jäänyttä committia karsiutui; `git mv bluemax_c64 bm` + `git mv docs/bluemax.md docs/bm.md`; viittaukset korjattu (`street.js` gameUrl + avainportti, `.clinerules/01`, `README.md`, `PROJECT.md`, `CHANGELOG.md`, `docs/plan.md`, `docs/bm.md`, muistipankki); versio v4.17 |
 
 
 | Oviukko (Avenger): ovesta tuleva hyökkääjä | ✅ v4.14 – potkun pudotukseen 3. arvonta: **1/8 + 30 s cooldown → pelaajan kaksonen astuu ovesta kynnykseltä** (ei putoa kuten ruukku/kolikko), juoksee 2.0 px/f (> pelaaja 1.225) kiinni → **ei väistettävissä**; osuma = tainnutus 600 f + **−1 🍔** (ei tuplaosumaa; 🍔 0 → kuolema), paluu ovelle ja katoaminen; iframen aikana jäissä; portti `!avenger` estää ruukun/kolikon samaan aikaan; uusi ääni `playKnock()`; ei uusia tekstejä; **v4.15 – isku dramaattisemmaksi: kontakti jäädyttää koko maailman 3 s (hit-stop + vinjetti + iskuvälähdys + tärinä + tähdet), vasta lopuksi pelaaja kosahtaa kasaan (tainnutus 600 f + −1 🍔)** |
@@ -70,7 +71,7 @@
 | Äänet, kosketusohjaus, iframe | ✅ |
 | Kolikot | ✅ v3.72 – DG1:1, DG2:4 (1/taso), hiljainen keräys |
 
-## ✈️ Blue Max (bluemax_c64/)
+## ✈️ Blue Max (bm/)
 
 | Ominaisuus | Tila |
 |-----------|------|

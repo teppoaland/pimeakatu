@@ -36,7 +36,7 @@ git commit -m "viesti"
 
 ## Alapelien buildaus
 
-Alapelit (`digGame1/`, `digGame2/`, `bluemax_c64/`, `commando_c64/`) käyttävät
+Alapelit (`digGame1/`, `digGame2/`, `bm/`) käyttävät
 `game_main.html`-kehitysversiota suoraan iframe-integraatiossa. Erillistä buildausta
 yhteen tiedostoon ei enää tarvita – kehitys on suoraviivaisempaa ja kaikki tiedostot
 ovat aina ajan tasalla.

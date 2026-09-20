@@ -15,7 +15,7 @@ Peli on osa **Pimeä Katu** -peliportaalia ja käynnistyy pääkadulta oven 3 ka
 ## Tiedostorakenne
 
 ```
-bluemax_c64/
+bm/
 ├── game_main.html     — kehitysversion pääsivu (lataa css/ ja js/ tiedostot)
 ├── css/
 │   └── style.css      — retro CRT-tyyli, responsiivisuus, touch-ohjaimet

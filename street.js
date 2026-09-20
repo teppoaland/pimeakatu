@@ -71,7 +71,7 @@ const Street = (() => {
     const lamps = [
         { x: 85,  bldgIdx: 1, lit: false, label: 'DIG\nGAME',    gameUrl: 'digGame1/game_main.html' },
         { x: 255, bldgIdx: 3, lit: false, label: 'BOULDER\nDASH', gameUrl: 'digGame2/game_main.html' },
-        { x: 445, bldgIdx: 5, lit: false, label: 'BLUE\nMÄX',     gameUrl: 'bluemax_c64/game_main.html' },
+        { x: 445, bldgIdx: 5, lit: false, label: 'BLUE\nMÄX',     gameUrl: 'bm/game_main.html' },
         { x: 625, bldgIdx: 7, lit: false, label: 'COM-\nMANDO',   gameUrl: null },
         { x: 720, bldgIdx: 8, lit: false, label: 'BAR',   gameUrl: null }
     ];
@@ -1291,7 +1291,7 @@ const Street = (() => {
                         return;
                     }
                     // Blue Max vaatii Boulder Dashista kerätyn avaimen
-                    if (lamp.gameUrl && lamp.gameUrl.includes('bluemax') && !boulderKeyCollected) {
+                    if (lamp.gameUrl && lamp.gameUrl.includes('bm/') && !boulderKeyCollected) {
                         showNotification('🔑 Avain puuttuu tonttu! Hae se edellisestä talosta!');
                         return;
                     }

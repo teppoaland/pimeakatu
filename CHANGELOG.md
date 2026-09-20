@@ -19,8 +19,6 @@
 ### Poistettu
 - `digGame1/.gitignore`, `digGame1/build_single.js`, `digGame1/git_backup.ps1`
 - `digGame2/.gitignore`, `digGame2/build_single.js`, `digGame2/git_backup.ps1`
-- `commando_c64/MEMO.md` (oli väärä kopio, kuului digGame2:lle)
-- `commando_c64/commando.html` (tyhjä tiedosto)
 
 ### Bugikorjaukset (street.js)
 1. Lamppujen varret piirretään nyt oikein (puinen tolppa, kupu, valokeila)

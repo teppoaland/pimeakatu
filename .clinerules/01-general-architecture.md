@@ -30,14 +30,9 @@ Jokainen alipeli on **itsenäinen kokonaisuus** omassa kansiossaan:
 |--------|------|------|
 | `digGame1/` | ⛏️ Dig Game – kaivuripeli, yksi yhtenäinen maailma | ✅ Valmis |
 | `digGame2/` | 💎 Boulder Däsh – 4 tason timanttipeli | ✅ Valmis |
-| `bluemax_c64/` | ✈️ Blue Max – isometrinen lentopeli | 🚧 Tulossa |
-| ~~`commando_c64/`~~ | ~~🔫 Commando~~ – **POISTETTU / EI OLEMASSA** | ❌ Kielletty |
+| `bm/` | ✈️ Blue Max – isometrinen lentopeli | 🚧 Tulossa |
 
 > **Sääntö:** Älä sekoita eri pelien koodia keskenään. Jokainen peli käyttää vain oman kansionsa tiedostoja.
-
-## 🚫 commando_c64/ – KIELLETTY HAARA
-
-> ⛔ **ABSOLUUTTINEN KIELTO:** `commando_c64/`-kansiota **ei saa lukea, listata, selata, muokata, eikä siihen saa viitata millään tavalla**. Tätä kansiota ei ole olemassa projektissa. Älä koskaan käytä mitään työkalua (read_files, search_codebase, run_commands, editor) mihinkään polkuun joka alkaa `D:\AI\Main\commando_c64\` tai `commando_c64/`. Älä edes tarkista onko kansiota olemassa. Tämän kiellon rikkominen tuhlaa tokeneita täysin turhaan.
 
 ## Hakemistorakenne
 
@@ -52,7 +47,7 @@ D:\AI\Main\
 ├── docs/                   Dokumentaatio ja memot
 ├── digGame1/               Alipeli 1
 ├── digGame2/               Alipeli 2
-└── bluemax_c64/            Alipeli 3
+└── bm/                     Alipeli 3
 ```
 
 ## Yleiset käytännöt

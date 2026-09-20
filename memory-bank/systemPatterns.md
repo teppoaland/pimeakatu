@@ -12,7 +12,7 @@
 │  index.html  │  style.css  │  street.js  │  gameState.js │
 │                                                         │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐│
-│  │ digGame1 │  │ digGame2 │  │bluemax   ││
+│  │ digGame1 │  │ digGame2 │  │bm        ││
 │  │ (iframe) │  │ (iframe) │  │(iframe)  ││
 │  └──────────┘  └──────────┘  └──────────┘│
 └─────────────────────────────────────────────────────────┘
