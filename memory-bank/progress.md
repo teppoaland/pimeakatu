@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> **v4.26 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
+> **v4.31 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -8,6 +8,7 @@
 |-----------|------|
 | Katunäkymä, hahmo, 9 lamppua, 9 ovea, ajoneuvot, eläimet, sää | ✅ |
 | Hahmon viilaus | ✅ v4.03–v4.05 – silmä + `lookY`, lipan/kasvojen/leuan varjot, maakosketusvarjo, hengitys, potkun ennakointi (`ANTICIP`) + nojaus, hit pause, dynaaminen lampunvalo (viuhka-VFX + käsien heilunta poistettu) |
+| Pelaajan syvyysskaalaus | ✅ v4.31 – `playerDepthScale()`: ±10 % (0,90 kauas / 1,00 keskikohdalla y=315 / 1,10 lähelle), ankkuri jalkojen kosketuspisteessä (myös tainnutusasento + varjo); visuaalinen vain – hitboxit, törmäykset ja kamera ennallaan |
 | Kolikot | ✅ v3.86 / v4.22 – katu: 1 kpl, näkyvissä 10 s + 30 s tauko, 120 s respawn; DG1 1 kpl, DG2 1/taso; syntymäpaketti 2 kolikkoa (tallennettu saldo voittaa) |
 | Hampurilaiset + BAR | ✅ v3.73 / v4.12 – 5 alussa, +1 / 40 s; BAR: `▲/W` osta 1 (katto 10), `▼/S` peru vierailun ostot, `(o)/Space` poistu |
 | 🖼️ BAR-huoneen seinätaulu | ✅ v4.25–v4.26 – `assets/justiina.png` mustilla kehyksillä (kuva 57,9×48, kehys 61,9×52), hampurilainen 2/3, asettelu alhaalta ylös, `winW`/`needPx`/`fitFs`-sovitus vaakanäyttöön; memo `docs/bar-memo.md` |
@@ -34,6 +35,7 @@
 | Ilmainen pyöräytys 1 / 120 s (pelin oma avain `pimeakatu_fruit_free`) | ✅ v4.11 |
 | Kytkentä katuun: `fruitSync` / `fruitBet` / `fruitWin` / `RETURN_TO_STREET` + saldo-echo | ✅ v4.11 |
 | Debug-korjaukset 19.9.2026: `new FruitGame()` käynnistys + `box-sizing: content-box` | ✅ |
+| 🖼️ Pelihuoneen seinäkuva | ✅ v4.28–v4.30 – `#wall-pic` HTML-elementtinä (ei canvasissa), koko vapaasta seinätilasta (`WALL_PIC_H_RATIO 0.28`, min 90 px, rako 0), keskitetty ja kiinni pelikentän yläreunassa, vaakatasossa piiloon; kuva `fruitgame/assets/dude_mv.jpg` (MV, v4.30) |
 | Dokumentaatio | ✅ `docs/fruit-game-memo.md` |
 
 ## ⛏️ Dig Game · 💎 Dig Däsh · ✈️ Blue Mäx

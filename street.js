@@ -4739,14 +4739,27 @@ const Street = (() => {
     }
 
     /* ── Pelaaja ────────────────────────────────── */
+    /* ── Syvyysskaalaus: pelaaja pienenee kauas (Y pieni), kasvaa lähelle ── */
+    const PLAYER_DEPTH_MID    = 315;            // liikeradan keskikohta 280…350 = nykyinen koko (1.00)
+    const PLAYER_DEPTH_MAX_Y  = WORLD_H - 50;   // sama kuin update()in PLAYER_Y_MAX (350)
+    const PLAYER_DEPTH_AMOUNT = 0.10;           // ±10 % → 0.90 kauas / 1.10 lähelle
+    function playerDepthScale() {
+        const t = (player.y - PLAYER_DEPTH_MID) / (PLAYER_DEPTH_MAX_Y - PLAYER_DEPTH_MID);
+        return 1 + Math.max(-1, Math.min(1, t)) * PLAYER_DEPTH_AMOUNT;
+    }
+
     function drawPlayer() {
         const px = Math.round(player.x), py = Math.round(player.y);
         const pw = player.w, ph = player.h;
+        // Syvyysskaalaus: koko riippuu Y-syvyydestä, ankkuri = jalkojen kosketuspiste
+        const depthScale = playerDepthScale();
+        const ax = px + pw / 2, ay = py + ph - 1;
 
         if (player.knockedDown) {
             ctx.save();
             const cx = px + pw/2, gy = py + ph;
             ctx.translate(cx, gy);
+            ctx.scale(depthScale, depthScale);   // tainnutusasento skaalautuu jalkapisteestä
             if (player.facing === -1) ctx.scale(-1, 1);
             // Keho (lähellä päätä, ei 20px irti)
             ctx.fillStyle = '#3366cc'; ctx.fillRect(-8, -16, 16, 14);
@@ -4764,6 +4777,10 @@ const Street = (() => {
         }
 
         ctx.save();
+        // Syvyysskaalaus jalan kosketuspisteestä (myös maakosketusvarjo skaalautuu)
+        ctx.translate(ax, ay);
+        ctx.scale(depthScale, depthScale);
+        ctx.translate(-ax, -ay);
         // Maakosketusvarjo – ankkuroi hahmon maahan (symmetrinen, piirretään ennen peilausta)
         const feetX = px + pw / 2, feetY = py + ph - 1;
         const shadowW = player.walking ? 11 : 10;

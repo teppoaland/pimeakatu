@@ -28,7 +28,14 @@ sovitetaan näkyvään ikkunaan keskitettynä x = 400 (jukebox v4.22, BAR v4.25:
 `D:\AI\Knived` (`.gitignore` estää `*.mpeg`/`*.mp4`).
 
 **Kuvat:** `assets/justiina.png` (315×261) = BAR-huoneen seinätaulu (`BAR_PIC_SRC`, `barPicReady`,
-varapinta jos ei lataudu). Muu grafiikka on proseduraalista.
+varapinta jos ei lataudu) · `fruitgame/assets/dude_mv.jpg` (672×400, MV) = hedelmäpelin huoneen seinäkuva
+HTML-elementtinä `#wall-pic` (ei canvasin piirrossa; koko/asemointi `renderer.wallPicSize()`, piiloon
+mobiilin vaakatasossa). Muu grafiikka on proseduraalista.
+
+**Syvyysskaalaus (syvyysvaikutelma):** talot `buildingScale()` 100 / 95 / 90 % ankkuroituna `GROUND_Y`:hin ·
+pelaaja `playerDepthScale()` ±10 % (0,90 kauas … 1,10 lähelle, 1,00 keskikohdalla `player.y = 315`)
+ankkuroituna jalkojen kosketuspisteeseen (`px + pw/2, py + ph − 1`). **Skaalaus on visuaalinen** –
+hitboxit (`player.w/h`, törmäykset, keräyssäteet) eivät skaalaudu, joten pelimekaniikat pysyvät ennallaan.
 
 ## 🎮 Pelien yhteinen arkkitehtuurimalli
 

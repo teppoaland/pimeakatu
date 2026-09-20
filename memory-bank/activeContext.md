@@ -2,7 +2,7 @@
 
 > **Kevyt:** Vain tämä tiedosto luetaan session alussa.
 > **Kompaktoitu 20.9.2026 (v4.26):** vanha versiokohtainen yksityiskohtaselostus (v3.9x–v4.25) poistettu –
-> täysi sisältö on git-historiassa (viimeisin täysi versio commitissa `ffb1dd9`).
+> täysi sisältö on git-historiassa (viimeisin täysi versio commitissa `ffb1dd9`; sitä uudemmat v4.27+ alla).
 
 ---
 
@@ -17,7 +17,8 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.26` (`index.html` → `#version-tag`) · **Git:** `HEAD = origin/main = ffb1dd9`, työpuu puhdas.
+- **Versio:** `v4.31` (`index.html` → `#version-tag`) · **Git:** `origin/main` (v4.31 committattu ja
+  pushattu 20.9.2026), työpuu puhdas.
 - **Tila:** pääportaali + 4 alipeliä (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️, `fruitgame` 🍒) valmiit ja pelattavat.
 - **Kadun canvas-huoneet (ei iframe):** palkintohuone `buildings[7]` · BAR (talo 9) · jukebox
   (`buildings[4]`, ovi x 410) · hedelmäpelitalo `buildings[6]` (iframe, aina auki).
@@ -28,6 +29,35 @@
 ---
 
 ## 🆕 Tuoreimmat versiot (20.9.2026)
+
+**v4.31 – Pelaajan syvyysskaalaus Y-akselilla.** Uusi `playerDepthScale()` (street.js r. ~4742): hahmo
+kasvaa liikkuessa alaspäin (lähemmäs) ja pienenee ylöspäin. **±10 %**: `PLAYER_DEPTH_MID 315` (liikeradan
+keskikohta 280…350) = nykyinen koko **1,00** → **0,90 kauas / 1,10 lähelle** (aloituspaikka y = 290 ≈ 0,93).
+Skaalaus on **ankkuroitu jalkojen kosketuspisteeseen** (`ax, ay = px + pw/2, py + ph − 1`) sekä
+normaalissa että tainnutusasennossa → jalat pysyvät maassa ja myös maakosketusvarjo skaalautuu.
+**Visuaalinen muutos vain:** hitboxit, törmäykset, keräyssäteet, kamera ja talousarvot ennallaan.
+Nupit `PLAYER_DEPTH_AMOUNT` (voimakkuus) ja `PLAYER_DEPTH_MID` (minkä Y:n kohdalla koko = 1,00).
+
+**v4.30 – Hedelmäpelin huoneen seinäkuva mustavalkoiseksi.** Uusi `fruitgame/assets/dude_mv.jpg`
+(672 × 400, 49 kt, puhdas luminanssi-MV, kanavaero 0; lähde `D:\AI\tmp\dude.jpeg` 1024 × 609).
+`lemmy_mv.jpg` poistettu ja `game_main.html`:n `src` → `assets/dude_mv.jpg` → **ei yhtään
+lemmy-viittausta repossa**. Koko ja asemointi ennallaan (`WALL_PIC_H_RATIO 0.28`), ei testiajoja.
+
+**v4.29 – Seinäkuva 4× isommaksi ja kiinni pelikentän yläreunassa.** `renderer.js`: kuvan koko vapaasta
+seinätilasta (`WALL_PIC_H_RATIO 0.28`, minimi `WALL_PIC_MIN_H 90`, leveyskatto = ikkuna − `WALL_PIC_SIDE 24`,
+kehys `WALL_PIC_FRAME 3`, rako `WALL_PIC_GAP 0`) funktiossa `wallPicSize()`; canvasin
+`marginTop = kuvan korkeus` → ryhmä (kuva + kone) keskittyy ja kone jää ryhmän alaosaan. Pystynäytössä
+canvas on leveysrajainen → **kone ei pienene** (390 × 844: kone 372 × 232 ennallaan, kuva 84 × 50 →
+351 × 211); PC:llä kone 1566 × 978 → 1096 × 685 (−29 %), kuva 112 × 66 → 471 × 282. `style.css`:
+kiinteä 112 px pois (koko tulee JS:stä), kehys 3 px + varjo `4px 5px`, vaakatasopiilotus ennallaan.
+
+**v4.28 – Hedelmäpelin huoneen seinäkuva.** Uusi `fruitgame/assets/lemmy_mv.jpg` (672 × 399, 72 kt; sittemmin
+korvattu v4.30:ssä) ja `<img id="wall-pic">` `#canvas-wrapper`in sisään – **HTML-elementti, ei canvasin
+piirrossa** → koneen kokoon, canvasin skaalaukseen eikä dialogeihin kosketa. `style.css`:
+`#canvas-wrapper position: relative`, `#wall-pic` (mobiili 84 px / PC 112 px, 2 px musta kehys, varjo,
+`pointer-events: none`) ja piilotus `landscape + max-height 500px + pointer: coarse`. `renderer.js`
+`placeWallPicture()` sijoittaa kuvan koneen viereen (PC) tai yläpuolelle (pystymobiili) vapaaseen
+seinätilaan – ei koskaan koneen päälle; `load`/`error` → uudelleenlaskenta. Kone, canvas ja skaalaus ennallaan.
 
 **v4.27 – Jukebox: tiedostonimet korjattu vastaamaan sisältöä.** Tiedostot nimettiin uudelleen
 `jukebox/Knived_Our_song.mp3`, `Knived_Unafraid.mp3`, `Knived_Unafraid_instrumental.mp3` – aiemmin raita 1
@@ -166,6 +196,8 @@ katuun (v4.11 ✅).
   (`lamps[4]`).
 - **Ovikynnykset:** `THRESH_RINGS`, `THRESH_TOP_Y`, `THRESH_DIP`, `THRESH_DETAILS`, `THRESH_LIGHT`,
   `KERB_GAP_EXTRA`, laatan korko (`slab.h`).
+- **Pelaajan syvyys:** `PLAYER_DEPTH_AMOUNT 0.10` (±10 %) · `PLAYER_DEPTH_MID 315` (koko 1,00 tässä Y:ssä) ·
+  `PLAYER_DEPTH_MAX_Y = WORLD_H - 50` (350, sama kuin `update()`in `PLAYER_Y_MAX`).
 - **Notifikaatiot:** `showNotification(text, durationMs = 2500)` + 0,5 s fade; `showSpawnHint` 4500 ms.
 
 ## 🔒 Lukitut osa-alueet
@@ -201,6 +233,9 @@ katuun (v4.11 ✅).
 - **Huoneet mobiilissa:** canvas on vain `viewW` (260–800) leveä ja kamera keskittää huoneen
   (`camX = (800 − viewW)/2`) → sisältö sovitetaan näkyvään ikkunaan (ks. `systemPatterns.md`).
 - Pään ympyrä (arc r = 7, `py+6`) peittää paidan ylimmät rivit → pään/kaulan varjostus vasta `py+13`.
+- **Pelaajan syvyysskaalaus (v4.31):** `s ≠ 1` tekee hahmon pikselikoordinaateista murto-osaisia → 1 px
+  reunat voivat pehmentyä ja skaalautuessa hitaasti ohuet yksityiskohdat väristä. Jos silmä havaitsee:
+  kvantisoi skaala portaisiin (esim. 0,025 välein) tai vaihda offscreen-blittiin (lähin naapuri).
 - `handleAction()` palaa heti osumasta → hit pause asetetaan haaroissa, `actionJustPressed` nollataan
   framen lopussa (ei tuplapotkua). `KICK_DURATION` ja törmäyslogiikka ennallaan.
 - `street.js` `lamps[].label` on **kuollutta dataa** – kadun kyltit eivät näytä pelien nimiä (vain BAR
