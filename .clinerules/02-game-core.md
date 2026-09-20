@@ -23,6 +23,9 @@ Jokaisessa alipelissä on seuraavat **ydintiedostot**, joihin ei kosketa ilman s
 - **Törmäystarkistukset** – pelaajan ja objektien vuorovaikutus
 - **Vihollisten tekoäly** – liikkumisreitit, nopeudet, käännökset
 - **Pisteytys ja elämät** – pistearvot, elämien menetys
+- **Talous ja palkkiotase** – 🔒 **LUKITTU**: kolikkotulot, hedelmäpelin painot/maksut/RTP, 🍔-tahti,
+  BAR- ja jukebox-hinnat, syntymäpaketti → ks. **`04-economy-balance.md` (ISO VAROITUS)**.
+  Ei muuteta ilman erillistä, nimenomaista pyyntöä – arvot on pelitestattu hyväksi.
 - **Tasojen rakenne** – kenttädatan formaatti, parserit, maailman rakentaja
 
 ---
@@ -41,8 +44,11 @@ Kun saat uuden alataskin (subtask) joka koskee jotain alipeliä:
 - Testaa kehitysversion kautta
 
 ### Työn jälkeen:
-- Päivitä `memory-bank/activeContext.md` – mitä tehtiin
-- Päivitä `memory-bank/progress.md` – mitä valmistui
+- **Kevyt polku** (`.clinerules/05-kevyt-polku.md`): kun muutos koskee vain yhtä näkymää tai
+  staattista asiaa (kuva, väri, teksti, koko, sijainti), **ei testejä eikä muistipankkipäivitystä**
+  – käyttäjä testaa itse. Raportti 1–3 riviä.
+- Muuten: päivitä `memory-bank/activeContext.md` – mitä tehtiin
+- Muuten: päivitä `memory-bank/progress.md` – mitä valmistui
 - **Älä buildaa** ellet saa erillistä pyyntöä
 
 ---

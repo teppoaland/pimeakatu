@@ -58,3 +58,4 @@ käyttää omissa projekteissa tai kaupallisesti ilman tekijän kirjallista lupa
 Tarkemmat ehdot: [`LICENSE`](LICENSE).
 
 `jukebox/`-kansion kappaleet ovat tekijän omia teoksia (Knived).
+`assets/justiina.png` on BAR-huoneen seinätaulun kuva-aineisto.

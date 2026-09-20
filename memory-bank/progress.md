@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> v4.21 – 20.9.2026
+> v4.25 – 20.9.2026
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -9,6 +9,7 @@
 | Katunäkymä, hahmo, lamput, ovet | ✅ |
 | Kolikot (katu + pelit) | ✅ v3.86 – katu: kolikko jalkojen liikkuma-alalle (x 0–780, y 310–380), 120s respawn; DG1 1kpl, DG2 1/taso; **v4.22 – syntymäpaketti: uusi peli / reset antaa 2 kolikkoa valmiiksi (5 🍔 ohella); tallennettu saldo voittaa aina (0 pysyy 0:na)** |
 | Hampurilaiset (lives) + BAR | ✅ v3.73 – 5 alussa, 1/40s, BAR:sta lisää, dramaattinen kuolemasekvenssi; **v4.12 – BAR-ostot: ▲/W = osta 1 (1 kolikko, katto 10), ▼/S = peru viimeisin osto (vain vierailun ostot, ei rahareikää), (o)/Space = poistu; reunanilmaisu estää toiston, tilateksti `Ostit Xx🍔 hampurilaista!`** |
+| 🖼️ BAR-huoneen seinätaulu (äitihahmo) + sovitus vaakanäyttöön | ✅ v4.25 – seinätaulu **mustilla kehyksillä** (`assets/justiina.png`, 315×261) äidin lapun ja ostorivin **yläpuolella**; hampurilainen **2/3** koossa, alaosa edelleen pöydän pinnassa (y = 260, 53,3×45,3); asettelu lasketaan alhaalta ylös ja sovitetaan näkyvään ikkunaan (`winW`, `needPx`, `fitFs`) → mahtuu myös puhelimen vaakanäyttöön (vaaka 844×390: kehys 83,2×71); varapinta ennen kuvan latausta, ei uusia localStorage-avaimia; validoitu `%TEMP%\street-bar-picture-test.cjs` 0 löydöstä (5 laitekokoa) |
 | Taustamusiikki (syntikkalooppi), äänet, CRT-teema | ✅ v4.21 – taustalla soi **proseduraalinen syntikkalooppi** (`MUSIC_SOURCE 'synth'`: rummut + basso + särökitara + melodia), 30 s soittoa (`SYNTH_PLAY_DURATION`) + **0,6 s häivytys** (`fadeOutSynth()` ramppaa `synthGain` 1 → 0) + 30–90 s tauko → sykli 60–120 s; `loadMusic()` ei lataa äänitiedostoa syntikkatilassa; aito äänite on vain **varatiekytkin** `'mp3'` (`MUSIC_FILE` = `knived_unafraid.mp3`) ja aidot koko kappaleet soi **ainoastaan jukeboxista**; `running.mp3` ei palaa (tekijänoikeudet); v4.18 – MP3-tilassa kappaleesta soi vain 30 s alku (`SONG_PLAY_LIMIT 30000`) + 0,6 s häivytys; mobiilifiksit: autoplay-esto ei poista musiikkia pysyvästi + `synthGain`-mykistys estää päällekkäin soimisen |
 | Ajoneuvot, eläimet, sääefektit | ✅ |
 | Mustat lehdettömät puut (isoimmat raot) | ✅ v3.82 – 2 kpl, siluetti, eri korkeus |
@@ -50,6 +51,7 @@
 
 | Oviukko (Avenger): ovesta tuleva hyökkääjä | ✅ v4.14 – potkun pudotukseen 3. arvonta: **1/8 + 30 s cooldown → pelaajan kaksonen astuu ovesta kynnykseltä** (ei putoa kuten ruukku/kolikko), juoksee 2.0 px/f (> pelaaja 1.225) kiinni → **ei väistettävissä**; osuma = tainnutus 600 f + **−1 🍔** (ei tuplaosumaa; 🍔 0 → kuolema), paluu ovelle ja katoaminen; iframen aikana jäissä; portti `!avenger` estää ruukun/kolikon samaan aikaan; uusi ääni `playKnock()`; ei uusia tekstejä; **v4.15 – isku dramaattisemmaksi: kontakti jäädyttää koko maailman 3 s (hit-stop + vinjetti + iskuvälähdys + tärinä + tähdet), vasta lopuksi pelaaja kosahtaa kasaan (tainnutus 600 f + −1 🍔)** |
 | 🎵 Jukebox-huone (talo 5, ovi x410) | ✅ v4.20 – potkaise ikkunat valaistuiksi → ovi aukeaa (2. painallus), 1 kolikko = koko kappale (`jukebox/` 3 × 128 kbps mp3, taso ≈ −13,5 LUFS); valinta ▲/▼ 0–3 (0 = ei valintaa → ei maksua eikä soittoa), soidessa valinta lukossa ja kappale soi loppuun; kappale peruuttaa taustamusiikin syklin ja taustamusiikki palaa `JUKEBOX_GAP` 2,5 s jälkeen; `killPlayer` pysäyttää myös jukeboxin; proseduraalinen Wurlitzer + neonkyltti + kynnysvalo kun valot palavat; 1/5 arpa ei ole enää tavoitettavissa talossa 5 (kuten hedelmäpelitalossa v4.11); **v4.21 – valintanuolet oikeinpäin: ▲/W = valitse ylös (−1), ▼/S = valitse alas (+1)** (rivi 0 on listan ylimpänä); **v4.22 – huoneen tekstit selkeiksi: koko asettelu sovitetaan näkyvään ikkunaan (`viewW`, keskitetty x = 400), yksi tumma paneeli, ei `shadowBlur`ia eikä `rgba`-tekstivärejä, fonttikoko näytön skaalan mukaan, kaappi vain kun `winW >= 620`, oven `♪JUKEBOX` 9 px + ääriviiva (hehku 3+|blink|·5)** |
+| 💰 Salainen kolikkopalkkio (testityökalu) | ✅ v4.23 – vitoslamppu (x 720, talon 8 lamppu): **20 potkua putkeen** → **+20 kolikkoa** (avain-cheat 5 potkusta ennallaan: kaikki avaimet + koko valorivi syttyy); **hiljainen** – ei popuppia, ei ääntä, ei hiukkasia, vain saldo + HUD (testausta varten); putki nollautuu toisesta lampusta / tauosta > 2 s / palkkiosta / respawn-resetistä; **cooldown 60 s** (nupit `COIN_CHEAT_LAMP/KICKS/REWARD/GAP/COOLDOWN` = 4/20/20/120/3600); ei uusia localStorage-avaimia; testi `%TEMP%\street-cheat-test.cjs` 36 tarkistusta 0 löydöstä |
 ## 🍒 Hedelmäpeli (fruitgame/) – Vaihe 1 + debug 19.9.2026
 
 | Ominaisuus | Tila |
@@ -87,4 +89,5 @@
 | Ominaisuus | Tila |
 |-----------|------|
 | Tekijänoikeudet (`LICENSE` + README-osio) | ✅ 20.9.2026 – uusi juuren `LICENSE` (Copyright (c) 2024–2026 Teppo Ålander, All rights reserved, ei myönnä lisenssiä eikä käyttöoikeutta; myös grafiikka/äänet/`jukebox/`-kappaleet mainittu) + README-osio "Tekijänoikeudet / Copyright"; tekijännimi korjattu `Aland` → `Ålander`; ei versionostoa (vain dokumentaatio, sääntö 03) |
+| 🔒 Talousbalanssi LUKITTU | ✅ v4.24 (20.9.2026) – käyttäjän päätös: kolikko-/🍔-/RTP-arvoja **ei enää säädetä** ilman erillistä pyyntöä. Uusi sitova sääntö `.clinerules/04-economy-balance.md` (ISO VAROITUS + lukitut arvot + pakollinen muutosprosessi), tausta `docs/economy-balance-memo.md` (talouslooppi + käyttäjän pelitestihavainnot mittapuuna: 1 kolikko pakko jättää, hedelmäpeli palauttaa yleensä 1–2, iso voitto ~1/30 pelikertaa), sääntö 02:n suojatut mekaniikat + `systemPatterns.md`-osio; ei koodimuutoksia |
 

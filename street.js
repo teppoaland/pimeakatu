@@ -167,6 +167,22 @@ const Street = (() => {
     let kickCoin = null;             // { x, y, vy, landed, ttl } – kolikko potkusta
     let kickCoinCooldown = 0;        // 30s tauko ennen kuin uusi kolikko voi pudota potkusta
 
+    /* ── Salainen kolikkopalkkio (TESTITYÖKALU, v4.23) ────────
+       Vitoslamppu (lamps[4], x 720) 20 potkua putkeen → +20 kolikkoa.
+       Avain-cheat (5 potkua → kaikki avaimet + koko valorivi syttyy) säilyy
+       koskemattomana; tämä on sen jatko ("5 + 15 heti perään").
+       Ei popuppia, ei ääntä, ei hiukkasia – vain saldo kasvaa (HUD + tallennus).
+       Putki nollautuu: välissä toinen lamppu, tauko > COIN_CHEAT_GAP, palkkio,
+       respawn/reset. Cooldownin aikana potkut eivät kerrytä putkea lainkaan. */
+    const COIN_CHEAT_LAMP     = 4;      // vitoslamppu (x 720, BAR-lamppu)
+    const COIN_CHEAT_KICKS    = 20;     // potkut putkeen (5 avain-cheat + 15 jatkoa)
+    const COIN_CHEAT_REWARD   = 20;     // kolikkoa palkkiosta
+    const COIN_CHEAT_GAP      = 120;    // 2s @ ~60fps: sallittu väli potkujen välissä
+    const COIN_CHEAT_COOLDOWN = 3600;   // 60s @ ~60fps palkkion jälkeen (0 = ei cooldownia)
+    let coinCheatStreak = 0;            // peräkkäiset potkut vitoslamppuun
+    let coinCheatGapTimer = 0;          // montako frameä putki vielä pysyy voimassa
+    let coinCheatCooldown = 0;          // cooldownin jäljellä olevat framet
+
     /* ── Oviukko (Avenger): kolikon vastakohta ────────
        Ei putoa ikkunasta kuten ruukku/kolikko – astuu OVESTA kynnykseltä ja
        juoksee pelaajan kiinni. Nopeus > pelaajan nopeus → ei väistettävissä.
@@ -1130,6 +1146,9 @@ const Street = (() => {
 
         // ── Potkusta pudonneen kolikon fysiikka ──────
         if (kickCoinCooldown > 0) kickCoinCooldown -= dt;
+        // Salainen kolikkopalkkio: putken vanheneminen + cooldown
+        if (coinCheatGapTimer > 0) { coinCheatGapTimer -= dt; if (coinCheatGapTimer <= 0) { coinCheatGapTimer = 0; coinCheatStreak = 0; } }
+        if (coinCheatCooldown > 0) { coinCheatCooldown -= dt; if (coinCheatCooldown < 0) coinCheatCooldown = 0; }
         if (kickCoin) {
             if (!kickCoin.landed) {
                 kickCoin.vy += 0.12 * dt;
@@ -1450,6 +1469,30 @@ const Street = (() => {
                 lamps[i].kickCount = (lamps[i].kickCount || 0) + 1;
                 hitPauseTimer = HIT_PAUSE;   // tuntuva osuma (myös ylikuumeneminen)
 
+                // ── Salainen kolikkopalkkio (TESTITYÖKALU, v4.23) ──
+                // Avain-cheatin jatko: vitoslamppu 20 potkua putkeen → +20 kolikkoa.
+                // Hiljainen: ei popuppia, ei ääntä, ei hiukkasia → vain saldo kasvaa.
+                if (i === COIN_CHEAT_LAMP) {
+                    if (coinCheatCooldown > 0) {
+                        coinCheatStreak = 0;             // cooldownin aikana ei kerrytetä
+                    } else {
+                        coinCheatStreak++;
+                        coinCheatGapTimer = COIN_CHEAT_GAP;
+                        if (coinCheatStreak >= COIN_CHEAT_KICKS) {
+                            coinCheatStreak = 0;
+                            coinCheatGapTimer = 0;
+                            coinCheatCooldown = COIN_CHEAT_COOLDOWN;
+                            coinCount += COIN_CHEAT_REWARD;
+                            state.inventory.coin = true;
+                            state.inventory.coinCount = coinCount;
+                            GameState.save(state);
+                            updateHUD();
+                        }
+                    }
+                } else {
+                    coinCheatStreak = 0;                 // välissä toinen lamppu → putki katki
+                }
+
                 if (lamps[i].kickCount >= 5) {
 // Salainen lamppu: 5 potkua → avaa kaikki ovet (vain viimeinen lamppu)
                     if (i === 4) {
@@ -1591,6 +1634,10 @@ const Street = (() => {
             lamps[i].overheat = false;
             lamps[i].overheatTimer = 0;
         }
+        // Salainen kolikkopalkkio: ei siirry elämältä/istunnolta toiselle
+        coinCheatStreak = 0;
+        coinCheatGapTimer = 0;
+        coinCheatCooldown = 0;
         coin.collected = state.inventory.coin;
         coinCount = state.inventory.coinCount || 0;
         coinRespawnTimer = coin.collected ? 1 : 0;
@@ -3737,6 +3784,20 @@ const Street = (() => {
         ctx.fillRect(x + 6, baseY - 8, w - 12, 8);
     }
 
+    /* ── BAR-huoneen seinätaulu (äitihahmo, kuva) ─────────────
+       Kuva ladataan kerran. Jos se ei ole vielä valmis (tai lataus
+       epäonnistuu), kehyksen sisään piirretään tumma varapinta → asettelu
+       pysyy samana eikä piirto kaadu. `typeof Image` -tarkistus pitää
+       headless-validonnat (Node-stub) toiminnassa. */
+    const BAR_PIC_SRC = 'assets/justiina.png';
+    const barPic = (typeof Image === 'function') ? new Image() : null;
+    let barPicReady = false;
+    if (barPic) {
+        barPic.onload  = () => { barPicReady = true; };
+        barPic.onerror = () => { barPicReady = false; };
+        barPic.src = BAR_PIC_SRC;
+    }
+
     /* ── BAR-huone (talo 8) ────────────────────── */
     function drawBarRoom() {
         // Täysin pimeä tausta
@@ -3761,8 +3822,18 @@ const Street = (() => {
         ctx.fillRect(tx + 10, ty + th, 10, 50);
         ctx.fillRect(tx + tw - 20, ty + th, 10, 50);
 
-        // Iso hampurilainen
+        /* Iso hampurilainen – pöydän pinnalla, skaalattu 2/3:een (v4.25).
+           Skaalaus tehdään pöydän pinnan keskipisteestä (bx, ty), joten
+           hampurilaisen alaosa pysyy tarkalleen pöydän pinnassa. */
+        const BURGER_SCALE = 2 / 3;
+        const BURGER_H = 68;                 // alkuperäinen korkeus (by−26 … by+42)
         const bx = tx + tw / 2, by = ty - 42;
+        const burgerTop = ty - BURGER_H * BURGER_SCALE;
+
+        ctx.save();
+        ctx.translate(bx, ty);
+        ctx.scale(BURGER_SCALE, BURGER_SCALE);
+        ctx.translate(-bx, -ty);
 
         // Alapulla
         ctx.fillStyle = '#8B4513';
@@ -3853,48 +3924,138 @@ const Street = (() => {
             ctx.stroke();
         }
 
-        // Ohjeteksti raameissa (varoitus hampurilaisten kulutuksesta)
+        ctx.restore();   // hampurilaisen skaalaus päättyy
+
+        /* ── Asettelu: taulu + äidin lappu + ostotilanne ────────────────
+           Kaikki mitoitetaan siitä ikkunasta, joka ruudulla oikeasti näkyy
+           (kuten jukebox-huoneessa v4.22): mobiilissa canvas on vain `viewW`
+           leveä ja kamera keskittää huoneen (camX), joten kiinteä 800 px:n
+           asettelu jäisi kankaan ulkopuolelle. Fonttikoko valitaan näytön
+           skaalan mukaan (`needPx`) → tekstit pysyvät luettavina myös
+           puhelimen vaakanäytössä. Sisältö mahtuu aina seinän yläreunan
+           (y = 60) ja ostorivin väliin eikä mikään osu hampurilaiseen. */
+        const winW = Math.round(Math.min(WORLD_W, Math.max(VIEWW_MIN, viewW)));
+        const vs = (canvas && canvas.height && canvas.clientHeight)
+            ? canvas.clientHeight / canvas.height : 1;
+        const vsafe = (vs > 0.25) ? vs : 1;
+        const needPx = (target, base, max) =>
+            Math.round(Math.max(base, Math.min(max, target / vsafe)));
+
+        /* Suurin fonttikoko, jolla kaikki `rows`-rivit mahtuvat maxW:iin */
+        const fitFs = (rows, weight, baseFs, minFs, family, maxW) => {
+            let w = 0;
+            ctx.font = weight + ' ' + baseFs + 'px ' + family;
+            for (let i = 0; i < rows.length; i++) {
+                w = Math.max(w, ctx.measureText(rows[i]).width);
+            }
+            if (w <= maxW) return baseFs;
+            return Math.max(minFs, Math.floor(baseFs * maxW / w));
+        };
+
+        /* Äidin lappu – 3 riviä (varoitus hampurilaisten kulutuksesta) */
         const hintLines = [
             'SEURAA HAMPURILAISTEN KULUTUSTA',
             'MUISTA SYÖDÄ VILLE!',
             'Tv. Äiti'
         ];
-        ctx.textAlign = 'center';
-        ctx.font = 'bold 11px "Courier New", monospace';
+        const boxPad = 36;                    // laatikon sisämarginaali
+        const hintFs = fitFs(hintLines, 'bold', needPx(12, 10, 12), 8,
+                             '"Courier New", monospace', winW - 28 - boxPad);
+        ctx.font = 'bold ' + hintFs + 'px "Courier New", monospace';
         let maxHintW = 0;
         for (let m = 0; m < hintLines.length; m++) {
-            const w = ctx.measureText(hintLines[m]).width;
-            if (w > maxHintW) maxHintW = w;
+            maxHintW = Math.max(maxHintW, ctx.measureText(hintLines[m]).width);
         }
-        const hintBoxW = Math.ceil(maxHintW + 48);
-        const hintBoxH = 68, hintBoxX = 400, hintBoxTop = 92;
+        const hintBoxW = Math.ceil(maxHintW + boxPad);
+        const hintLineH = hintFs + 3;
+        const hintBoxH = hintLineH * 3 + 6;
+
+        /* Ostotilanteen rivi – fontti pisimmän vaihtoehdon mukaan */
+        const infoRows = [
+            'Ostit ' + Math.max(barBuyQty, 1) + 'x🍔 hampurilaista!',
+            '🍔 Hampurilaiskiintiö täynnä Osta jotain muuta!.',
+            '🍔 Ei kolikoita. Hommaa massia!'
+        ];
+        const infoFs = fitFs(infoRows, 'normal', needPx(15, 13, 15), 8,
+                             '"Courier New", monospace', winW - 24);
+        const infoBaseline = Math.round(burgerTop - 8);
+
+        /* Sijoitus alhaalta ylös: ostorivi (hampurilaisen yläpuolella),
+           sen alla äidin lappu ja ylimpänä pieni seinätaulu ohuissa
+           mustissa kehyksissä. Taulu on kiinteän kokoinen (ei täytä koko
+           seinää) ja keskitetään seinän yläreunan ja lapun väliin. */
+        const infoTop = infoBaseline - infoFs;
+        const noteX = Math.round(400 - hintBoxW / 2);
+        const noteY = Math.round(infoTop - 4 - hintBoxH);
+        const PIC_PAD = 2;                    // mustan kehyksen paksuus
+        const PIC_TOP = 60;                   // seinä alkaa y = 60
+        const PIC_MAX_IMG_H = 48;             // kuvan maksimikorkeus (pieni taulu)
+        const picAspect = (barPicReady && barPic.naturalHeight > 0)
+            ? barPic.naturalWidth / barPic.naturalHeight : 315 / 261;
+        const picBand = noteY - 6 - PIC_TOP;  // vapaa seinätila taululle
+        let picImgH = Math.min(PIC_MAX_IMG_H, picBand - PIC_PAD * 2);
+        let picImgW = picImgH * picAspect;
+        const picMaxW = winW - 24;            // kapea ikkuna: ei reunojen yli
+        if (picImgW + PIC_PAD * 2 > picMaxW) {
+            picImgW = picMaxW - PIC_PAD * 2;
+            picImgH = picImgW / picAspect;
+        }
+        const picFrameW = picImgW + PIC_PAD * 2;
+        const picFrameH = picImgH + PIC_PAD * 2;
+        const picX = Math.round(400 - picFrameW / 2);
+        const picY = Math.round(PIC_TOP + (picBand - picFrameH) / 2);
+
+        /* Taulun varjo seinälle, musta kehys ja kuva
+           (varakuva, jos kuva ei ole vielä latautunut) */
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(picX + 3, picY + 4, picFrameW, picFrameH);
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(picX, picY, picFrameW, picFrameH);
+        if (barPicReady) {
+            ctx.imageSmoothingEnabled = true; // valokuva → pehmennetty skaalaus
+            ctx.drawImage(barPic, picX + PIC_PAD, picY + PIC_PAD, picImgW, picImgH);
+            ctx.imageSmoothingEnabled = false;
+        } else {
+            const pg = ctx.createLinearGradient(0, picY, 0, picY + picImgH);
+            pg.addColorStop(0, '#242424');
+            pg.addColorStop(1, '#0e0e0e');
+            ctx.fillStyle = pg;
+            ctx.fillRect(picX + PIC_PAD, picY + PIC_PAD, picImgW, picImgH);
+        }
+
+        /* Äidin lappu (keltaiset raamit) – taulun alla */
+        ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(15, 8, 4, 0.9)';
         ctx.strokeStyle = '#ffcc44';
         ctx.lineWidth = 2;
-        ctx.fillRect(hintBoxX - hintBoxW / 2, hintBoxTop, hintBoxW, hintBoxH);
-        ctx.strokeRect(hintBoxX - hintBoxW / 2, hintBoxTop, hintBoxW, hintBoxH);
+        ctx.fillRect(noteX, noteY, hintBoxW, hintBoxH);
+        ctx.strokeRect(noteX, noteY, hintBoxW, hintBoxH);
+        ctx.font = 'bold ' + hintFs + 'px "Courier New", monospace';
         for (let hi = 0; hi < hintLines.length; hi++) {
             ctx.fillStyle = (hi === 2) ? '#ff6644' : '#ffdd88';
-            ctx.fillText(hintLines[hi], hintBoxX, hintBoxTop + 22 + hi * 17);
+            ctx.fillText(hintLines[hi], noteX + hintBoxW / 2,
+                         noteY + hintLineH * (hi + 1) + 1);
         }
 
         // Info-tekstit – ostomäärä = tämän vierailun ostot (▼ pienentää sitä)
         ctx.fillStyle = '#eeddcc';
-        ctx.font = '14px "Courier New", monospace';
+        ctx.font = 'normal ' + infoFs + 'px "Courier New", monospace';
         ctx.textAlign = 'center';
         if (barBuyQty > 0) {
-            ctx.fillText('Ostit ' + barBuyQty + 'x🍔 hampurilaista!', 400, 185);
+            ctx.fillText('Ostit ' + barBuyQty + 'x🍔 hampurilaista!', 400, infoBaseline);
         } else if (hamburgerCount >= 10) {
-            ctx.fillText('🍔 Hampurilaiskiintiö täynnä Osta jotain muuta!.', 400, 185);
+            ctx.fillText('🍔 Hampurilaiskiintiö täynnä Osta jotain muuta!.', 400, infoBaseline);
         } else if (coinCount <= 0) {
-            ctx.fillText('🍔 Ei kolikoita. Hommaa massia!', 400, 185);
+            ctx.fillText('🍔 Ei kolikoita. Hommaa massia!', 400, infoBaseline);
         }
 
         // Ohjevihje: ▲ osta / ▼ peru / (o) poistu
         var pulse = Math.sin(Date.now() / 800) * 0.3 + 0.7;
         ctx.fillStyle = 'rgba(255,255,255,' + pulse + ')';
-        ctx.font = '10px Arial, sans-serif';
-        ctx.fillText('▲ = osta 1 🍔   ▼ = peru 1   POISTU: (o) / Space', 400, 370);
+        var exitRow = '▲ = osta 1 🍔   ▼ = peru 1   POISTU: (o) / Space';
+        ctx.font = Math.max(8, fitFs([exitRow], 'normal', 10, 8, 'Arial, sans-serif',
+                                     winW - 24)) + 'px Arial, sans-serif';
+        ctx.fillText(exitRow, 400, 370);
         ctx.textAlign = 'start';
     }
 
