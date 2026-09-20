@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> **v4.33 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
+> **v4.36 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -21,14 +21,17 @@
 | Ovikynnykset | ✅ v4.13 – kynnyslaatta + 1 kivirivi, kiveys vain y 317–324 |
 | Mobiilikamera + ohjaimet | ✅ v3.91 – zoom + `camX` seuraa; D-pad + ⚡ overlay |
 | Taustamusiikki + SFX | ✅ v3.28 / v4.16–v4.21 – syntikkalooppi (`MUSIC_SOURCE 'synth'`, 30 s + 0,6 s häivytys + 30–90 s tauko); `'mp3'` varatie (`knived_unafraid.mp3`, 30 s); `running.mp3` ei palaa |
-| 🎵 Jukebox-huone (talo 5) | ✅ v4.20–v4.23 – ikkunat valaistuiksi → ovi auki; 3 kappaletta (`Knived - …`), 1 kolikko / koko kappale; valinta ▲/▼ 0–3, soidessa lukossa; nuolet v4.21; mobiilasettelu v4.22; **v4.27 – tiedostonimet korjattu vastaamaan sisältöä (`jukebox/Knived_*.mp3`; aiemmin raita 1 ja 2 soivat ristissä)** |
+| 🎵 Jukebox-huone (talo 5) | ✅ v4.20–v4.23 – ikkunat valaistuiksi → ovi auki; 3 kappaletta (`Knived - …`), 1 kolikko / koko kappale; valinta ▲/▼ 0–3, soidessa lukossa; nuolet v4.21; mobiilasettelu v4.22; **v4.27 – tiedostonimet korjattu vastaamaan sisältöä (`jukebox/Knived_*.mp3`; aiemmin raita 1 ja 2 soivat ristissä)**; **v4.34 – auki vain öisin (klo 20–06)** |
 | Palkintohuone (talo 8) | ✅ kaikki avaimet TAI 3 kolikkoa |
 | 💰 Salainen kolikkopalkkio (testityökalu) | ✅ v4.23 – vitoslamppu 20 potkua → +20 kolikkoa, hiljainen; putki katkeaa toiseen lamppuun / 2 s taukoon, cooldown 60 s; avain-cheat 5 potkusta ennallaan |
 | 🛏️ Makuuhuone (ex-palkintohuone, talo 7) | ✅ v4.33 – lukko = **3 avainta** (kolikkoreitti poistettu); avaimilla ovi aina auki ilman lamppua. Paksu sänky sivusta + ikkuna (kuu/aurinko), rivit **Nuku / Poistu** (▲/▼ + `(o)`/Space/⚡), mobiilisovitus jukeboxin mallilla. **Nuku** = pimennys ~1,5 s → päivä ⇄ yö + tallennus; **Poistu** = ei muutosta. Ilmainen. **Testattu käyttäjän toimesta 20.9.2026 → "toimii juuri kuten pitää"** |
 | ☀️ Päivä/yö (lopputila) | ✅ v4.32 / v4.33 – 3 avainta → `dayT` 0→1 (**~20 s**): päivätaivas, **kuu → aurinko**, tähdet/tähdenlento/satelliitti pois, lamppujen hehku himmenee (`lamp.lit` ennallaan), additive-päivänvalo-wash; liuku odottaa kadulle paluuta. **v4.33:** tila tallennetaan (`state.isDay`), liuku molempiin suuntiin (`NIGHT_FADE_FRAMES`) ja makuuhuoneen Nuku vaihtaa sen; **auringon valkoinen sisäkiekko poistettu**; testityökalut `?day=1` / `?day=0` |
 | Popupit | ✅ v3.99 / v4.00 – ohjeet pois HUD:sta; `showNotification(2500 ms)`, aloitusohje 4500 ms |
+| 🌙 Jukebox & Hedelmäpeli vain öisin | ✅ v4.34 – päivällä (`dayT >= 0.5`) ovesta teksti-popup `Avoinna` / `Klo 20 - 06` (`CLOSED_SIGN`, `nightOnlyClosed()`); jukeboxin ovea ei potkita eikä valoja sytytetä päivällä. Yöllä portti ennallaan. `#notification` sai `white-space: pre-line` (2 riviä). **Talousarvot ennallaan** |
+| 🚗 Ajovalot päivällä | ✅ v4.35 – `VEHICLE_HEADLIGHT_DIM 1`: auton ja mopon etuvalo + hehku ja valokeila himmenevät `dayT`:n myötä (`headlightDim`/`headlightOn`), pois kokonaan päivällä; takavalot, ambulanssin kattovilkku ja `hasHeadlight`-arpa ennallaan |
+| 🛏️ Nukkumisen Zzz | ✅ v4.36 – `SLEEP_DARK_FRAMES 45` (~0,75 s pimennys) + `SLEEP_ZZZ_FRAMES 180` → Zzz näkyy tasan **3 s** (yhteensä ~3,75 s); pimennys lasketaan kuluneesta ajasta, joten Zzz ei enää vilahtele |
 
-## 🍒 Hedelmäpeli (fruitgame/) – talo 7, aina auki
+## 🍒 Hedelmäpeli (fruitgame/) – talo 7, auki vain öisin (v4.34)
 
 | Ominaisuus | Tila |
 |-----------|------|
@@ -38,6 +41,7 @@
 | Kytkentä katuun: `fruitSync` / `fruitBet` / `fruitWin` / `RETURN_TO_STREET` + saldo-echo | ✅ v4.11 |
 | Debug-korjaukset 19.9.2026: `new FruitGame()` käynnistys + `box-sizing: content-box` | ✅ |
 | 🖼️ Pelihuoneen seinäkuva | ✅ v4.28–v4.30 – `#wall-pic` HTML-elementtinä (ei canvasissa), koko vapaasta seinätilasta (`WALL_PIC_H_RATIO 0.28`, min 90 px, rako 0), keskitetty ja kiinni pelikentän yläreunassa, vaakatasossa piiloon; kuva `fruitgame/assets/dude_mv.jpg` (MV, v4.30) |
+| 🌙 Aukiolo | ✅ v4.34 – auki vain öisin (klo 20–06); päivällä ovi → popup `Avoinna` / `Klo 20 - 06` (`CLOSED_SIGN`), ei `enterGame`ia |
 | Dokumentaatio | ✅ `docs/fruit-game-memo.md` |
 
 ## ⛏️ Dig Game · 💎 Dig Däsh · ✈️ Blue Mäx

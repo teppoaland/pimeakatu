@@ -6,9 +6,10 @@
 
 - **Pääportaali (juuri):** `index.html`, `style.css`, `street.js`, `gameState.js`, `audio.js` – ei `js/`-kansiota.
 - **Iframet (4 alipeliä):** `digGame1/` ⛏️ Dig Game · `digGame2/` 💎 Dig Däsh · `bm/` ✈️ Blue Mäx ·
-  `fruitgame/` 🍒 Hedelmäpeli (talo 7, aina auki).
+  `fruitgame/` 🍒 Hedelmäpeli (talo 7, **auki vain öisin** v4.34).
 - **Kadun canvas-huoneet (ei iframe):** **makuuhuone** (ex-palkintohuone, `buildings[7]`, lukko = 3 avainta,
-  valinnat Nuku/Poistu) · BAR (talo 9, 🍔) · jukebox (talo 5, `buildings[4]`, ovi x 410, 1 kolikko = koko kappale).
+  valinnat Nuku/Poistu) · BAR (talo 9, 🍔) · jukebox (talo 5, `buildings[4]`, ovi x 410, 1 kolikko = koko
+  kappale, **auki vain öisin** v4.34).
 - **Kommunikaatio:** `window.parent.postMessage()` molempiin suuntiin.
 - **LocalStorage-avaimet:** `pimeakatu_gamestate` (portaali; sisältää myös **`isDay`** = päivä/yö-tila),
   `digKeyCollected`, `boulderKeyCollected`,
@@ -47,6 +48,16 @@ alapeli on auki (`iframeOpen`) tai ollaan canvas-huoneessa → muutos näkyy kad
 Testityökalut `?day=1` / `?day=0` pakottavat tilan eivätkä tallenna.
 **Visuaalinen vain:** ei muutoksia hitboxeihin, törmäyksiin eikä talouteen; yö piirtyy täsmälleen kuten
 ennen, koska kaikki päivähaarat ovat ehtoja `dayT > 0`.
+
+**Aukiolo (v4.34):** jukebox (talo 5) ja hedelmäpeli (talo 7) ovat auki **vain öisin**: päivällä
+(`dayT >= 0.5`, nuppi `CLOSED_AT_DAYT`) kummankin oven action näyttää saman teksti-popupin kuin
+lukitusta ovesta (`CLOSED_SIGN = 'Avoinna\nKlo 20 - 06'`, `nightOnlyClosed()`) eikä huonetta/peliä
+avata; jukeboxin ovea ei päivällä potkita eikä valoja sytytetä. `#notification` rivittyy nyt
+(`white-space: pre-line`). Yölogiikka ja kaikki talousarvot ovat täysin ennallaan.
+
+**Ajovalot (v4.35):** ajoneuvojen etuvalot ja valokeila himmenevät `dayT`:n myötä
+(`VEHICLE_HEADLIGHT_DIM 1` → pois päältä päivällä, `headlightDim`/`headlightOn` `drawVehicle()`issa);
+takavalot ja ambulanssin kattovilkku eivät muutu. Puhtaasti visuaalinen – ei pelimekaniikkaa.
 
 ## 🎮 Pelien yhteinen arkkitehtuurimalli
 

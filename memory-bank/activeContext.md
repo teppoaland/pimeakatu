@@ -17,11 +17,14 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.33` (`index.html` → `#version-tag`) · **Git:** **v4.33 committattu ja pushattu
-  20.9.2026** (`0bbf7c6`, origin/main) · käyttäjän testaus: *"toimii juuri kuten pitää"* · työpuu puhdas.
+- **Versio:** `v4.36` (`index.html` → `#version-tag`) · **Git:** **v4.36 committattu ja pushattu
+  20.9.2026** (`73d0e8b`, origin/main) · työpuu puhdas · käyttäjän palaute: nukkumisen
+  Zzz-ajoitus säädettiin 3 sekuntiin.
 - **Tila:** pääportaali + 4 alipeliä (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️, `fruitgame` 🍒) valmiit ja pelattavat.
 - **Kadun canvas-huoneet (ei iframe):** **makuuhuone** (ex-palkintohuone, `buildings[7]`, Nuku/Poistu) · BAR (talo 9) ·
-  jukebox (`buildings[4]`, ovi x 410) · hedelmäpelitalo `buildings[6]` (iframe, aina auki).
+  jukebox (`buildings[4]`, ovi x 410) · hedelmäpelitalo `buildings[6]` (iframe).
+- **Aukiolo (v4.34):** jukebox ja hedelmäpeli ovat auki **vain öisin** – päivällä (`dayT >= 0.5`)
+  ovesta tulee sama teksti-popup kuin lukitusta ovesta: `Avoinna` / `Klo 20 - 06` (`CLOSED_SIGN`).
 - **Päivä/yö (v4.33):** 3 avainta nostaa päivän kerran (`state.isDay` null → true, v4.32-käytös) →
   sen jälkeen **makuuhuoneen Nuku vaihtaa päivä ⇄ yö** ja tila on tallennettu; Poistu ei muuta mitään.
   Huoneeseen pääsee **vain 3 avaimella** (kolikkoreitti poistettu) – silloin ovi on aina auki ilman lamppua.
@@ -33,6 +36,33 @@
 ---
 
 ## 🆕 Tuoreimmat versiot (20.9.2026)
+
+**v4.36 – Nukkumisen Zzz-efekti 3 s.** Nukkuminen jaettiin kolmeen nuppiin:
+`SLEEP_DARK_FRAMES 45` (~0,75 s pimennys), `SLEEP_ZZZ_FRAMES 180` (itse Zzz ~3 s) ja
+`SLEEP_FADE_FRAMES = 45 + 180` (~3,75 s yhteensä). Pimennys lasketaan **kuluneesta** ajasta
+(`elapsed = SLEEP_FADE_FRAMES - sleepPhase`): aiempi kaava `1 - sleepPhase / SLEEP_FADE_FRAMES`
+toi mustan kerroksen ja Zzzin mukaan vasta viimeisellä 0,75 sekunnilla – siksi Zzz "vilahti".
+Zzz himmenee sisään pimennyksen tahdissa ja on täydellä kirkkaudella 0,75 s → 3,75 s.
+Versio `v4.36`.
+
+**v4.35 – Ajoneuvojen ajovalot sammuvat päivällä.** `drawVehicle()` sai nupin
+`VEHICLE_HEADLIGHT_DIM 1` → `headlightDim = 1 - VEHICLE_HEADLIGHT_DIM * dayT` (sama liuku kuin
+katuvaloissa). Auton ja mopon etuvalo + hehku sekä valokeila piirretään vain kun
+`headlightDim > 0.01` (alpha = `headlightDim`); valokeila jää kokonaan pois kun `headlightOn`
+on epätosi. **Takavalot, ambulanssin kattovilkku ja `hasHeadlight`-arpa ennallaan** –
+pelimekaniikka ei muutu. Samalla siistittiin valokeilan turha sisäkkäinen `{`-lohko.
+
+**v4.34 – Jukebox ja Hedelmäpeli auki vain öisin (klo 20–06).** Päivällä kummankin oven
+action-painallus näyttää saman teksti-popupin kuin lukitusta ovesta (`CLOSED_SIGN =
+'Avoinna\nKlo 20 - 06'`, `#notification`, 2,5 s) eikä huoneeseen/peliin pääse
+(`handleAction` 1502–1526) – jukeboxin ovea ei päivällä myöskään potkita eikä valoja
+sytytetä. Yöllä kaikki on ennallaan: potku → valot 20 s → huone, 1 kolikko = koko kappale.
+Raja `dayT >= 0.5` (`CLOSED_AT_DAYT`) = sama kuin makuuhuoneen tilanvaihto, joten kyltti
+ilmestyy/poistuu hämärtymisen keskellä. `style.css`: `#notification` sai
+`white-space: pre-line` → `\n` on nyt rivinvaihto (myös "💡 Ovi on lukossa.\nSytytä lamppu
+ensin!" rivittyy oikein). **Talousarvot ennallaan** – vain aukioloaika muuttui; kirjattu
+sääntöön 04 ja memoihin (`economy-balance-memo`, `jukebox-memo`, `fruit-game-memo`).
+Versio `v4.34`, ei committia.
 
 **v4.33 – Talo 7: palkintohuone → makuuhuone (Nuku / Poistu) + päivä/yö vaihdettavaksi + aurinko siistitty.**
 Pääsy: **vain 3 avainta** (kolikkoreitti poistettu käyttäjän pyynnöstä: *"3 avainta on se lukko tässä"*),
@@ -248,7 +278,14 @@ katuun (v4.11 ✅).
   `DAY_LIGHT_RGB [70,58,40]` · `DAY_LIGHT_ALPHA 0.30` (washin voimakkuus) · `LAMP_DAY_DIM 0.15` (jäljelle
   jäävä lampun hehku) · testityökalut `DAY_PARAM`/`DAY_FORCE` = `?day=1` (päivä heti) ja `?day=0`
   (pakota yö) – eivät tallenna mitään.
-- **Makuuhuone (talo 7):** `SLEEP_BLDG_IDX 7` · `SLEEP_FADE_FRAMES 90` (~1,5 s nukkumisen pimennys) ·
+- **Aukiolo (v4.34):** `CLOSED_SIGN 'Avoinna\nKlo 20 - 06'` · `CLOSED_AT_DAYT 0.5` (dayT-raja,
+  sama kuin makuuhuoneen tilanvaihdossa) · `nightOnlyClosed()` – jukebox (talo 5) ja
+  hedelmäpeli (talo 7) auki vain öisin, päivällä popup eikä sisään.
+- **Ajovalot (v4.35):** `VEHICLE_HEADLIGHT_DIM 1` (1 = kokonaan pois päivällä, 0 = ei muutosta) ·
+  `headlightDim` / `headlightOn` `drawVehicle()`issa (r. ~4922) – auton ja mopon etuvalo + valokeila
+  himmenevät `dayT`:n myötä; takavalot ja ambulanssin kattovilkku ennallaan.
+- **Makuuhuone (talo 7):** `SLEEP_BLDG_IDX 7` · `SLEEP_DARK_FRAMES 45` (~0,75 s pimennys) ·
+  `SLEEP_ZZZ_FRAMES 180` (Zzz ~3 s) · `SLEEP_FADE_FRAMES = DARK + ZZZ` (~3,75 s yhteensä) ·
   `sleepSel` (0 = Nuku, 1 = Poistu) · sängyn koko paneelista (`bedW = min(340, panelW − 16)`),
   paneeli ≤ `winW − 24`, sivuikkuna vasta kun `winW ≥ 560`.
 - **Notifikaatiot:** `showNotification(text, durationMs = 2500)` + 0,5 s fade; `showSpawnHint` 4500 ms.
