@@ -90,32 +90,27 @@ html, body {
 }
 
 /* ── Pelihuoneen seinäkuva (wall-pic) ──────────────────────
-   Kuva on HTML-elementti, ei canvasin sisällä → koneen kokoon,
-   canvasin skaalaukseen eikä dialogeihin ei kosketa. Sijainti ja
-   näkyvyys lasketaan renderer.resize():ssa vapaasta seinätilasta:
-   kuva on koneen vieressä tai yläpuolella, ei koskaan koneen päällä. */
+   Kuva on HTML-elementti, ei canvasin sisällä → koneen kokoon, canvasin
+   skaalaukseen eikä dialogeihin ei kosketa. Koko ja sijainti lasketaan
+   renderer.resize():ssa: kuva on vaakasuunnassa keskitetty ja kiinni
+   pelikentän yläreunassa, ja koko ryhmä (kuva + kone) keskitetään
+   pystysuunnassa. renderer.js asettaa kuvan leveyden ja korkeuden. */
 #wall-pic {
     position: absolute;
     left: 0;
     top: 0;
-    width: 112px;
     display: none;
-    border: 2px solid #0a0a0a;      /* pieni musta kehys (kuten BAR-taulussa) */
+    border: 3px solid #0a0a0a;      /* musta kehys (kuten BAR-taulussa) */
     background: #0a0a0a;
-    box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.45);
+    box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.45);
     pointer-events: none;
     -webkit-user-drag: none;
 }
 
 #wall-pic.visible { display: block; }
 
-/* Pienempi ruutu → pienempi taulu */
-@media (max-width: 768px) {
-    #wall-pic { width: 84px; }
-}
-
-/* Mobiilin vaakataso: kuva ei mahdu seinälle → piiloon
-   (sama sääntö on varmistettu myös renderer.js:ssä) */
+/* Mobiilin vaakataso: kuva ei mahdu seinälle → piiloon, jolloin kone saa
+   koko korkeuden (sama sääntö on varmistettu myös renderer.js:ssä) */
 @media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
     #wall-pic { display: none !important; }
 }

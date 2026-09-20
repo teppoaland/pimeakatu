@@ -1,6 +1,19 @@
 // renderer.js – Hedelmäpeli: canvas-piirto (kone, rullat, symbolit, efektit)
 let wallPicFailed = false;   // seinäkuva ei latautunut → pysyy piilossa
 
+/* Seinäkuvan mitoitus. Kuva on koriste eikä saa huonontaa pelattavuutta:
+   pystynäytöissä canvas on leveysrajainen, joten kuvalle varattu kaista
+   mahtuu jo olemassa olevaan tyhjään seinätilaan eikä kone pienene lainkaan.
+   PC:llä (canvas korkeusrajainen) kaista otetaan koneen yläpuolelta ja koko
+   ryhmä (kuva + rako + kone) keskitetään → kone pysyy ryhmän alaosassa. */
+const WALL_PIC_H_RATIO = 0.28;   // kuvan enimmäiskorkeus osuutena ikkunan korkeudesta
+const WALL_PIC_MIN_H   = 90;     // tätä matalampaa kuvaa ei näytetä (px)
+const WALL_PIC_GAP     = 0;      // rako kuvan ja pelikentän yläreunan välissä (0 = kiinni)
+const WALL_PIC_SIDE    = 24;     // vapaa marginaali ikkunan reunoihin yhteensä
+const WALL_PIC_FRAME   = 3;      // mustan kehyksen paksuus (sama kuin CSS:ssä)
+const GROUP_MARGIN     = 12;     // pystymarginaali koko ryhmän ympärillä (px)
+const CANVAS_BORDER    = 6;      // canvasin reunus 2 × 3 px (content-box)
+
 class Renderer {
     constructor(canvas, game) {
         this.canvas = canvas;
@@ -23,53 +36,67 @@ class Renderer {
         }
     }
 
-    /** Skaalaa canvas käytettävissä olevaan tilaan (toimii pysty- ja vaaka-asennossa) */
+    /** Skaalaa canvasin käytettävissä olevaan tilaan ja sijoittaa seinäkuvan
+        (toimii pysty- ja vaaka-asennossa). Kuvalle varattu kaista ei muuta
+        koneen kokoa, jos canvas on leveysrajainen (pystynäyttö). */
     resize() {
         const wrap = this.canvas.parentElement;
         if (!wrap) return;
-        const availW = Math.max(220, wrap.clientWidth - 6);
-        const availH = Math.max(140, wrap.clientHeight - 6);
+        const W = wrap.clientWidth, H = wrap.clientHeight;
+
+        // 1) Seinäkuvan koko vapaasta seinätilasta (null = ei näytetä)
+        const pic = this.wallPicSize(W, H);
+        const bandH = pic ? (pic.ih + WALL_PIC_FRAME * 2) + WALL_PIC_GAP : 0;
+
+        // 2) Canvas loppuun tilaan
+        const availW = Math.max(220, W - CANVAS_BORDER);
+        const availH = Math.max(140, H - CANVAS_BORDER - bandH - (pic ? GROUP_MARGIN : 0));
         const scale = Math.min(availW / CANVAS_W, availH / CANVAS_H);
+        const canvasH = Math.floor(CANVAS_H * scale);
         this.canvas.style.width = Math.floor(CANVAS_W * scale) + 'px';
-        this.canvas.style.height = Math.floor(CANVAS_H * scale) + 'px';
-        this.placeWallPicture(wrap, parseFloat(this.canvas.style.width),
-                              parseFloat(this.canvas.style.height));
+        this.canvas.style.height = canvasH + 'px';
+        // Ryhmän keskitys: ylämarginaali = kuva + rako → kone ryhmän alaosaan
+        this.canvas.style.marginTop = bandH > 0 ? bandH + 'px' : '0px';
+
+        // 3) Kuva kiinni pelikentän yläreunassa, vaakasuunnassa keskitetty
+        const el = this.wallPic();
+        if (!el) return;
+        if (!pic) { el.classList.remove('visible'); return; }
+        const picW = pic.iw + WALL_PIC_FRAME * 2;
+        const picH = pic.ih + WALL_PIC_FRAME * 2;
+        const groupH = bandH + canvasH + CANVAS_BORDER;    // koko ryhmän ulkomitta
+        el.style.width = picW + 'px';
+        el.style.height = picH + 'px';
+        el.style.left = Math.round((W - picW) / 2) + 'px';
+        el.style.top = Math.max(0, Math.round((H - groupH - WALL_PIC_GAP) / 2)) + 'px';
+        el.classList.add('visible');
     }
 
-    /* ── Pelihuoneen seinäkuva ───────────────────────────
-       Kuva on HTML-elementti canvasin ulkopuolella, joten koneen kokoon
-       ei kosketa. Se sijoitetaan vapaaseen seinäkaistaan koneen viereen
-       (PC) tai yläpuolelle (pystymobiili); jos tilaa ei ole, kuva pysyy
-       piilossa. Mobiilin vaakatasossa se piilotetaan aina. */
-    placeWallPicture(wrap, canvasW, canvasH) {
-        const pic = (typeof document !== 'undefined' && document.getElementById)
+    /* ── Pelihuoneen seinäkuva ──────────────────────────── */
+
+    /** Seinäkuva-elementti (tai null, jos ei ole käytettävissä) */
+    wallPic() {
+        return (typeof document !== 'undefined' && document.getElementById)
             ? document.getElementById('wall-pic') : null;
-        if (!pic || !pic.classList) return;
-        if (wallPicFailed) { pic.classList.remove('visible'); return; }
+    }
 
-        const landMobile = (typeof window.matchMedia === 'function')
-            && window.matchMedia('(orientation: landscape) and (max-height: 500px) and (pointer: coarse)').matches;
-        if (landMobile) { pic.classList.remove('visible'); return; }
-
-        const gap = 12;                        // marginaali seinään
-        pic.classList.add('visible');          // mitattava: display:none → 0
-        const picW = Number(pic.offsetWidth) || 0;
-        const picH = Number(pic.offsetHeight) || 0;
-        if (!picW || !picH) { pic.classList.remove('visible'); return; }
-
-        const freeX = (wrap.clientWidth - canvasW) / 2;
-        const freeY = (wrap.clientHeight - canvasH) / 2;
-        if (freeX >= picW + gap * 2) {
-            // Koneen vieressä oleva seinäkaista (tyypillisesti PC)
-            pic.style.left = Math.round((freeX - picW) / 2) + 'px';
-            pic.style.top = Math.round(Math.max(gap, freeY + gap)) + 'px';
-        } else if (freeY >= picH + gap * 2) {
-            // Koneen yläpuolinen seinäkaista (tyypillisesti pystymobiili)
-            pic.style.left = Math.round((wrap.clientWidth - picW) / 2) + 'px';
-            pic.style.top = Math.round((freeY - picH) / 2) + 'px';
-        } else {
-            pic.classList.remove('visible');   // ei mahdu → piiloon
+    /** Kuvan sisältökoko (px) vapaasta seinätilasta; null = ei näytetä.
+        Vaatii kuvan oikean koon (naturalWidth), joten ennen latausta ja
+        headless-ympäristössä kuva pysyy piilossa eikä muuta asettelua. */
+    wallPicSize(W, H) {
+        const el = this.wallPic();
+        if (!el || !el.classList || wallPicFailed) return null;
+        if (typeof window.matchMedia === 'function'
+            && window.matchMedia('(orientation: landscape) and (max-height: 500px) and (pointer: coarse)').matches) {
+            return null;                     // mobiilin vaakataso: ei mahdu
         }
+        const nw = Number(el.naturalWidth) || 0;
+        const nh = Number(el.naturalHeight) || 0;
+        if (!nw || !nh) return null;         // ei vielä ladattu
+        const aspect = nw / nh;
+        const ih = Math.min(H * WALL_PIC_H_RATIO, (W - WALL_PIC_SIDE) / aspect);
+        if (ih < WALL_PIC_MIN_H) return null;   // liian matala → ei nysää
+        return { ih: Math.round(ih), iw: Math.round(ih * aspect) };
     }
 
     /* ═══ PÄÄPIIRTO ═══════════════════════════════════ */
