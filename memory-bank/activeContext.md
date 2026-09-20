@@ -17,8 +17,8 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.38` (`index.html` → `#version-tag`) · **Git:** v4.37 committattu ja pushattu
-  20.9.2026 (`273552c`, origin/main) · **v4.38 työpuussa, ei committia** (odottaa käyttäjän testausta).
+- **Versio:** `v4.38` (`index.html` → `#version-tag`) · **Git:** **v4.38 committattu ja pushattu
+  20.9.2026** (`7b2e593`, origin/main) · työpuu puhdas.
 - **Päivä (v4.38):** ovet aukeavat **ilman lampun potkaisua** kun `dayT >= 0.5` (`lampFreeOpen()`,
   `DOOR_NO_LAMP_AT_DAY`), moskiitot **häipyvät päivällä kokonaan** (`MOSQUITO_DAY_DIM 1`) ja
   **täydellä päivällä (`dayT === 1`) kaikki katuvalot sammutetaan kerran** (`dayLampsOff`) –
