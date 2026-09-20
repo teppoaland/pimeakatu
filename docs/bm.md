@@ -4,7 +4,7 @@ Päivämäärä: 10.9.2026
 Versio: 1.1 (debuggauskorjaus)
 
 ## Mikä tämä on
-Blue Max on C64-klassikosta inspiroitunut isometrinen lentopeli. Puhdas HTML + CSS +
+Blue Max on retroklassikosta inspiroitunut isometrinen lentopeli. Puhdas HTML + CSS +
 JavaScript, ei ulkoisia riippuvuuksia eikä kirjastoja. Toimii pelkällä tiedoston
 avaamisella selaimessa. Pelaaja ohjaa Sopwith Camel -kaksitasoa I maailmansodan
 rintamalla, ampuu viholliskoneita ja pommittaa maakohteita.

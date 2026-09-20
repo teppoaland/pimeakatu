@@ -1,5 +1,5 @@
 ﻿=========================================================================
-    BOULDER DASH: BUILDAUS POIS - Toimenpidelista (seuraava sessio)
+    BOULDER DÄSH: BUILDAUS POIS - Toimenpidelista (seuraava sessio)
 =========================================================================
 
 Tausta: digGame2/-kansiossa on viela buildattu boulder_dash.html ja
@@ -23,7 +23,7 @@ VAIHEET:
    - .clinerules/02-game-core.md rivi 41 -> poista boulder_dash.html
    - .clinerules/03-versioning.md rivi 32 -> poista viittaus
    - PROJECT.md rivi 58 -> digGame2/ vain game_main.html
-   - docs/boulder-dash-memo.md -> poista buildaus-osio
+   - docs/bd-memo.md -> poista buildaus-osio
    - memory-bank/activeContext.md + progress.md -> paivita
 
 6. VERSIONOSTO: index.html #version-tag -> +0.1 (v3.18 -> v3.19)

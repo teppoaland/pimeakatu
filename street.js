@@ -70,7 +70,7 @@ const Street = (() => {
     /* ── Lamput (talojen väleissä) ──────────────────── */
     const lamps = [
         { x: 85,  bldgIdx: 1, lit: false, label: 'DIG\nGAME',    gameUrl: 'digGame1/game_main.html' },
-        { x: 255, bldgIdx: 3, lit: false, label: 'BOULDER\nDASH', gameUrl: 'digGame2/game_main.html' },
+        { x: 255, bldgIdx: 3, lit: false, label: 'BOULDER\nDÄSH', gameUrl: 'digGame2/game_main.html' },
         { x: 445, bldgIdx: 5, lit: false, label: 'BLUE\nMÄX',     gameUrl: 'bm/game_main.html' },
         { x: 625, bldgIdx: 7, lit: false, label: 'COM-\nMANDO',   gameUrl: null },
         { x: 720, bldgIdx: 8, lit: false, label: 'BAR',   gameUrl: null }
@@ -1285,12 +1285,12 @@ const Street = (() => {
                     return;
                 }
                 if (lamp.lit) {
-                    // Boulder Dash vaatii Dig Gamesta kerätyn avaimen
+                    // Boulder Däsh vaatii Dig Gamesta kerätyn avaimen
                     if (lamp.gameUrl && lamp.gameUrl.includes('digGame2') && !digKeyCollected) {
                         showNotification('🔑 Avain puuttuu! Saat avaimen kun läpäiset ensin pelin ensimmäisessä talossa!');
                         return;
                     }
-                    // Blue Max vaatii Boulder Dashista kerätyn avaimen
+                    // Blue Max vaatii Boulder Däshistä kerätyn avaimen
                     if (lamp.gameUrl && lamp.gameUrl.includes('bm/') && !boulderKeyCollected) {
                         showNotification('🔑 Avain puuttuu tonttu! Hae se edellisestä talosta!');
                         return;

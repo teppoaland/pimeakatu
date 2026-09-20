@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
    audio.js – Pimeä Katu -taustamusiikki
-   Iron Maiden "Running Free" – täysi bändisoundi
+   Täysi bändisoundi (fallback kun MP3 ei soi)
    Web Audio API: rummut + basso + särökitara + melodia
    ═══════════════════════════════════════════════════════════ */
 
@@ -42,7 +42,7 @@ const StreetAudio = (() => {
     const LOOP_BARS = CHORD_ROOTS.length;
     let LOOP = BAR * LOOP_BARS;
 
-    // "Running Free" -laulumelodia (E-molli, E3–B4)
+    // Laulumelodia (E-molli, E3–B4)
     // Tahdit 1-2, 3, 4, 5, 6 – jokaisessa 8 nuottia
     const MELODY_NOTES = [
         164.81,185.00,196.00,220.00, 196.00,185.00,164.81,146.83,
@@ -345,7 +345,7 @@ const StreetAudio = (() => {
         }
     }
 /* ═══════════════════════════════════════════════════
-       MELODIA: "Running Free" -laulumelodia
+       MELODIA: laulumelodia
        ═══════════════════════════════════════════════════ */
 
     function leadNote(freq, time, dur) {

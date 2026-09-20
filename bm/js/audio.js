@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   audio.js – Blue Max C64 -proseduraaliset äänet
+   audio.js – Blue Max -proseduraaliset äänet
    Web Audio API: moottori, kk, pommit, räjähdykset, Rule Britannia
    ═══════════════════════════════════════════════════════════ */
 const AudioFX = (() => {
@@ -101,7 +101,7 @@ const AudioFX = (() => {
         } catch(e) {}
     }
 
-    /* ── Räjähdys (3-kerroksinen jysäys, kuten Boulder Dash) ─ */
+    /* ── Räjähdys (3-kerroksinen jysäys, kuten Boulder Däsh) ─ */
     function playExplosion() {
         try {
             init();

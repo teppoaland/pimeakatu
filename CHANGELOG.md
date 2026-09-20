@@ -13,7 +13,7 @@
 ### Muutettu
 - `digGame1/.git` ja `digGame2/.git` **poistettu** → yksi yhteinen git juureen
 - `digGame1/MEMO.md` → `docs/dig-game-memo.md`
-- `digGame2/MEMO.md` → `docs/boulder-dash-memo.md`
+- `digGame2/MEMO.md` → `docs/bd-memo.md`
 - `digGame1/JATKOKEHITYS.md` → `docs/dig-game-roadmap.md`
 
 ### Poistettu

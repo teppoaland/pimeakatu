@@ -4,7 +4,7 @@ Päivämäärä: 11.9.2026
 Versio: 1.1
 
 ## Mikä tämä on
-Boulder Dash -tyylinen selainpeli. Toteutettu puhtaalla HTML + CSS + JavaScriptillä,
+Boulder Däsh -tyylinen selainpeli. Toteutettu puhtaalla HTML + CSS + JavaScriptillä,
 ei ulkoisia riippuvuuksia eikä kirjastoja. Toimii pelkällä tiedoston avaamisella selaimessa.
 
 ## Tiedostorakenne
@@ -95,5 +95,5 @@ pelaaja törmää jatkuvasti yllätyksiin, joista voi kertoa kavereille.
 
 ## Versiohallinta
 - Paikallinen git-repo kansiossa. **Ei ole tarkoitus julkaista mihinkään.**
-- Ensimmäinen snapshot: "Boulder Dash - initial working version"
+- Ensimmäinen snapshot: "Boulder Däsh - initial working version"
 - Nykyinen versio: **v1.0** (git-tag `v1.0`)

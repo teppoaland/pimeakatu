@@ -102,7 +102,7 @@ peli/
 
 - **localStorage:** `pimeakatu_gamestate` – pääportaalin pelitila
 - **Pelien sisäinen tila:** ei tallenneta (jokainen pelikerta alusta)
-- **Avaimet:** Dig Gamen avain → `digKeyCollected`, Boulder Dashin avain → `boulderKeyCollected`
+- **Avaimet:** Dig Gamen avain → `digKeyCollected`, Boulder Däshin avain → `boulderKeyCollected`
 
 ---
 
