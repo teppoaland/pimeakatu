@@ -17,8 +17,8 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.32` (`index.html` → `#version-tag`) · **Git:** v4.31 on committattu ja pushattu
-  20.9.2026; **v4.32 (päivä-lopputila) on työpuussa** – ei committia ilman pyyntöä.
+- **Versio:** `v4.32` (`index.html` → `#version-tag`) · **Git:** **v4.32 committattu ja pushattu
+  20.9.2026** (`f8fc96f`, origin/main) · työpuu puhdas.
 - **Tila:** pääportaali + 4 alipeliä (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️, `fruitgame` 🍒) valmiit ja pelattavat.
 - **Kadun canvas-huoneet (ei iframe):** palkintohuone `buildings[7]` · BAR (talo 9) · jukebox
   (`buildings[4]`, ovi x 410) · hedelmäpelitalo `buildings[6]` (iframe, aina auki).
