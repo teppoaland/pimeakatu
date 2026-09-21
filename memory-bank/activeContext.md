@@ -17,8 +17,32 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.46` (`index.html` → `#version-tag`) · **Git:** v4.39–v4.43 committattu ja
-  pushattu 20.9.2026 (`2ffcd94`, `e941778`, origin/main) · **työpuu:** v4.44 (Nuku → +1 🍔) + v4.45 (✕ sulkee huoneet, ei resettiä) + v4.46 (jukeboxin monivalinta).
+- **Versio:** `v4.49` (`index.html` → `#version-tag`) · **Git:** v4.39–v4.43 committattu ja
+  pushattu 20.9.2026 (`2ffcd94`, `e941778`, origin/main) · **työpuu:** v4.44 (Nuku → +1 🍔) + v4.45 (✕ sulkee huoneet, ei resettiä) + v4.46 (jukeboxin monivalinta) + v4.47 (ajoneuvon törmäyksen tärinä + `playKnock`) + v4.48 (✕-nappi: sulku kaikista tiloista, reset vain kadulta) + v4.49 (nälkä kulkee kaikkialla paitsi nukkuessa).
+- **🍔 Nälkä kulkee kaikkialla (v4.49, 21.9.2026):** nälkäblokki siirrettiin `update()`in alkuun
+  (kuolemasekvenssin jälkeen) → 🍔 kuluu nyt myös **BAR:ssa, jukeboxissa ja iframe-peleissä**
+  kuten kadulla. **Syy:** blokki oli huoneiden `return`ien jälkeen, ja lisäksi `closeGame()` teki
+  `hamburgerTimer = 2400` → jokainen alapelistä poistuminen täytti 40 s (hedelmäpelin lyhyet
+  sessiot eivät kuluttaneet mitään). Jäissä **vain** nukkuessa (`hungerOnHold`) ja kuolleena.
+  **Siirretty kuolema:** jos viimeinen 🍔 kuluu huoneessa/pelissä, kuolema ei laukea näkymättömissä
+  (`insideHiddenState()` → `starvingOnExit`) vaan **vasta kadulla**, jossa `checkStarvingOnExit()`
+  antaa 10 s (`HUNGER_WAKE_GRACE`) aikaa ostaa 🍔 BAR:sta; armoaika vain kerran eikä sitä tipu jos
+  ruokaa ehti saada. Uusi nuppi: `HUNGER_WARN`-logiikka ennallaan, `hamburgerTimer <= 0` + 🍔 > 0
+  → 10 s top-up (esim. BAR-osto 0-tilanteesta). **Lukitut arvot ennallaan:** 2400 framet (1/40 s),
+  katto 10, hinnat, RTP (sääntö 04 + `docs/economy-balance-memo.md` päivitetty). Validoitu
+  `%TEMP%\street-hunger-scope-test.cjs` (26 tarkistusta, 0 löydöstä). Versio `v4.49`, ei committia.
+- **✕-nappi korjattu (v4.48, 21.9.2026):** sama `handleCloseButton()` (`index.html`) palvelee **molempia**
+  ✕-nappeja (`#reset-btn` kadulla/huoneissa, `#iframe-close-btn` iframe-overlayn päällä). Järjestys:
+  (1) iframe auki (`#game-iframe-overlay.active`) → `Street.closeGame()` = takaisin kadulle,
+  (2) canvas-huone auki → `Street.closeRoom()` (BAR / makuuhuone / jukebox),
+  (3) vasta kadulla → `confirm()` + localStorage-tyhjennys + reload. **Syy mobiiliongelmaan:** napautus
+  (touchend + synteettinen click) ehti laueta kahdesti ja/tai ghost-click osui samaan kohtaan jäävään
+  reset-✕:ään heti kun huone/overlay sulkeutui → toinen laukaisu näki "ei mitään auki" → reset.
+  Nyt: **600 ms dedupe-suoja** (`CLOSE_DEDUPE_MS`), napautus hoidetaan `touchend`illa
+  (`preventDefault`, `passive:false`) eikä synteettistä clickiä enää synny, ✕-napeille
+  `touch-action: manipulation` ja mobiilissa isommat kohteet (reset 46×46, iframe-✕ 52×52).
+  `closeGame()` palauttaa nyt `true/false` ja lukee tallennetun tilan vain jos tallennus on olemassa
+  (estää "nollautuminen" jos localStorage ei ole käytettävissä). Versio `v4.48`, ei committia.
 - **Testaus:** v4.39–v4.42 käyttäjän testaus OK ("Tuli hieno" – led-valot syttyvät naksahdellen,
   vanhat lamput olivat dramaattisempia). **v4.43 odottaa käyttäjän testausta** (sääntö 05):
   makuuhuoneen oven pitää aueta ilman avaimia ja lamppua sekä yöllä (`?day=0`) että päivällä (`?day=1`).

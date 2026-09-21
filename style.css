@@ -212,6 +212,7 @@ body::after {
     justify-content: center;
     transition: all 0.15s;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 #iframe-close-btn:hover {
     background: #cc0000;
@@ -253,6 +254,7 @@ body::after {
     justify-content: center;
     transition: all 0.2s;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 #reset-btn:hover {
     background: rgba(180, 40, 40, 0.85);
@@ -336,6 +338,17 @@ body::after {
     }
     #game-canvas {
         border-width: 2px;
+    }
+    /* ✕-napit: isommat kosketuskohteet mobiilissa (helpompi osua) */
+    #reset-btn {
+        width: 46px;
+        height: 46px;
+        font-size: 1.2rem;
+    }
+    #iframe-close-btn {
+        width: 52px;
+        height: 52px;
+        font-size: 1.6rem;
     }
 }
 

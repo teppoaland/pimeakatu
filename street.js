@@ -155,10 +155,14 @@ const Street = (() => {
     const SLEEP_FADE_FRAMES = SLEEP_DARK_FRAMES + SLEEP_ZZZ_FRAMES;  // ~3,75 s yhteensä
     /* ── Nälkä on jäissä vain nukkuessa (v4.41, käyttäjän linjaus) ──
        Makuuhuone ja nukkumisen Zzz-pimennys pysäyttävät nälkäajastimen,
-       joten pelaaja ei voi kuolla nukkuessaan. Muualla (BAR, jukebox,
-       iframe-pelit) nälkä tikittää ennallaan – pelaaja huolehtii itse,
-       ettei pelaa tai käy "ostoksilla" nälissään. */
+       joten pelaaja ei voi kuolla nukkuessaan. Kaikkialla muualla (katu,
+       BAR, jukebox, iframe-pelit) kulutus jatkuu kuten kadulla (v4.49) –
+       pelaaja huolehtii itse, ettei pelaa tai käy "ostoksilla" nälissään. */
     function hungerOnHold() { return sleepRoom || sleepPhase > 0; }
+    /* Tila, jossa kuolema ei näkyisi: huone peittää kadun tai alapeli on
+       auki. Siellä ei päästetä pelaajaa kuolemaan – viimeisen 🍔:n kuluessa
+       kuolema siirtyy kadulle (starvingOnExit + checkStarvingOnExit). */
+    function insideHiddenState() { return iframeOpen || barRoom || jukeboxRoom; }
     let isDay = false;             // tallennettu päivä/yö-tila (state.isDay)
     let barRoom = false;
     let barBuyQty = 0;             // BAR: tämän vierailun ostetut (▼ peruu vain nämä)
@@ -194,7 +198,11 @@ const Street = (() => {
     let coinCount = 0;
     let coinRespawnTimer = 0;
     let hamburgerCount = 5;
-    let hamburgerTimer = 2400;  // 40s @ ~60fps
+    let hamburgerTimer = 2400;  // 40s @ ~60fps – lukittu tahti (sääntö 04)
+    /* v4.49: jos viimeinen 🍔 kuluu huoneessa tai alapelissä, kuolema ei
+       laukea näkymättömissä vaan vasta kadulle palatessa
+       (checkStarvingOnExit antaa HUNGER_WAKE_GRACE-verran aikaa reagoida). */
+    let starvingOnExit = false;
     /* Herätysrauha (v4.41): nukkumisen jälkeen nälkäajastimelle jää vähintään
        tämä aika, ettei 1 🍔:lla nukkunut voi kuolla heti sängystä noustuaan.
        Ajastin ei nollaudu täyteen → ei ilmaista 40 s:ää eikä sängyssä
@@ -252,6 +260,7 @@ const Street = (() => {
     let isTouchDevice = false;
     let animClock = 0;                // animaatiokello (~frameä): hengitys + silmän vilkahdus
     let hitPauseTimer = 0;            // hit pause -laskuri: maailma jäätyy osumasta (frameä)
+    let vehicleShakeTimer =0;          // tärinä ajoneuvon törmäyksestä  (frameä, vain visuaalinen)
     let iframeOpen = false;           // alapeli auki (overlay) → päivän liuku pysähtyy
 
     /* ── Kamera (mobiili: vaakasuuntainen seuranta) ── */
@@ -989,7 +998,10 @@ const Street = (() => {
     }
 
     function update(dt) {
-        // ── Hit pause: maailma jäätyy 2 frameä osumasta (render jatkaa) ──
+        // Ajoneuvon törmäyksen tärinä (vain visuaalinen – ei jäädytä pelilogiikkaa)
+        if  (vehicleShakeTimer > 0) { vehicleShakeTimer -= dt; }
+
+        // ── Hit pause: maailma jäätyy 2  frameä osumasta (render jatkaa) ──
         if (hitPauseTimer > 0) { hitPauseTimer -= dt; return; }
 
         // Animaatiokello (hengitys, silmän vilkahdus)
@@ -1081,6 +1093,42 @@ const Street = (() => {
                 location.reload();
             }
             return;
+        }
+
+        // ── Nälkä (hampurilaisajastin, 1/60s) ────────────────────────
+        // Kulutus jatkuu kaikkialla kuten kadulla (v4.49): myös BAR:ssa,
+        // jukeboxissa ja iframe-peleissä. Jäissä vain nukkuessa
+        // (hungerOnHold, v4.41) ja kuolleena (yllä oleva return).
+        // Viimeisen 🍔:n kuluessa huoneessa/pelissä kuolema ei laukea
+        // näkymättömissä: se odottaa kadulle paluuta, jossa
+        // checkStarvingOnExit antaa 10 s armoaikaa reagoida.
+        // Tahti (2400 framet = 40 s) ja katto 10 ovat lukittuja (sääntö 04).
+        if (!hungerOnHold()) {
+            if (hamburgerCount > 0) {
+                // Juuri saatu 🍔 (BAR-osto tai herätys 0-tilanteesta) → 10 s
+                if (hamburgerTimer <= 0) hamburgerTimer = HUNGER_WAKE_GRACE;
+                hamburgerTimer -= dt;
+                if (hamburgerTimer <= 0) {
+                    hamburgerCount--;
+                    state.inventory.hamburgerCount = hamburgerCount;
+                    GameState.save(state);
+                    updateHUD();
+                    if (hamburgerCount > 0) {
+                        starvingOnExit = false;   // ruokaa on taas
+                        hamburgerTimer = 2400;
+                    } else {
+                        hamburgerTimer = 0;
+                        // Kuolema vasta kadulla, jos oltiin huoneessa/pelissä
+                        if (insideHiddenState()) starvingOnExit = true;
+                    }
+                }
+            } else if (hamburgerTimer > 0) {
+                hamburgerTimer -= dt;    // 0 🍔: kadulle paluun armoaika kuluu
+            }
+            if (hamburgerCount <= 0 && hamburgerTimer <= 0 && !insideHiddenState()) {
+                killPlayer();
+                return;
+            }
         }
 
         // ── Makuuhuone (ex-palkintohuone, talo 7) ──
@@ -1391,24 +1439,9 @@ const Street = (() => {
             }
         }
 
-        // ── Hampurilaisajastin (1/60s) ──────────
-        // Nukkuminen pitää nälän jäissä (v4.41): makuuhuone ja Zzz-pimennys
-        // pysäyttävät ajastimen → pelaaja ei voi kuolla nukkuessaan.
-        // Muualla (BAR, jukebox, iframe-pelit) ajastin tikittää ennallaan.
-        if (hamburgerCount > 0 && !hungerOnHold()) {
-            hamburgerTimer -= dt;
-            if (hamburgerTimer <= 0) {
-                hamburgerCount--;
-                state.inventory.hamburgerCount = hamburgerCount;
-                GameState.save(state);
-                updateHUD();
-                if (hamburgerCount <= 0) {
-                    killPlayer();
-                    return;
-                }
-                hamburgerTimer = 2400;
-            }
-        }
+        // HUOM (v4.49): hampurilaisajastin siirrettiin update():n alkuun
+        // (kuolemasekvenssin jälkeen) → kulutus jatkuu myös BAR:ssa,
+        // jukeboxissa ja iframe-peleissä eikä pysähdy huoneisiin.
 
         // ── Toiminto ────────────────────────────────
         if (actionJustPressed) handleAction();
@@ -1620,6 +1653,8 @@ const Street = (() => {
                     player.kicking = false;
                     player.kickFrame = 0;
                     spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ffaa44', 15);
+                    playKnock();   // "Smack"-tömähdys
+                    vehicleShakeTimer = 90;  // ~1.5s tärinä
                     hamburgerCount--;
                     state.inventory.hamburgerCount = hamburgerCount;
                     GameState.save(state);
@@ -2021,6 +2056,20 @@ const Street = (() => {
         resetJukeboxRoom();
     }
 
+    /* ═══ KADULLE PALUU: siirretty nälkäkuolema (v4.49) ═══════════
+       Jos viimeinen 🍔 kului huoneessa tai alapelissä, kuolema ei lauennut
+       näkymättömissä. Kadulle palatessa annetaan HUNGER_WAKE_GRACE (10 s)
+       aikaa reagoida (esim. ostaa 🍔 BAR:sta), minkä jälkeen tavallinen
+       nälkäkuolema alkaa näkyvästi kadulla. Armoaika vain kerran – lippu
+       nollataan, joten ovikävelyllä ei voi kerätä lisäaikaa. */
+    function checkStarvingOnExit() {
+        if (!starvingOnExit) return;
+        starvingOnExit = false;
+        // Armoaika vain jos ollaan yhä 0 🍔:ssa – jos pelaaja ehti ostaa
+        // (tai sai) ruokaa, tavallinen tahti jatkuu eikä lisäaikaa tipu.
+        if (hamburgerCount <= 0) hamburgerTimer = HUNGER_WAKE_GRACE;
+    }
+
     /* ═══ SULJE HUONE (BAR/sleep/jukebox) ✕-napista ═════════════ */
     /* Palauttaa true jos huone suljettiin, false jos ei oltu huoneessa. */
     function closeRoom() {
@@ -2029,6 +2078,7 @@ const Street = (() => {
             barBuyQty = 0;
             barBuyHeldUp = false;
             barBuyHeldDown = false;
+            checkStarvingOnExit();
             return true;
         }
         if (sleepRoom) {
@@ -2037,18 +2087,23 @@ const Street = (() => {
             sleepHeldUp = false;
             sleepHeldDown = false;
             if (sleepPhase > 0) { sleepPhase = 0; }  // kesken nukkumisen → herätä
+            checkStarvingOnExit();
             return true;
         }
         if (jukeboxRoom) {
             // ✕ = peruuta: valinnat pois ilman veloitusta (v4.46)
             resetJukeboxRoom();
+            checkStarvingOnExit();
             return true;
         }
         return false;
     }
 
+    /* Sulkee alapelin (iframe). Palauttaa true jos alapeli oli auki.
+       index.html:n ✕-nappi käyttää tätä: sulje ensin, resetoi vasta kadulla. */
     function closeGame() {
         const overlay = document.getElementById('game-iframe-overlay');
+        if (!overlay || !overlay.classList.contains('active')) return false;
         const iframe = overlay.querySelector('iframe');
 
         // Vapauta iframen fokus ENNEN piilotusta
@@ -2073,7 +2128,13 @@ const Street = (() => {
             try { canvas.focus(); } catch(e) {}
         }, 50);
         StreetAudio.start(); // herätä AudioContext jos suspendattu
-        state = GameState.load();
+        /* Tila luetaan tallennuksesta vain jos tallennus on olemassa.
+           Jos localStorage ei ole käytettävissä (esim. yksityinen selaus),
+           muistissa oleva tila säilyy – muuten katu näyttäisi nollautuvan
+           aina alapelistä palatessa. */
+        let savedRaw = null;
+        try { savedRaw = localStorage.getItem(GameState.STORAGE_KEY); } catch (e) {}
+        if (savedRaw) state = GameState.load();
         for (let i = 0; i < lamps.length; i++) {
             lamps[i].lit = state.litLamps[i];
             lamps[i].kickCount = 0;
@@ -2089,7 +2150,10 @@ const Street = (() => {
         coinRespawnTimer = coin.collected ? 1 : 0;
         coin.despawnTimer = coin.collected ? 0 : 600;
         hamburgerCount = state.inventory.hamburgerCount || 5;
-        hamburgerTimer = 2400;
+        /* HUOM (v4.49): ajastinta EI enää nollata tässä – se jatkaa siitä
+           mihin jäi, kuten kadulla. Vanha `hamburgerTimer = 2400` antoi
+           ilmaisen 40 s joka kerta, kun alapelistä poistui → hedeläpelin
+           lyhyet sessiot eivät koskaan kuluttaneet mitään. */
         if (coin.collected) { coin.x = -100; coin.y = -100; }
         else { coin.x = randomCoinX(); coin.y = randomCoinY(); }
         digKeyCollected = state.digKeyCollected || false;
@@ -2106,6 +2170,8 @@ const Street = (() => {
         player.x = savedPlayerX; player.y = savedPlayerY;
         player.vx = 0; player.vy = 0;
         updateHUD();
+        checkStarvingOnExit();   // mahdollinen siirretty nälkäkuolema
+        return true;
     }
 
     /** Tyhjentää kaikki näppäintilat ja action-flagit */
@@ -2652,6 +2718,10 @@ const Street = (() => {
         // Oviukon isku: 1–2 px tärinä jäädytyksen aikana (hitPauseTimer toimii kellona)
         if (avenger && avenger.phase === 'hold' && hitPauseTimer > 0) {
             ctx.translate(Math.round(Math.sin(hitPauseTimer * 0.9) * 1.6), 0);
+        }
+        // Ajoneuvon törmäyksen tärinä
+        if (vehicleShakeTimer > 0) {
+            ctx.translate(Math.round(Math.sin(vehicleShakeTimer *0.9) *1.6), 0);
         }
 
         // Taivas

@@ -89,6 +89,29 @@ pitää mennä onholdiin. Pelaaja ei saa kuolla nukkuessa."* Rajaus: **vain nukk
 - **Lukitut arvot ennallaan:** 2400 framet (1 🍔 / 40 s), katto 10, BAR 1 kolikko = 1 🍔,
   RTP ≈ 78,5 %. Muutos koskee vain *sitä, milloin* ajastin käy – ei sen tahtia eikä hintoja.
 
+### Kulutus jatkuu kaikkialla muualla kuin nukkuessa (v4.49) – ei lukittu talousarvo
+
+Käyttäjän havainto 21.9.2026: *"hampurilaisia kuluu myös Jukebox-tilassa ja hedelmäpeliä pelatessa.
+Nyt tuntuu että kulutus pysähtyy ko tiloissa. … Nukkuessa=levossa hampurilaiskulutus onkin
+tarkoituksella tauolla, muissa ei tarvisi olla vaan jatkuu, kunten katuelämä."*
+
+- **Syy:** nälkäblokki oli `update()`issa **huoneiden `return`ien jälkeen** → jukebox ja BAR
+  pysäyttivät kulutuksen; lisäksi `closeGame()` teki `hamburgerTimer = 2400`, joten **jokainen
+  alapelistä poistuminen täytti 40 s ajastimen** (hedelmäpelin lyhyet sessiot eivät kuluttaneet
+  mitään). DG1/DG2/BM:ssä kulutus näkyi, koska sessiot ovat pitkiä eivätkä ne pysäytä silmukkaa.
+- **Nyt:** blokki on heti kuolemasekvenssin jälkeen → kulutus jatkuu kadulla, BAR:ssa, jukeboxissa
+  ja iframe-peleissä; jäissä vain `hungerOnHold()` (makuuhuone + Zzz). `closeGame()` ei enää
+  nollaa ajastinta (se jatkaa siitä mihin jäi) eikä lue tallennusta jos `localStorage` puuttuu.
+- **Siirretty kuolema:** viimeisen 🍔:n kuluessa huoneessa/pelissä kuolema ei laukea näkymättömissä
+  (huone peittää kadun / iframe on auki) → `starvingOnExit`; kadulle palatessa
+  `checkStarvingOnExit()` antaa **10 s** (`HUNGER_WAKE_GRACE`) aikaa ostaa 🍔 BAR:sta, minkä jälkeen
+  tavallinen nälkäkuolema alkaa näkyvästi kadulla. Armoaika vain kerran (lippu nollataan) eikä sitä
+  tipu, jos pelaaja ehti ostaa ruokaa. 0 🍔 + armoaika loppu ei anna lisää aikaa ovikävelyllä.
+- **Lukitut arvot ennallaan:** 2400 framet (1 🍔 / 40 s), katto 10, BAR 1 kolikko = 1 🍔,
+  jukebox 1 kolikko / kappale, RTP ≈ 78,5 %, syntymäpaketti 2 🪙 + 5 🍔.
+- **Validointi:** `%TEMP%\street-hunger-scope-test.cjs` (26 tarkistusta, 0 löydöstä) –
+  kulutus kadulla/BAR:ssa/jukeboxissa/iframessa, jäissä makuuhuoneessa, siirretty kuolema.
+
 ### Makuuhuoneen ovi auki ilman avaimia (v4.43) – ei lukittu talousarvo
 
 Käyttäjän pyyntö 20.9.2026: *"Vapauta ovi, että ei tarvi 3 avainta että pääsee nukkumaan.

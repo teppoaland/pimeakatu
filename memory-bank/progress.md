@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> **v4.42 – 20.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
+> **v4.48 – 21.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -41,6 +41,8 @@
 | 💡 Yö sytyttää katuvalot yksi kerrallaan | ✅ v4.42 – kun `dayT === 0` ja pelaaja on edennyt (`state.isDay === false`), lamput syttyvät itsestään vasemmalta oikealle (~0,3 s väli: `NIGHT_LAMP_FIRST 30` / `NIGHT_LAMP_INTERVAL 18` / `NIGHT_LAMP_ORDER 'wave'`) + `playLampOn()`-naksahdus + kipinähiukkaset. `nightShowArmed` herää vain aidosta päivä→yö-siirtymästä → uudessa pelissä ja sivunlatauksessa valot potkitaan yhä itse. `kickCount` ei kasva (cheatit/ylikuumeneminen ennallaan), ovet aukeavat ilman potkua vain kun päivä/yö on ratkaistu. `?day=0` näyttää efektin heti. **Käyttäjän testaus 20.9.2026: "Tuli hieno" – sopivasti pikkuisen liioiteltu (led-valot vs. vanhat dramaattiset lamput) → hyväksytty** |
 | 🚪 Makuuhuoneen ovi auki ilman avaimia | ✅ v4.43 – makuuhuoneeseen (talo 7, `buildings[7]`) pääsee **aina**: ei 3 avainta eikä lamppua, päivällä ja yöllä (kuten BAR). `handleAction()` avaa huoneen oven edestä (`lamp.bldgIdx === SLEEP_BLDG_IDX`, ehto ennen `lamp.lit \|\| lampFreeOpen()`), kuollut avainpopup poistettu; oven ulkoasu (`drawDoor()`) ja kynnysvalo (`drawThresholdPaving()`) seuraavat samaa `sleepOpen`-ehtoa. Avainportit ja koko muu katu ennallaan; **talous ennallaan** (Nuku/Poistu ilmaisia). Seuraus: nukkua voi heti ensimmäisenä yönä → `state.isDay` voi ratketa ennen avaimia. **Käyttäjän pyyntö 20.9.2026** |
 | 🛏️ Nuku → +1 🍔 | ✅ v4.44 – makuuhuoneessa Nuku antaa **+1 🍔** herätessä (katto 10, sama kuin BAR). Käyttäjän pyyntö 21.9.2026. Nälkä jäissä ja HUNGER_WAKE_GRACE ennallaan; muut talousarvot (2400, katto 10, hinnat, RTP) eivät muutu |
+| 🍔 Nälkä kulkee kaikkialla | ✅ v4.49 – nälkäblokki siirrettiin `update()`in alkuun → 🍔 kuluu myös **BAR:ssa, jukeboxissa ja iframe-peleissä** (ennen: jäissä vahingossa); `closeGame()` ei enää nollaa 40 s ajastinta poistuttaessa. Jäissä vain nukkuessa. Viimeisen 🍔:n kuluessa huoneessa/pelissä kuolema **siirtyy kadulle** (10 s armoaika). Lukitut arvot (2400/katto 10/hinnat/RTP) ennallaan. Validoitu `%TEMP%\street-hunger-scope-test.cjs` 26/26 |
+| ✕-nappi (sulku + reset) | ✅ v4.48 – ✕ sulkee **minkä tahansa** tilan (alapeli-iframe / BAR / makuuhuone / jukebox) ja resetoi pelin **vain kadulla**. 600 ms dedupe-suoja estää mobiilin tupla-/ghost-klikkauksen (aiemmin ✕ = resetti myös BAR/hedelmäpelistä mobiilissa); touchend hoitaa napautuksen, isommat kosketuskohteet, `closeGame()` palauttaa true/false eikä enää nollaa tilaa jos localStorage puuttuu |
 
 
 
