@@ -160,9 +160,10 @@ const Street = (() => {
        pelaaja huolehtii itse, ettei pelaa tai käy "ostoksilla" nälissään. */
     function hungerOnHold() { return sleepRoom || sleepPhase > 0; }
     /* Tila, jossa kuolema ei näkyisi: huone peittää kadun tai alapeli on
-       auki. Siellä ei päästetä pelaajaa kuolemaan – viimeisen 🍔:n kuluessa
-       kuolema siirtyy kadulle (starvingOnExit + checkStarvingOnExit). */
-    function insideHiddenState() { return iframeOpen || barRoom || jukeboxRoom; }
+       auki. Sinne ei jätetä pelaajaa kuolemaan – huone/alapeli suljetaan
+       ensin (leaveHiddenStateForDeath), jotta kuolinsekvenssi näkyy kadulla.
+       Myös sanomalehden lukutila (v4.53) peittää kadun. */
+    function insideHiddenState() { return iframeOpen || barRoom || jukeboxRoom || newsRoom; }
     let isDay = false;             // tallennettu päivä/yö-tila (state.isDay)
     let barRoom = false;
     let barBuyQty = 0;             // BAR: tämän vierailun ostetut (▼ peruu vain nämä)
@@ -195,14 +196,24 @@ const Street = (() => {
     let jukeSpaceHeld = false;     // Space/⚡/(o) reunanilmaisu (ota/poista)
     let jukeEnterHeld = false;     // Enter-reunanilmaisu (soita & poistu)
     let jukeQueue = [];            // soivat kappaleet numeroina (1..N), sama kuin audio-jono
+
+    /* ── Sanomalehti (v4.53) ──────────────────────────
+       Kadulla lojuva lehti avataan toimintonapilla → peliohjeet.
+       Lukutila on kuin canvas-huone: maailma jäätyy, nälkä kuluu
+       (v4.49/v4.50) ja ✕-nappi sulkee (closeRoom). Sivuja selataan
+       ▲/▼, Space (⚡) vie seuraavalle sivulle ja poistuu viimeiseltä,
+       (o)/Enter poistuu heti. Ei tallennettavaa tilaa. */
+    let newsRoom = false;
+    let newsScreen = 0;            // näkyvä "näyttö" (pitkä sivu voi olla usealla)
+    let newsHeldUp = false;        // ▲ reunanilmaisu
+    let newsHeldDown = false;      // ▼ reunanilmaisu
+    let newsSpaceHeld = false;     // Space/⚡ reunanilmaisu (seuraava sivu)
+    let newsExitHeld = false;      // (o)/Enter reunanilmaisu (poistu heti)
+
     let coinCount = 0;
     let coinRespawnTimer = 0;
     let hamburgerCount = 5;
     let hamburgerTimer = 2400;  // 40s @ ~60fps – lukittu tahti (sääntö 04)
-    /* v4.49: jos viimeinen 🍔 kuluu huoneessa tai alapelissä, kuolema ei
-       laukea näkymättömissä vaan vasta kadulle palatessa
-       (checkStarvingOnExit antaa HUNGER_WAKE_GRACE-verran aikaa reagoida). */
-    let starvingOnExit = false;
     /* Herätysrauha (v4.41): nukkumisen jälkeen nälkäajastimelle jää vähintään
        tämä aika, ettei 1 🍔:lla nukkunut voi kuolla heti sängystä noustuaan.
        Ajastin ei nollaudu täyteen → ei ilmaista 40 s:ää eikä sängyssä
@@ -408,6 +419,81 @@ const Street = (() => {
     let spawnTimers = [300, 300];     // 5 s ekaan spawniin molemmille
     const TRAFFIC_DAY_MULT = 2;       // päivällä liikennevirta tuplataan (v4.37, spawn-väli /2)
 
+    /* ── Viemärinkannet: avoin kaivo (v4.51/v4.52, käyttäjän pyyntö 21.9.2026) ──
+       Kadulla on 2 viemärinkantta (foreground.manholes). Jos kansi puuttuu,
+       kohta on musta reikä: siihen astuva pelaaja putoaa alas (katoaa) ja
+       köpii takaisin ylös.
+       MENETYS (v4.52): putoaminen vie **enintään 2 🪙** (kolikot hulahtavat
+       viemäriin): 3 → 1, 2 → 0, 1 → 0 (ainutkin kolikko menee), 0 → ei mitään.
+       Putoaminen ei syö 🍔:tä eikä tapa pelaajaa.
+       Ei tainnutusta (toisin kuin auto/sähkökaappi/kukkaruukku).
+       Arvonta: pelin alussa 1/6 (satunnainen kansi puuttuu) ja 1/10 joka
+       kerta kun pelaaja palaa kadulle huoneesta tai alapelistä – tilanne voi
+       vaihtua molempiin suuntiin (kansi katoaa TAI asennetaan takaisin).
+       Tila on vain muistissa → uusi arpa joka latauksella (ei uutta
+       localStorage-avainta, gameState.js ei muutu).
+       Testityökalut (eivät tallenna): ?hole=1 = 1. kansi puuttuu heti,
+       ?hole=2 = 2. kansi puuttuu, ?hole=0 = molemmat paikallaan. */
+    const MANHOLE_START_CHANCE  = 1 / 6;   // uusi peli / sivun lataus
+    const MANHOLE_RETURN_CHANCE = 1 / 10;  // paluu huoneesta / alapelistä
+    const MH_COIN_COST = 2;                // putoaminen vie enintään 2 kolikkoa (v4.52)
+    const MH_HIT_RX = 11;                  // törmäysellipsi: piirros on 14×7,
+    const MH_HIT_RY = 5;                   //   hitusen pienempi → ovelle mahtuu
+    const MH_FALL_FRAMES  = 36;            // ~0,6 s: vajoaa reikään (katoaa) – nopea
+    const MH_CLIMB_FRAMES = 210;           // ~3,5 s: köpii hitaasti takaisin ylös
+    const MH_RISE_PART    = 0.65;          // osuus kiipeämisestä, jolloin hahmo nousee esiin
+    const MH_STEP_PX      = 9;             // loppuosa: astuu reiän reunan yli kuivalle
+    const MH_CLIMB_WOBBLE = 1.6;           // köpimisen sivuttaisheilunta (px, vain visuaalinen)
+    let manholeOpen = null;                // null = kannet paikallaan · 0/1 = kumpi puuttuu
+    let mhInside = [false, false];         // oliko jalkapiste reiän ellipsissä (reunaehto)
+    let mhAction = null;                   // { idx, phase: 'fall' | 'climb', t } pudotuksen aikana
+    let wasHiddenStreet = false;           // oliko huone/alapeli auki viime framella (paluu = 1/10)
+
+    const MH_HOLE_PARAM = (typeof location !== 'undefined' && typeof URLSearchParams !== 'undefined')
+        ? new URLSearchParams(location.search).get('hole') : null;
+    /* undefined = ei pakotettu · null = pakotettu "kannet paikallaan" · 0/1 = pakotettu kansi */
+    const MH_FORCE = (MH_HOLE_PARAM === '0' || MH_HOLE_PARAM === '1' || MH_HOLE_PARAM === '2')
+        ? (MH_HOLE_PARAM === '0' ? null : Number(MH_HOLE_PARAM) - 1)
+        : undefined;
+
+    /* Onko pelaajan jalkapiste reiän ellipsin sisällä? */
+    function manholeHit(idx) {
+        const mh = (foreground && foreground.manholes) ? foreground.manholes[idx] : null;
+        if (!mh) return false;
+        const fx = (player.x + player.w / 2) - mh.x;
+        const fy = (player.y + player.h - 1) - mh.y;
+        return (fx * fx) / (MH_HIT_RX * MH_HIT_RX) + (fy * fy) / (MH_HIT_RY * MH_HIT_RY) <= 1;
+    }
+
+    /* Alkutilanne: 1/6 → satunnainen kansi puuttuu. */
+    function rollManholeState() {
+        if (MH_FORCE !== undefined) { manholeOpen = MH_FORCE; mhInside = [false, false]; return; }
+        manholeOpen = (Math.random() < MANHOLE_START_CHANCE)
+            ? (Math.random() < 0.5 ? 0 : 1)
+            : null;
+        mhInside = [manholeHit(0), manholeHit(1)];
+    }
+
+    /* Paluu kadulle: 1/10 → tilanne vaihtuu (kansi katoaa TAI palaa paikalleen). */
+    function maybeRerollManholeState() {
+        if (MH_FORCE !== undefined || playerDead || mhAction) return;
+        if (Math.random() >= MANHOLE_RETURN_CHANCE) return;
+        manholeOpen = (manholeOpen == null)
+            ? (Math.random() < 0.5 ? 0 : 1)
+            : null;
+        /* Jos jalat ovat juuri uuden reiän kohdalla, putoaminen ei laukea
+           heti: jalkapisteen pitää käydä välillä ellipsin ulkopuolella. */
+        mhInside = [manholeHit(0), manholeHit(1)];
+    }
+
+    /* Paluu kadulle -vahti: kun huone tai alapeli sulkeutuu, arvotaan 1/10
+       (kattaa kaikki poistumistiet: ✕, Poistu, Space, Enter, RETURN_TO_STREET). */
+    function trackHiddenStreet() {
+        const nowHidden = iframeOpen || sleepRoom || barRoom || jukeboxRoom;
+        if (wasHiddenStreet && !nowHidden) maybeRerollManholeState();
+        wasHiddenStreet = nowHidden;
+    }
+
     /* ── Kukkaruukun pudotus ──────────────────────── */
     function spawnFlowerPot(bldg) {
         const dc = doorCenter(bldg);
@@ -536,6 +622,71 @@ const Street = (() => {
         }
         StreetAudio.stop();        // pysäytä taustamusiikki
         StreetAudio.playDeathGong(); // gongi kumahtaa
+    }
+
+    /* ── Avoin kaivo: pudotus ja ylöskiipeäminen (v4.51/v4.52) ───────
+       Pelaaja astui reiän ellipsiin → vajoaa alas (katoaa), köpii takaisin
+       ylös ja jatkaa matkaa. Menetys: **enintään 2 🪙** (1 → 0, 0 → ei mitään);
+       ei tainnutusta eikä 🍔-menetystä.
+       Sekvenssin ajan katu on jäissä (update palaa heti alussa). */
+    function startManholeFall(idx) {
+        const mh = foreground.manholes[idx];
+        mhAction = { idx: idx, phase: 'fall', t: MH_FALL_FRAMES };
+        player.kicking = false;
+        player.kickFrame = 0;
+        player.walking = false;
+        hitPauseTimer = HIT_PAUSE;                     // pieni pysähdys osumasta
+        playKnock();                                   // putoamisen tömähdys
+        spawnParticles(mh.x, mh.y - 2, '#3a3a3a', 8);  // pölyä reiän reunalta
+    }
+
+    function updateManholeAction(dt) {
+        const a = mhAction;
+        const mh = foreground.manholes[a.idx];
+        a.t -= dt;
+
+        if (a.phase === 'climb') {
+            /* Kiipeäminen (v4.51): hahmo nousee hitaasti KAIVON KESKELTÄ
+               (jalat reiän keskipisteessä) ja astuu lopuksi reunan yli
+               kuivalle. Logiikka seuraa visuaalia → loppuasento on valmis
+               eikä hahmo hypähdä viimeisellä framella. */
+            const p = Math.max(0, Math.min(1, 1 - a.t / MH_CLIMB_FRAMES));
+            const stepP = Math.max(0, (p - MH_RISE_PART) / (1 - MH_RISE_PART));
+            player.x = mh.x - player.w / 2;
+            player.y = (mh.y - player.h) - MH_STEP_PX * stepP;
+            player.vx = 0; player.vy = 0;
+            if (a.t > 0) return;
+            /* Ylös päästy: jalat ovat ellipsin ulkopuolella → ei heti uutta
+               putoamista, mutta seuraava astuminen laukaisee taas. */
+            player.walking = false;
+            player.walkFrame = 0;
+            mhInside[a.idx] = false;
+            mhAction = null;
+            spawnParticles(mh.x, mh.y - 6, '#5a5a5a', 8);
+            return;
+        }
+
+        /* Pudotus: pelaaja valuu nopeasti reiän KESKIPISTEESEEN
+           (jalat keskelle) ja vajoaa siitä alas. */
+        const pull = Math.min(1, 0.22 * dt);
+        player.x += (mh.x - player.w / 2 - player.x) * pull;
+        player.y += (mh.y - player.h - player.y) * pull;
+        player.vx = 0; player.vy = 0;
+        if (a.t > 0) return;
+
+        /* Pohjassa: menetys enintään 2 🪙 (v4.52) – kolikot hulahtavat
+           viemäriin: 3 → 1, 2 → 0, 1 → 0 (ainutkin kolikko menee),
+           0 → ei mitään. Ei 🍔-menetystä eikä kuolemaa. */
+        if (coinCount > 0) {
+            coinCount = Math.max(0, coinCount - MH_COIN_COST);
+            state.inventory.coinCount = coinCount;
+            GameState.save(state);
+            updateHUD();
+        }
+        a.phase = 'climb';
+        a.t = MH_CLIMB_FRAMES;
+        player.x = mh.x - player.w / 2;     // kiipeäminen alkaa reiän keskeltä
+        player.y = mh.y - player.h;
     }
 
     /* ── Pienten talojen valot ──────────────────── */
@@ -872,6 +1023,7 @@ const Street = (() => {
         initClouds();
         initBackdrop();
         initForeground();
+        rollManholeState();   // avoin kaivo: 1/6 (tai ?hole=0/1/2) – v4.51
         setupInput();
         resize();
         lastTime = performance.now();
@@ -997,6 +1149,109 @@ const Street = (() => {
         if (Math.abs(target - camX) < 0.5) camX = target;
     }
 
+    /* ── Liikenne: ajoneuvojen liike, spawnit ja törmäys ──────────
+       Kaksi ajorataa (LANE_DEFS). Päivällä liikennevirta tuplataan
+       (v4.37): spawn-laskuri kuluu TRAFFIC_DAY_MULT-kertaista vauhtia ja
+       kerroin liukuu dayT:n mukana (1 = yö, TRAFFIC_DAY_MULT = täysi päivä).
+       Sama 1 ajoneuvo per kaista ja samat nopeudet/törmäykset kuin ennen.
+       Palauttaa true, jos ajoneuvo osui pelaajaan tällä framella.
+       HUOM (v4.54): liikenne pyörii myös sanomalehteä lukiessa → kadulla
+       voi jäädä auton alle kesken lukemisen (lehti putoaa kädestä).
+       `PLAYER_DEPTH_MAX_Y` (WORLD_H - 50 = 350) on sama raja kuin
+       update()in paikallinen PLAYER_Y_MAX (aidan yläreuna). */
+    function updateTraffic(dt) {
+        let playerHit = false;
+
+        // 1) Liike ja spawnit
+        for (let li = 0; li < LANE_DEFS.length; li++) {
+            const lane = LANE_DEFS[li];
+            if (!vehicles[li]) {
+                spawnTimers[li] -= dt * (1 + (TRAFFIC_DAY_MULT - 1) * dayT);
+                if (spawnTimers[li] <= 0) {
+                    const dir = lane.direction;
+                    const vehRnd = Math.random();
+                    let type, w, h, speed;
+                    if (vehRnd < 0.4) {
+                        type = 'car'; w = 80; h = 30; speed = 1.0 + Math.random() * 0.5;
+                    } else if (vehRnd < 0.8) {
+                        type = 'motorcycle'; w = 40; h = 22; speed = 1.5 + Math.random() * 1.0;
+                    } else {
+                        type = 'ambulance'; w = 80; h = 34; speed = 1.8 + Math.random() * 1.2;
+                    }
+                    const vehicle = {
+                        type,
+                        x: dir > 0 ? -w : WORLD_W + w,
+                        y: lane.y,
+                        w, h,
+                        vx: dir * speed,
+                        direction: dir,
+                        hasHeadlight: type !== 'motorcycle' || Math.random() < 0.5
+                    };
+                    vehicle.engine = startVehicleEngine(vehicle);
+                    vehicles[li] = vehicle;
+                    spawnTimers[li] = 1200 + Math.random() * 1200; // 20–40s
+                }
+            } else {
+                const v = vehicles[li];
+                v.x += v.vx * dt;
+                updateVehicleEngine(v.engine, v);
+                if ((v.direction > 0 && v.x > WORLD_W + v.w + 10) || (v.direction < 0 && v.x < -v.w - 10)) {
+                    stopVehicleEngine(v.engine);
+                    vehicles[li] = null;
+                }
+            }
+        }
+
+        // 2) Törmäys (molemmat kaistat)
+        if (!player.knockedDown) {
+            const playerCY = player.y + player.h / 2;
+            const gapCenter = (LANE_DEFS[0].y + LANE_DEFS[1].y) / 2;  // 334
+            const inGap = Math.abs(playerCY - gapCenter) < 5;          // ±5px turvakaista
+
+            // Kumman kaistan auton kanssa pelaaja on enemmän limittäin?
+            const CAR_H = 30; // tyypillinen auton korkeus
+            const pTop = player.y, pBot = player.y + player.h;
+            const ov0 = Math.max(0, Math.min(pBot, LANE_DEFS[0].y + CAR_H) - Math.max(pTop, LANE_DEFS[0].y));
+            const ov1 = Math.max(0, Math.min(pBot, LANE_DEFS[1].y + CAR_H) - Math.max(pTop, LANE_DEFS[1].y));
+
+            for (let li = 0; li < LANE_DEFS.length; li++) {
+                const v = vehicles[li];
+                if (!v) continue;
+
+                // Pelaaja teräsaidan juuressa → ei kumpikaan kaista osu
+                if (player.y >= PLAYER_DEPTH_MAX_Y - 3) continue;
+
+                // Pelaaja kaistojen välisessä raossa → ei osumaa
+                if (inGap) continue;
+
+                // Pelaaja on vain lähimmällä kaistalla – kauemman kaistan autot menevät ohi
+                if (li === 0 && ov1 > ov0) continue;
+                if (li === 1 && ov0 > ov1) continue;
+
+                const vCollisionTop = v.y + v.h * 0.5;
+                if (v.x < player.x + player.w && v.x + v.w > player.x &&
+                    player.y + player.h > vCollisionTop && player.y < v.y + v.h) {
+                    player.knockedDown = true;
+                    player.knockdownTimer = 600;
+                    player.kicking = false;
+                    player.kickFrame = 0;
+                    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ffaa44', 15);
+                    playKnock();   // "Smack"-tömähdys
+                    vehicleShakeTimer = 90;  // ~1.5s tärinä
+                    hamburgerCount--;
+                    state.inventory.hamburgerCount = hamburgerCount;
+                    GameState.save(state);
+                    updateHUD();
+                    playerHit = true;
+                    if (hamburgerCount <= 0) { killPlayer(); }
+                    break;
+                }
+            }
+        }
+
+        return playerHit;
+    }
+
     function update(dt) {
         // Ajoneuvon törmäyksen tärinä (vain visuaalinen – ei jäädytä pelilogiikkaa)
         if  (vehicleShakeTimer > 0) { vehicleShakeTimer -= dt; }
@@ -1019,9 +1274,10 @@ const Street = (() => {
         }
         // Liuku pysäytetään, kunnes pelaaja on taas kadulla: avain saadaan
         // alapelistä (iframe) ja huoneista → muutos näkyy kadulle palatessa
-        // eikä jää taustalla näkymättömiin.
+        // eikä jää taustalla näkymättömiin (myös lehteä lukiessa, v4.53).
         const dayWanted = dayTarget();
-        if (dayT !== dayWanted && !iframeOpen && !sleepRoom && !barRoom && !jukeboxRoom) {
+        if (dayT !== dayWanted && !iframeOpen && !sleepRoom && !barRoom &&
+            !jukeboxRoom && !newsRoom) {
             const fadeFrames = (dayWanted > dayT) ? DAY_FADE_FRAMES : NIGHT_FADE_FRAMES;
             const step = DAY_DEBUG ? 1 : dt / fadeFrames;
             if (dayWanted > dayT) {
@@ -1097,39 +1353,39 @@ const Street = (() => {
 
         // ── Nälkä (hampurilaisajastin, 1/60s) ────────────────────────
         // Kulutus jatkuu kaikkialla kuten kadulla (v4.49): myös BAR:ssa,
-        // jukeboxissa ja iframe-peleissä. Jäissä vain nukkuessa
-        // (hungerOnHold, v4.41) ja kuolleena (yllä oleva return).
-        // Viimeisen 🍔:n kuluessa huoneessa/pelissä kuolema ei laukea
-        // näkymättömissä: se odottaa kadulle paluuta, jossa
-        // checkStarvingOnExit antaa 10 s armoaikaa reagoida.
+        // jukeboxissa ja iframe-peleissä → pelaajan pitää aina huolehtia,
+        // että 🍔 riittää. Jäissä vain nukkuessa (hungerOnHold, v4.41)
+        // ja kuolleena (yllä oleva return).
+        // Nälkäkuolema laukeaa myös huoneessa/pelissä (v4.50): huone tai
+        // alapeli suljetaan ensin, jotta pelaaja romahtaa näkyvästi kadulle
+        // eikä peli näytä nollautuvan kesken pelaamisen.
         // Tahti (2400 framet = 40 s) ja katto 10 ovat lukittuja (sääntö 04).
         if (!hungerOnHold()) {
             if (hamburgerCount > 0) {
-                // Juuri saatu 🍔 (BAR-osto tai herätys 0-tilanteesta) → 10 s
-                if (hamburgerTimer <= 0) hamburgerTimer = HUNGER_WAKE_GRACE;
                 hamburgerTimer -= dt;
                 if (hamburgerTimer <= 0) {
                     hamburgerCount--;
                     state.inventory.hamburgerCount = hamburgerCount;
                     GameState.save(state);
                     updateHUD();
-                    if (hamburgerCount > 0) {
-                        starvingOnExit = false;   // ruokaa on taas
-                        hamburgerTimer = 2400;
-                    } else {
-                        hamburgerTimer = 0;
-                        // Kuolema vasta kadulla, jos oltiin huoneessa/pelissä
-                        if (insideHiddenState()) starvingOnExit = true;
-                    }
+                    hamburgerTimer = hamburgerCount > 0 ? 2400 : 0;
                 }
-            } else if (hamburgerTimer > 0) {
-                hamburgerTimer -= dt;    // 0 🍔: kadulle paluun armoaika kuluu
             }
-            if (hamburgerCount <= 0 && hamburgerTimer <= 0 && !insideHiddenState()) {
-                killPlayer();
+            if (hamburgerCount <= 0) {              // 0 🍔 → kuolema
+                killPlayer();                       // kuolinsekvenssi alkaa heti
+                if (insideHiddenState()) leaveHiddenStateForDeath();
                 return;
             }
         }
+
+        // ── Paluu kadulle -vahti (v4.51): huone tai alapeli sulkeutui →
+        //    1/10 mahdollisuus, että viemärinkannen tilanne muuttuu
+        //    (kansi katoaa tai asennetaan takaisin paikalleen).
+        trackHiddenStreet();
+
+        // ── Avoin kaivo: pudotus / ylöskiipeäminen käynnissä (v4.51) ──
+        // Katu on jäissä sekvenssin ajan (kuten nukkumisen pimennys).
+        if (mhAction) { updateManholeAction(dt); return; }
 
         // ── Makuuhuone (ex-palkintohuone, talo 7) ──
         //   ▲ / W = Nuku     ▼ / S = Poistu   (valinta liikkuu reunoilla)
@@ -1273,6 +1529,46 @@ const Street = (() => {
             return;
         }
 
+        // SANOMALEHTI (v4.53/v4.54) – sivuttain selattava ohjelehti
+        //   ▲ / ▼ = edellinen / seuraava sivu (ei kierrä yli)
+        //   Space (⚡) = seuraava sivu; viimeisellä sivulla poistuu kadulle
+        //   (o) / Enter = poistu heti      ✕-nappi = sulje (closeRoom)
+        //   Ilmainen eikä muuta taloutta; nälkä kuluu kuten huoneissa.
+        //   LIIKENNE EI PYSÄHDY (v4.54): auto voi ajaa yli kesken lukemisen
+        //   → lehti putoaa kädestä ja pelaaja kaatuu kadulle (tainnutus +
+        //   −1 🍔 kuten muutenkin; 0 🍔 = kuolema). Turvassa ovat kaistojen
+        //   välinen rako sekä aivan aidan juuri – samat rajat kuin ennen.
+        if (newsRoom) {
+            if (updateTraffic(dt)) {
+                closeNewspaper();          // lehti lentää kädestä
+                actionJustPressed = false;
+                return;
+            }
+
+            const L = newsLayout();
+            const lastIdx = Math.max(0, L.screens.length - 1);
+            const selUp = !!(keys['ArrowUp'] || keys['w'] || keys['W']);
+            const selDown = !!(keys['ArrowDown'] || keys['s'] || keys['S']);
+            if (selUp && !newsHeldUp) newsScreen = Math.max(0, newsScreen - 1);
+            if (selDown && !newsHeldDown) newsScreen = Math.min(lastIdx, newsScreen + 1);
+            newsHeldUp = selUp;
+            newsHeldDown = selDown;
+
+            const nextDown = !!keys[' '];
+            if (nextDown && !newsSpaceHeld) {
+                if (newsScreen < lastIdx) newsScreen++;
+                else closeNewspaper();           // viimeinen sivu → takaisin kadulle
+            }
+            newsSpaceHeld = nextDown;
+
+            const exitDown = !!(keys['o'] || keys['O'] || keys['Enter']);
+            if (exitDown && !newsExitHeld) closeNewspaper();
+            newsExitHeld = exitDown;
+
+            actionJustPressed = false;
+            return;
+        }
+
         updateClouds(dt);
         updateForeground(dt);
 
@@ -1410,6 +1706,19 @@ const Street = (() => {
                 coin.x = randomCoinX(); coin.y = randomCoinY();
                 coin.despawnTimer = 600;  // uusi 10s
             }
+        }
+
+        // ── Avoin kaivo: astuminen reiän päälle (v4.51) ─────────────
+        // Reunaehtoinen: putoaminen laukeaa vain kun jalkapiste siirtyy
+        // ellipsin sisään. Jos kansi katoaa jalkojen alta (paluu huoneesta),
+        // putoaminen ei laukea ennen kuin pelaaja astuu pois ja takaisin.
+        if (manholeOpen != null && !iframeOpen && !player.knockedDown) {
+            const inside = manholeHit(manholeOpen);
+            if (inside && !mhInside[manholeOpen]) {
+                startManholeFall(manholeOpen);
+                return;
+            }
+            mhInside[manholeOpen] = inside;
         }
 
         // ── Sähkökaapit: sähköisku ─────────────────
@@ -1575,95 +1884,10 @@ const Street = (() => {
             if ((a.direction>0 && a.x>WORLD_W+a.w+10) || (a.direction<0 && a.x<-a.w-10)) groundAnimal = null;
         }
 
-        // ── Ajoneuvo: kaksi ajorataa ──────────────────────
-        //    Päivällä liikennevirta tuplataan (v4.37): spawn-laskuri kuluu
-        //    TRAFFIC_DAY_MULT-kertaista vauhtia ja kerroin liukuu dayT:n
-        //    mukana (1 = yö, TRAFFIC_DAY_MULT = täysi päivä). Sama 1 ajoneuvo
-        //    per kaista ja samat nopeudet/törmäykset kuin ennen.
-        for (let li = 0; li < LANE_DEFS.length; li++) {
-            const lane = LANE_DEFS[li];
-            if (!vehicles[li]) {
-                spawnTimers[li] -= dt * (1 + (TRAFFIC_DAY_MULT - 1) * dayT);
-                if (spawnTimers[li] <= 0) {
-                    const dir = lane.direction;
-                    const vehRnd = Math.random();
-                    let type, w, h, speed;
-                    if (vehRnd < 0.4) {
-                        type = 'car'; w = 80; h = 30; speed = 1.0 + Math.random() * 0.5;
-                    } else if (vehRnd < 0.8) {
-                        type = 'motorcycle'; w = 40; h = 22; speed = 1.5 + Math.random() * 1.0;
-                    } else {
-                        type = 'ambulance'; w = 80; h = 34; speed = 1.8 + Math.random() * 1.2;
-                    }
-                    const vehicle = {
-                        type,
-                        x: dir > 0 ? -w : WORLD_W + w,
-                        y: lane.y,
-                        w, h,
-                        vx: dir * speed,
-                        direction: dir,
-                        hasHeadlight: type !== 'motorcycle' || Math.random() < 0.5
-                    };
-                    vehicle.engine = startVehicleEngine(vehicle);
-                    vehicles[li] = vehicle;
-                    spawnTimers[li] = 1200 + Math.random() * 1200; // 20–40s
-                }
-            } else {
-                const v = vehicles[li];
-                v.x += v.vx * dt;
-                updateVehicleEngine(v.engine, v);
-                if ((v.direction > 0 && v.x > WORLD_W + v.w + 10) || (v.direction < 0 && v.x < -v.w - 10)) {
-                    stopVehicleEngine(v.engine);
-                    vehicles[li] = null;
-                }
-            }
-        }
-
-        // ── Ajoneuvon törmäys (molemmat kaistat) ─────────
-        if (!player.knockedDown) {
-            const playerCY = player.y + player.h / 2;
-            const gapCenter = (LANE_DEFS[0].y + LANE_DEFS[1].y) / 2;  // 334
-            const inGap = Math.abs(playerCY - gapCenter) < 5;          // ±5px turvakaista
-
-            // Kumman kaistan auton kanssa pelaaja on enemmän limittäin?
-            const CAR_H = 30; // tyypillinen auton korkeus
-            const pTop = player.y, pBot = player.y + player.h;
-            const ov0 = Math.max(0, Math.min(pBot, LANE_DEFS[0].y + CAR_H) - Math.max(pTop, LANE_DEFS[0].y));
-            const ov1 = Math.max(0, Math.min(pBot, LANE_DEFS[1].y + CAR_H) - Math.max(pTop, LANE_DEFS[1].y));
-
-            for (let li = 0; li < LANE_DEFS.length; li++) {
-                const v = vehicles[li];
-                if (!v) continue;
-
-                // Pelaaja teräsaidan juuressa → ei kumpikaan kaista osu
-                if (player.y >= PLAYER_Y_MAX - 3) continue;
-
-                // Pelaaja kaistojen välisessä raossa → ei osumaa
-                if (inGap) continue;
-
-                // Pelaaja on vain lähimmällä kaistalla – kauemman kaistan autot menevät ohi
-                if (li === 0 && ov1 > ov0) continue;
-                if (li === 1 && ov0 > ov1) continue;
-
-                const vCollisionTop = v.y + v.h * 0.5;
-                if (v.x < player.x + player.w && v.x + v.w > player.x &&
-                    player.y + player.h > vCollisionTop && player.y < v.y + v.h) {
-                    player.knockedDown = true;
-                    player.knockdownTimer = 600;
-                    player.kicking = false;
-                    player.kickFrame = 0;
-                    spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ffaa44', 15);
-                    playKnock();   // "Smack"-tömähdys
-                    vehicleShakeTimer = 90;  // ~1.5s tärinä
-                    hamburgerCount--;
-                    state.inventory.hamburgerCount = hamburgerCount;
-                    GameState.save(state);
-                    updateHUD();
-                    if (hamburgerCount <= 0) { killPlayer(); }
-                    break;
-                }
-            }
-        }
+        // ── Ajoneuvot: liike, spawnit ja törmäys ──────────
+        //    Siirretty omaan funktioonsa (v4.54), jotta sama liikenne
+        //    pyörii myös sanomalehteä lukiessa (ks. newsRoom-haara yllä).
+        updateTraffic(dt);
 
         // ── Tähdenlento + satelliitti (vain yöllä) ────
         // Päivällä (dayT > 0) niitä ei enää spawnata; update() nollaa
@@ -1719,6 +1943,13 @@ const Street = (() => {
     function handleAction() {
         const px = player.x + player.w / 2;
         const py = player.y + player.h / 2;
+
+        // 0. SANOMALEHTI (v4.53) – kadulla lojuva lehti: poimimalla aukeaa
+        //    peliohjeet. Ilmainen eikä vaikuta talouteen (sääntö 04).
+        //    Lehti on sijoitettu kauas ovista ja lampuista, joten tämä
+        //    tarkistus ei varasta minkään muun kohteen toimintoa.
+        //    Tainnutettuna lehteä ei voi poimia (v4.54).
+        if (!player.knockedDown && nearNewspaper()) { openNewspaper(); return; }
 
         // 0. HEDELMÄPELI (talo 7, buildings[6], x 560–610) – ei lamppua eikä avainta,
         //    mutta auki vain öisin (v4.34)
@@ -2056,29 +2287,52 @@ const Street = (() => {
         resetJukeboxRoom();
     }
 
-    /* ═══ KADULLE PALUU: siirretty nälkäkuolema (v4.49) ═══════════
-       Jos viimeinen 🍔 kului huoneessa tai alapelissä, kuolema ei lauennut
-       näkymättömissä. Kadulle palatessa annetaan HUNGER_WAKE_GRACE (10 s)
-       aikaa reagoida (esim. ostaa 🍔 BAR:sta), minkä jälkeen tavallinen
-       nälkäkuolema alkaa näkyvästi kadulla. Armoaika vain kerran – lippu
-       nollataan, joten ovikävelyllä ei voi kerätä lisäaikaa. */
-    function checkStarvingOnExit() {
-        if (!starvingOnExit) return;
-        starvingOnExit = false;
-        // Armoaika vain jos ollaan yhä 0 🍔:ssa – jos pelaaja ehti ostaa
-        // (tai sai) ruokaa, tavallinen tahti jatkuu eikä lisäaikaa tipu.
-        if (hamburgerCount <= 0) hamburgerTimer = HUNGER_WAKE_GRACE;
+    /* ═══ NÄLKÄKUOLEMA HUONEESSA/ALAPELISSÄ (v4.50) ══════════════
+       Jos 🍔 loppuu kesken huoneen tai alapelin, pelaaja kuolee heti – kuten
+       kadullakin (vain nukkuminen on jäissä). Huone/alapeli suljetaan ensin,
+       jotta kuolinsekvenssi näkyy kadulla eikä peli näytä nollautuvan kesken
+       pelaamisen. Kutsutaan vain nälkäblokista; talousarvot ennallaan. */
+    function leaveHiddenStateForDeath() {
+        if (iframeOpen) closeGame();   // alapeli kiinni (overlay pois)
+        else closeRoom();              // BAR / makuuhuone / jukebox kiinni
     }
 
-    /* ═══ SULJE HUONE (BAR/sleep/jukebox) ✕-napista ═════════════ */
+    /* ═══ SANOMALEHTI (v4.53) ══════════════════════════════════════
+       Kadun lehti avataan toimintonapilla, kun pelaaja seisoo sen
+       kohdalla. Lukutila on kuin canvas-huone: maailma jäätyy, nälkä
+       kuluu (v4.49/v4.50) ja ✕-nappi sulkee (closeRoom). */
+    function openNewspaper() {
+        newsRoom = true;
+        newsScreen = 0;
+        /* Estä sama painallus laukaisemasta sivunvaihtoa heti perään
+           (sama kikka kuin jukeboxissa: jukeSpaceHeld). */
+        newsHeldUp = !!(keys['ArrowUp'] || keys['w'] || keys['W']);
+        newsHeldDown = !!(keys['ArrowDown'] || keys['s'] || keys['S']);
+        newsSpaceHeld = !!keys[' '];
+        newsExitHeld = !!(keys['o'] || keys['O'] || keys['Enter']);
+    }
+
+    function closeNewspaper() {
+        newsRoom = false;
+        newsScreen = 0;
+        newsHeldUp = false;
+        newsHeldDown = false;
+        newsSpaceHeld = false;
+        newsExitHeld = false;
+    }
+
+    /* ═══ SULJE HUONE (sanomalehti/BAR/sleep/jukebox) ✕-napista ═════════════ */
     /* Palauttaa true jos huone suljettiin, false jos ei oltu huoneessa. */
     function closeRoom() {
+        if (newsRoom) {           // sanomalehti kiinni (✕ / poistuminen)
+            closeNewspaper();
+            return true;
+        }
         if (barRoom) {
             barRoom = false;
             barBuyQty = 0;
             barBuyHeldUp = false;
             barBuyHeldDown = false;
-            checkStarvingOnExit();
             return true;
         }
         if (sleepRoom) {
@@ -2087,13 +2341,11 @@ const Street = (() => {
             sleepHeldUp = false;
             sleepHeldDown = false;
             if (sleepPhase > 0) { sleepPhase = 0; }  // kesken nukkumisen → herätä
-            checkStarvingOnExit();
             return true;
         }
         if (jukeboxRoom) {
             // ✕ = peruuta: valinnat pois ilman veloitusta (v4.46)
             resetJukeboxRoom();
-            checkStarvingOnExit();
             return true;
         }
         return false;
@@ -2149,7 +2401,10 @@ const Street = (() => {
         coinCount = state.inventory.coinCount || 0;
         coinRespawnTimer = coin.collected ? 1 : 0;
         coin.despawnTimer = coin.collected ? 0 : 600;
-        hamburgerCount = state.inventory.hamburgerCount || 5;
+        /* 0 🍔 pysyy 0:na (ei `|| 5`): nälkäkuolema ei saa "parantua" siitä,
+           että closeGame sulkee alapelin kesken kuolinsekvenssiä (v4.50). */
+        hamburgerCount = (state.inventory.hamburgerCount != null)
+            ? state.inventory.hamburgerCount : 5;
         /* HUOM (v4.49): ajastinta EI enää nollata tässä – se jatkaa siitä
            mihin jäi, kuten kadulla. Vanha `hamburgerTimer = 2400` antoi
            ilmaisen 40 s joka kerta, kun alapelistä poistui → hedeläpelin
@@ -2170,7 +2425,6 @@ const Street = (() => {
         player.x = savedPlayerX; player.y = savedPlayerY;
         player.vx = 0; player.vy = 0;
         updateHUD();
-        checkStarvingOnExit();   // mahdollinen siirretty nälkäkuolema
         return true;
     }
 
@@ -2473,9 +2727,11 @@ const Street = (() => {
             speed: 0.3 + Math.random() * 0.3
         };
 
-        // Sanomalehti
+        /* Sanomalehti (v4.53: poimittavissa) – rauta-aidan aukkoon kauas
+           kaikista ovista (lähin ovi x 410), jotta poiminta ei varasta
+           oven toimintoa eikä lehti jää aidan taakse piiloon. */
         foreground.newspaper = {
-            x: 460 + Math.random() * 60,
+            x: 338 + Math.random() * 14,
             y: GROUND_Y + 40 + Math.random() * 10,
             angle: -0.05 + Math.random() * 0.1
         };
@@ -2713,6 +2969,9 @@ const Street = (() => {
 
         if (jukeboxRoom) { camX = (WORLD_W - viewW) / 2; ctx.save(); ctx.translate(-Math.round(camX), 0); drawJukeboxRoom(); ctx.restore(); return; }
 
+        // Sanomalehti (v4.53) – oma huonekäsittely, kamera keskittää arkin
+        if (newsRoom) { camX = (WORLD_W - viewW) / 2; ctx.save(); ctx.translate(-Math.round(camX), 0); drawNewspaperView(); ctx.restore(); return; }
+
         ctx.save();
         ctx.translate(-Math.round(camX), 0);
         // Oviukon isku: 1–2 px tärinä jäädytyksen aikana (hitPauseTimer toimii kellona)
@@ -2877,8 +3136,14 @@ const Street = (() => {
         // Oviukko (Avenger) – piirretään pelaajan alle
         if (avenger) drawAvenger();
 
-        // Pelaaja
-        drawPlayer();
+        // Pelaaja – avoimessa kaivossa vajoaa/kiipeää (v4.51)
+        if (mhAction) { drawPlayerManhole(); } else { drawPlayer(); }
+        // Avoin kaivo: musta aukko pelaajan PÄÄLLE pudotuksen aikana,
+        // jotta pelaaja näyttää katoavan reikään (v4.51)
+        drawManholeOverlay();
+
+        // Sanomalehden poimintavihje pelaajan yläpuolelle (v4.53)
+        drawNewspaperHint();
 
         // Ajoneuvot – ylempi kaista (kauempana) ensin, alempi (lähempänä) päälle
         if (vehicles[1]) drawVehicle(vehicles[1]);
@@ -3735,37 +4000,197 @@ const Street = (() => {
 
     /* Etualan apufunktiot ─────────────────────────── */
     function drawManholes() {
-        for (const mh of foreground.manholes) {
+        for (let i = 0; i < foreground.manholes.length; i++) {
+            const mh = foreground.manholes[i];
             const mx = mh.x, my = mh.y;
             ctx.fillStyle = '#0d0d0d';
             ctx.beginPath();
             ctx.ellipse(mx + 1, my + 2, 15, 8, 0, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = '#2a2a2e';
-            ctx.beginPath();
-            ctx.ellipse(mx, my, 14, 7, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#1a1a1e'; ctx.lineWidth = 1;
-            ctx.stroke();
-            ctx.strokeStyle = '#3a3a3e';
-            ctx.beginPath();
-            ctx.ellipse(mx, my - 2, 12, 5, 0, Math.PI, 0);
-            ctx.stroke();
-            ctx.fillStyle = '#444';
-            for (let n = 0; n < 6; n++) {
-                const angle = n * Math.PI / 3 + 0.2;
+            if (manholeOpen === i) {
+                // Kansi puuttuu → musta aukko (v4.51)
+                drawManholeHole(mx, my);
+            } else {
+                ctx.fillStyle = '#2a2a2e';
                 ctx.beginPath();
-                ctx.arc(mx + Math.cos(angle) * 10, my + Math.sin(angle) * 4.5, 1.2, 0, Math.PI * 2);
+                ctx.ellipse(mx, my, 14, 7, 0, 0, Math.PI * 2);
                 ctx.fill();
-            }
-            for (const p of mh.steamParticles) {
-                ctx.fillStyle = 'rgba(200,205,215,' + p.alpha + ')';
+                ctx.strokeStyle = '#1a1a1e'; ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.strokeStyle = '#3a3a3e';
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.ellipse(mx, my - 2, 12, 5, 0, Math.PI, 0);
+                ctx.stroke();
+                ctx.fillStyle = '#444';
+                for (let n = 0; n < 6; n++) {
+                    const angle = n * Math.PI / 3 + 0.2;
+                    ctx.beginPath();
+                    ctx.arc(mx + Math.cos(angle) * 10, my + Math.sin(angle) * 4.5, 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
+            drawManholeSteam(mh);
         }
     }
+
+    /* ── Avoin viemäri: kohta on musta, ei kantta (v4.51) ──
+       Sama piirto tehdään myös pelaajan PÄÄLLE pudotuksen aikana
+       (drawManholeOverlay) → pelaaja näyttää vajoavan kaivoon. */
+    function drawManholeHole(mx, my) {
+        // Aukon sisus – täysin musta
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(mx, my, 14, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Valurautainen kehä (tumma reuna)
+        ctx.strokeStyle = '#1b1b1f'; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(mx, my, 14, 7, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        // Lähihuulen kiiltolaita (alareuna) – erottaa reiän mustasta asfaltista
+        ctx.strokeStyle = '#3a3a3e'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(mx, my + 0.5, 12.5, 5.5, 0, 0, Math.PI);
+        ctx.stroke();
+    }
+
+    /* Viemärin höyry – sama sekä kannellisessa että avoimessa tilassa */
+    function drawManholeSteam(mh) {
+        for (const p of mh.steamParticles) {
+            ctx.fillStyle = 'rgba(200,205,215,' + p.alpha + ')';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    /* Putoamisen aikana musta aukko piirretään vasta pelaajan jälkeen →
+       pelaaja vajoaa reikään ja katoaa (v4.51). */
+    function drawManholeOverlay() {
+        if (!mhAction) return;
+        const mh = (foreground && foreground.manholes) ? foreground.manholes[mhAction.idx] : null;
+        if (!mh) return;
+        drawManholeHole(mh.x, mh.y);
+        drawManholeSteam(mh);
+    }
+
+    /* ═══ SANOMALEHTI: sisältö ja poiminta (v4.53) ═════════════════════
+       Kadulla lojuva lehti voidaan poimia toimintonapilla (⚡ / Space /
+       Enter) → aukeaa sanomalehtinäkymä, jossa ovat pelin omat peliohjeet.
+       Lukeminen on ILMAISTA eikä muuta taloutta (sääntö 04); nälkä kuluu
+       myös lukiessa, kuten huoneissa (v4.49/v4.50). Lehti jää katuun, joten
+       ohjeet voi lukea uudelleen – ei tallennettavaa tilaa eikä uutta
+       localStorage-avainta (gameState.js ei muutu). */
+    const NEWS_READ_R = 26;      // kuinka läheltä lehden voi poimia (px)
+
+    /* Manuaalisivu (5. sivu, v4.55): sama rahavirta ASCII-piirroksena.
+       Kaksi leveyttä – leveä PC:lle/vaakanäytölle ja kapea pystykännykälle;
+       `newsLayout()` valitsee sen, jolla teksti on ruudulla isompi.
+       Rivit on rakennettu niin, että reunat ovat tarkalleen kohdakkain
+       (leveä = 64 merkkiä, kapea = 40 merkkiä). */
+    const NEWS_MANUAL_WIDE = [
+        '┌───────────────── kadun tulot ────────────────────────────────┐',
+        '│ katu-kolikko 1 kpl / 120 s · kolikko potkusta 1/5 (30 s cd)  │',
+        '│ hedelmäpelitalo (ilmainen pyöräytys 1/120 s)                 │',
+        '└───────────────────────────────┬──────────────────────────────┘',
+        '                                ▼',
+        '┌──────────── käytön kohteet (raha pois) ──────────────────────┐',
+        '│ BAR:         1 kolikko = 1 🍔 (katto 10)                      │',
+        '│ Jukebox:     1 kolikko = 1 koko kappale                      │',
+        '│ Hedelmäpeli: 1 kolikko / pyöräytys, RTP 78,5 %               │',
+        '│ Makuuhuone:  aina auki (Nuku/Poistu ilmainen)                │',
+        '│ Avoin kaivo: ≤ 2 🪙 (3 → 1, 2 → 0, 1 → 0)                     │',
+        '└───────────────────────────────┬──────────────────────────────┘',
+        '                                ▼',
+        '┌──────────── paine (pakko pitää huolta) ──────────────────────┐',
+        '│ 🍔 5 alussa, +1 / 40 s · osuma (oviukko, ruukku,              │',
+        '│ kukkaruukka, sähkökaappi) = −1 🍔 · 🍔 0 → kuolema + reload    │',
+        '└──────────────────────────────────────────────────────────────┘',
+    ];
+
+    const NEWS_MANUAL_NARROW = [
+        '┌───────── kadun tulot ────────────────┐',
+        '│ katu-kolikko 1 kpl / 120 s           │',
+        '│ kolikko potkusta 1/5 (30 s cd)       │',
+        '│ hedelmäpelitalo: ilmainen 1/120 s    │',
+        '└───────────────────┬──────────────────┘',
+        '                    ▼',
+        '┌─────── käytön kohteet ───────────────┐',
+        '│ BAR: 1 kolikko = 1 🍔 (katto 10)      │',
+        '│ Jukebox: 1 kolikko / kappale         │',
+        '│ Hedelmäpeli: 1 kolikko, RTP 78,5 %   │',
+        '│ Makuuhuone: ilmainen (Nuku/Poistu)   │',
+        '│ Avoin kaivo: ≤ 2 🪙 (3 → 1, 2 → 0)    │',
+        '└───────────────────┬──────────────────┘',
+        '                    ▼',
+        '┌─────────── paine ────────────────────┐',
+        '│ 🍔 5 alussa, +1 / 40 s                │',
+        '│ osuma (oviukko, kukkaruukka,         │',
+        '│ sähkökaappi) = −1 🍔 · 🍔 0            │',
+        '│ → kuolema + reload                   │',
+        '└──────────────────────────────────────┘',
+    ];
+
+    /* Lehden sisältö: yksi alkio = yksi sivu. Tyhjä merkkijono = riviväli.
+       Rivin alun välilyönnit = sisennys (säilyy tekstin kääriytyessä). */
+    const NEWSPAPER_PAGES = [
+        {
+            title: 'PIMEÄ KATU',
+            lines: [
+                'Liiku nuolilla tai WASD. Puhelimessa ristikko ja ⚡-nappi.',
+                'Toiminto ⚡ (Space / Enter): ovella astut sisään, muualla potkaiset.',
+                'Potkaise katuvalo, niin valo syttyy ja ovi aukeaa. Päivällä ovet ovat auki ilman valoja.',
+                '🪙 Kolikoita on kadulla yksi kerrallaan – kävele päältä. Potkusta voi tipahtaa lisää.',
+                '🍔 Hampurilainen on elämäsi: nälkä vie yhden 40 sekunnissa. Kun 🍔 loppuu, henki lähtee!',
+                'Ilmaisin vilkkuu punaisena, kun 🍔 on kolme tai vähemmän.',
+                'Varo autoja, mopoa, kukkaruukkua, sähkökaappia ja oviukkoa – osuma vie 1 🍔.',
+                'Avoin viemärinkansi nielaisee sinut: kukkarosta katoaa enintään 2 🪙.',
+                '✕ = koko peli alusta – kaikki edistyminen katoaa.'
+            ]
+        },
+        {
+            title: 'UNI JA VALO',
+            lines: [
+                '🛏️ Makuuhuoneeseen pääsee aina (kadun oikea puoli):',
+                '   Nuku = nälkä on jäissä, heräät +1 🍔:n kanssa ja päivä vaihtuu yöksi (tai yö päiväksi).',
+                '   Poistu = ei muuta mitään, eikä maksa mitään.',
+                'Kun kolme avainta on koossa, kadulle nousee kerran aamu – sen jälkeen vuorokauden vaihtaa makuuhuone.',
+                '🎵 Jukebox ja 🍒 Hedelmäpeli ovat auki vain öisin klo 20–06.',
+                'Päivällä ovesta kertoo kyltti: Avoinna, klo 20 - 06.'
+            ]
+        },
+        {
+            title: 'TALOJEN PELIT',
+            lines: [
+                '⛏️ DIG GAME – kaiva mullan läpi, kerää timantit ja löydä avain.',
+                '   Nuolet liikuttavat, Space kaivaa. Pidä Space pohjassa ja paina suuntaa = etäkaivu.',
+                '💎 DIG DÄSH – neljä tasoa ja aikaraja. Kerää tarpeeksi timantteja ja avain, niin uloskäynti aukeaa.',
+                '   Kivi putoaa päälle = elämä pois. Kolme elämää.',
+                '✈️ BLUE MÄX – lennä nuolilla ja tuhoa rakennukset.',
+                '   Space tai G = konekivääri, B = pommi, L = laskeudu. Enter = aloita.',
+                'Avaimet kulkevat talosta taloon: Dig Gamen avain avaa Dig Däshin ja sen avain Blue Mäxin.'
+            ]
+        },
+        {
+            title: 'RAHAPELI',
+            lines: [
+                '🍒 Hedelmäpeli: panos 1 🪙 / pyöräytys. Space, Enter tai napautus pyöräyttää.',
+                'Ilmainen pyöräytys joka toinen minuutti.',
+                'Voitot: 💎 35 · 🍔 20 · 🔔 12 · 🍋 7 · 🍒 4. Kaksi samaa = panos takaisin.',
+                'Palautus noin 78,5 % – talo voittaa pitkässä juoksussa.',
+                '🎵 Jukebox: potkaise ikkunat valaistuiksi, niin ovi aukeaa. 1 🪙 = 1 kappale.',
+                'Valitse vaikka kolme kappaletta – ne soivat peräkkäin, kun poistut huoneesta.',
+                '🍔 BAR: yksi kolikko = yksi hampurilainen. ▼ peruu tämän vierailun ostot.'
+            ]
+        },
+        {
+            /* Manuaali (5. sivu, v4.55) – rahavirta piirroksena.
+               `art` = leveä, `artNarrow` = kapea; newsLayout valitsee. */
+            title: 'MANUAALI',
+            art: NEWS_MANUAL_WIDE,
+            artNarrow: NEWS_MANUAL_NARROW
+        }
+    ];
 
     function drawNewspaper() {
         const n = foreground.newspaper;
@@ -3788,6 +4213,77 @@ const Street = (() => {
         ctx.fillStyle = '#777';
         ctx.fillRect(2, 9, 14, 1);
         ctx.restore();
+    }
+
+    /* Onko pelaaja lehden kohdalla? (sama ajatus kuin kolikon keräys) */
+    function nearNewspaper() {
+        const n = (foreground && foreground.newspaper) ? foreground.newspaper : null;
+        if (!n) return false;
+        const dx = (player.x + player.w / 2) - (n.x + 11);
+        const dy = (player.y + player.h / 2) - (n.y + 6);
+        return (dx * dx + dy * dy) <= NEWS_READ_R * NEWS_READ_R;
+    }
+
+    /* Pieni vihje lehden yläpuolella, kun sen voi poimia (v4.53) */
+    function drawNewspaperHint() {
+        if (newsRoom || iframeOpen) return;
+        const n = (foreground && foreground.newspaper) ? foreground.newspaper : null;
+        if (!n || !nearNewspaper()) return;
+        const label = '⚡ = lue';
+        const cx = n.x + 11;
+        const cy = n.y - 16;
+        ctx.save();
+        ctx.font = 'bold 8px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const w = Math.round(ctx.measureText(label).width) + 10;
+        const bx = Math.round(cx - w / 2);
+        ctx.fillStyle = 'rgba(8,8,14,0.82)';
+        ctx.fillRect(bx, cy - 7, w, 14);
+        ctx.strokeStyle = '#8a836f';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx + 0.5, cy - 6.5, w - 1, 13);
+        ctx.fillStyle = '#ffe9a8';
+        ctx.fillText(label, cx, cy);
+        ctx.restore();
+    }
+
+    /* Käärii yhden kappaleen näkyvään sarakeleveyteen sana kerrallaan */
+    function wrapNewsText(text, maxW) {
+        const out = [];
+        let line = '';
+        const words = String(text).split(' ');
+        for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+            const test = line ? line + ' ' + word : word;
+            if (ctx.measureText(test).width <= maxW) { line = test; continue; }
+            if (line) { out.push(line); line = ''; }
+            if (ctx.measureText(word).width > maxW) {
+                // Yksittäinen sana on saraketta leveämpi → pilkotaan merkki kerrallaan
+                let part = '';
+                for (const ch of word) {
+                    if (part && ctx.measureText(part + ch).width > maxW) { out.push(part); part = ch; }
+                    else { part += ch; }
+                }
+                line = part;
+            } else {
+                line = word;
+            }
+        }
+        if (line) out.push(line);
+        return out;
+    }
+
+    /* Sovittaa fontin niin, ettei teksti valu sarakkeen ulkopuolelle */
+    function fitNewsFont(text, maxW, baseFs, minFs, family, weight) {
+        const pre = weight ? weight + ' ' : '';
+        let fs = Math.max(minFs, baseFs);
+        ctx.font = pre + fs + 'px ' + family;
+        while (fs > minFs && ctx.measureText(text).width > maxW) {
+            fs--;
+            ctx.font = pre + fs + 'px ' + family;
+        }
+        return fs;
     }
 
     function drawTuft(tx, ty, blades, phase, scale, t) {
@@ -3823,6 +4319,224 @@ const Street = (() => {
         for (const tuft of foreground.treeGrassTufts) {
             drawTuft(tuft.x, tuft.y, tuft.blades, tuft.phase, 0.25, t);
         }
+    }
+
+    /* ── Sanomalehden asettelu (v4.53) ────────────────────────────
+       Sama näyttösovitus kuin huoneissa (winW, vs, needPx): kapea kännykkä
+       zoomataan 1:1:tä suuremmaksi, joten fontin maailmakoko voi olla
+       pienempi ja näkyä silti isona. Kaikki kappaleet kääritään sarakkeen
+       leveyteen ja jaetaan näkyvän korkeuden mittaisiin "näyttöihin" →
+       mitään ei koskaan leikata millään näytöllä. Tulos välimuistiin. */
+    let newsCache = { key: '', layout: null };
+
+    function newsLayout() {
+        const winW = Math.round(Math.min(WORLD_W, Math.max(VIEWW_MIN, viewW)));
+        const vs = (canvas && canvas.height && canvas.clientHeight)
+            ? canvas.clientHeight / canvas.height : 1;
+        const vsafe = (vs > 0.25) ? vs : 1;
+        const needPx = (target, base, max) =>
+            Math.round(Math.max(base, Math.min(max, target / vsafe)));
+
+        const panelW = Math.max(196, Math.min(560, winW - 20));
+        const panelX = Math.round(400 - panelW / 2);
+        const padX   = 12;
+        const rowX   = panelX + padX;
+        const rowW   = panelW - padX * 2;
+
+        const mastFs  = needPx(17, 12, 18);   // mastoke (PIMEÄ KATU)
+        const titleFs = needPx(13, 10, 13);   // sivun otsikko
+        const bodyFs  = needPx(15, 13, 20);   // leipäteksti
+        const smallFs = needPx(10, 9, 11);    // ylä- ja alatunniste
+        const lineH   = Math.round(bodyFs * 1.45);
+
+        const paperTop = 10, paperBottom = 390;
+        const subY    = paperTop + smallFs + 8;
+        const mastY   = subY + mastFs + 8;
+        const ruleY   = mastY + 8;
+        const titleY  = ruleY + 6 + titleFs + 10;
+        const textTop = titleY + 6;
+        const textBottom = paperBottom - 26;
+        const footerY = paperBottom - 12;
+        const maxLines = Math.max(3, Math.floor((textBottom - textTop) / lineH));
+
+        const key = winW + '|' + bodyFs + '|' + mastFs + '|' + titleFs + '|' + smallFs;
+        if (newsCache.key === key && newsCache.layout) return newsCache.layout;
+
+        ctx.save();
+        ctx.font = bodyFs + 'px "Courier New", monospace';
+        const screens = [];
+        for (let p = 0; p < NEWSPAPER_PAGES.length; p++) {
+            const page = NEWSPAPER_PAGES[p];
+
+            /* Manuaalisivu (v4.55): ASCII-piirros piirretään merkki
+               kerrallaan kiinteälle ruudukolle, joten reunat pysyvät
+               kohdakkain myös emojien kanssa. Leveä ja kapea versio –
+               valitaan se, jolla teksti on ruudulla isompi. */
+            if (page.art) {
+                const availH = textBottom - textTop;
+                const rateArt = (lines) => {
+                    let cols = 0;
+                    for (const l of lines) cols = Math.max(cols, Array.from(l).length);
+                    const fsW = Math.floor(rowW / (0.6 * cols));
+                    const fsH = Math.floor(availH / (lines.length * 1.3));
+                    return { lines: lines, cols: cols,
+                             fs: Math.max(6, Math.min(bodyFs, fsW, fsH)) };
+                };
+                const wideArt = rateArt(page.art);
+                const narrowArt = page.artNarrow ? rateArt(page.artNarrow) : null;
+                const chosen = (narrowArt && narrowArt.fs > wideArt.fs) ? narrowArt : wideArt;
+                const artLineH = Math.max(6, Math.round(chosen.fs * 1.3));
+                ctx.font = chosen.fs + 'px "Courier New", monospace';
+                const cellW = Math.max(2, ctx.measureText('M').width);
+                const perScreen = Math.max(3, Math.floor(availH / artLineH));
+                for (let i = 0; i < chosen.lines.length; i += perScreen) {
+                    const chunk = chosen.lines.slice(i, i + perScreen);
+                    const artH = chunk.length * artLineH;
+                    screens.push({
+                        page: p,
+                        lines: [],
+                        art: {
+                            fs: chosen.fs, cellW: cellW, lineH: artLineH, cols: chosen.cols,
+                            top: textTop + Math.round((availH - artH) / 2),
+                            lines: chunk
+                        }
+                    });
+                }
+                continue;
+            }
+
+            const vis = [];
+            for (const raw of page.lines) {
+                const src = String(raw);
+                if (src.trim() === '') { vis.push(''); continue; }   // riviväli
+                const indent = (src.match(/^\s*/) || [''])[0];
+                const indentPx = indent ? ctx.measureText(indent).width : 0;
+                const wrapped = wrapNewsText(src.trim(), Math.max(40, rowW - indentPx));
+                for (let i = 0; i < wrapped.length; i++) vis.push(indent + wrapped[i]);
+            }
+            let i = 0;
+            do {
+                const chunk = vis.slice(i, i + maxLines);
+                while (chunk.length && chunk[0] === '') chunk.shift();               // ei tyhjää alkua
+                while (chunk.length && chunk[chunk.length - 1] === '') chunk.pop();  // eikä loppua
+                screens.push({ page: p, lines: chunk });
+                i += maxLines;
+            } while (i < vis.length);
+        }
+        ctx.restore();   // mittauksen fontti ei vuoda kadun piirtoon
+
+        const layout = {
+            winW: winW, panelX: panelX, panelW: panelW, padX: padX, rowX: rowX, rowW: rowW,
+            mastFs: mastFs, titleFs: titleFs, bodyFs: bodyFs, smallFs: smallFs, lineH: lineH,
+            paperTop: paperTop, paperBottom: paperBottom, subY: subY, mastY: mastY, ruleY: ruleY,
+            titleY: titleY, textTop: textTop, textBottom: textBottom, footerY: footerY,
+            maxLines: maxLines, screens: screens
+        };
+        newsCache = { key: key, layout: layout };
+        return layout;
+    }
+
+    /* Sanomalehtinäkymä (v4.53): vaalea paperiarkki, tumma selkeä teksti.
+       Piirto on save()/restore()-parin sisällä, ettei tila vuoda kadulle. */
+    function drawNewspaperView() {
+        const L = newsLayout();
+        const idx = Math.max(0, Math.min(L.screens.length - 1, newsScreen));
+        const scr = L.screens[idx];
+        const pageCount = NEWSPAPER_PAGES.length;
+        const page = NEWSPAPER_PAGES[scr.page];
+        const pageScreens = L.screens.filter(s => s.page === scr.page).length;
+        const onPage = L.screens.slice(0, idx + 1).filter(s => s.page === scr.page).length;
+        const pageTxt = 'SIVU ' + (scr.page + 1) + '/' + pageCount +
+                        (pageScreens > 1 ? '  (' + onPage + '/' + pageScreens + ')' : '');
+        const hint = '▲/▼ = sivu   Space = seuraava   (o)/Enter = poistu';
+
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'rgba(0,0,0,0)';
+        ctx.textBaseline = 'alphabetic';
+
+        // 1) Tausta: katu jää tummaksi arkin taakse
+        ctx.fillStyle = '#07070c';
+        ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+        // 2) Paperiarkki, varjo ja ohut reuna
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(L.panelX + 3, L.paperTop + 5, L.panelW, L.paperBottom - L.paperTop);
+        ctx.fillStyle = '#f4eede';
+        ctx.fillRect(L.panelX, L.paperTop, L.panelW, L.paperBottom - L.paperTop);
+        ctx.strokeStyle = '#c6bca2';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(L.panelX + 0.5, L.paperTop + 0.5, L.panelW - 1, L.paperBottom - L.paperTop - 1);
+
+        // 3) Ylätunniste: lehden nimi (vasen) ja sivunumero (oikea).
+        //    Jos kadulla on ajoneuvo liikkeellä, vasen teksti vaihtuu
+        //    vilkkuvaksi varoitukseksi (v4.54) – lukija ehtii sulkea lehden.
+        const trafficComing = !!(vehicles[0] || vehicles[1]);
+        const topTxt = trafficComing ? '⚠ VARO AUTOA – liikenne ei pysähdy!'
+                                     : 'SANOMAT · PELIOHJEET';
+        ctx.fillStyle = '#6a6250';
+        ctx.textAlign = 'left';
+        ctx.font = 'bold ' + L.smallFs + 'px "Courier New", monospace';
+        const pageW = ctx.measureText(pageTxt).width;
+        fitNewsFont(topTxt, L.rowW - pageW - 10, L.smallFs, 7, '"Courier New", monospace', 'bold');
+        if (trafficComing) {
+            ctx.fillStyle = (Math.sin(Date.now() * 0.012) > 0) ? '#a51212' : '#c07a12';
+        }
+        ctx.fillText(topTxt, L.rowX, L.subY);
+        // Sivunumero omalla fontillaan, vaikka varoitusteksti olisi kutistettu
+        ctx.font = 'bold ' + L.smallFs + 'px "Courier New", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(pageTxt, L.rowX + L.rowW, L.subY);
+
+        // 4) Mastoke + kaksinkertainen viiva
+        ctx.textAlign = 'center';
+        fitNewsFont('PIMEÄ KATU', L.rowW, L.mastFs, 9, '"Press Start 2P", monospace', 'normal');
+        ctx.fillStyle = '#141414';
+        ctx.fillText('PIMEÄ KATU', 400, L.mastY);
+        ctx.fillRect(L.panelX + 8, L.ruleY, L.panelW - 16, 2);
+        ctx.fillRect(L.panelX + 8, L.ruleY + 3, L.panelW - 16, 1);
+
+        // 5) Sivun otsikko
+        fitNewsFont(page.title, L.rowW - 8, L.titleFs, 8, '"Press Start 2P", monospace', 'normal');
+        ctx.fillStyle = '#8c1d1d';
+        ctx.fillText(page.title, 400, L.titleY);
+
+        // 6) Leipäteksti (valmiiksi käärityt rivit) TAI manuaalin ASCII-piirros
+        ctx.fillStyle = '#16150f';
+        if (scr.art) {
+            const A = scr.art;
+            const x0 = L.rowX + Math.max(0, Math.round((L.rowW - A.cols * A.cellW) / 2));
+            ctx.font = A.fs + 'px "Courier New", monospace';
+            ctx.textAlign = 'center';
+            for (let i = 0; i < A.lines.length; i++) {
+                const chars = Array.from(A.lines[i]);      // emoji = yksi merkki
+                const baseline = A.top + A.fs + i * A.lineH;
+                for (let c = 0; c < chars.length; c++) {
+                    if (chars[c] === ' ') continue;
+                    ctx.fillText(chars[c], x0 + (c + 0.5) * A.cellW, baseline);
+                }
+            }
+            ctx.textAlign = 'left';
+        } else {
+            ctx.textAlign = 'left';
+            ctx.font = L.bodyFs + 'px "Courier New", monospace';
+            for (let i = 0; i < scr.lines.length; i++) {
+                if (!scr.lines[i]) continue;
+                ctx.fillText(scr.lines[i], L.rowX, L.textTop + L.bodyFs + i * L.lineH);
+            }
+        }
+
+        // 7) Alatunniste: ohjeet (vasen) ja sivunumero (oikea)
+        fitNewsFont(hint, L.rowW - pageW - 12, L.smallFs, 7, '"Courier New", monospace', 'bold');
+        ctx.fillStyle = '#6a6250';
+        ctx.textAlign = 'left';
+        ctx.fillText(hint, L.rowX, L.footerY);
+        ctx.font = 'bold ' + L.smallFs + 'px "Courier New", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(pageTxt, L.rowX + L.rowW, L.footerY);
+        ctx.textAlign = 'left';
+
+        ctx.restore();
     }
 
     function drawBeetle() {
@@ -5557,6 +6271,37 @@ const Street = (() => {
         ctx.fillStyle = '#7a2020';
         ctx.fillRect(px + pw / 2 + 2, top + 1, 7, 3);
 
+        ctx.restore();
+    }
+
+    /* ── Pelaaja avoimessa kaivossa (v4.51) ─────────
+       Pudotus: hahmo kutistuu nopeasti reiän keskipisteeseen → vajoaa alas ja
+       katoaa (musta aukko piirretään päälle: drawManholeOverlay).
+       Ylöskiipeäminen: nousee hitaasti (~3,5 s) reiän keskeltä, askel reunan
+       yli viimeistelee – pieni sivuttaisheilunta tekee köpimisen tunnun. */
+    function drawPlayerManhole() {
+        const a = mhAction;
+        if (a.phase === 'fall' && a.t <= 0) return;   // pohjalla → ei piirretä
+        const feetX = Math.round(player.x) + player.w / 2;
+        const feetY = Math.round(player.y) + player.h - 1;
+        let k, wob = 0;
+        if (a.phase === 'fall') {
+            // 1 → 0,10 (katoaa reikään)
+            const p = Math.max(0, Math.min(1, 1 - a.t / MH_FALL_FRAMES));
+            k = 1 - 0.90 * p;
+        } else {
+            // 0,10 → 1: nousee esiin reiän keskeltä; loppuosa = askel reunan yli
+            const p = Math.max(0, Math.min(1, 1 - a.t / MH_CLIMB_FRAMES));
+            const riseP = Math.min(1, p / MH_RISE_PART);
+            k = 0.10 + 0.90 * riseP;
+            wob = Math.sin(p * Math.PI * 7) * MH_CLIMB_WOBBLE * (1 - riseP);
+        }
+        if (k <= 0.05) return;
+        ctx.save();
+        ctx.translate(feetX + wob, feetY);
+        ctx.scale(k, k);
+        ctx.translate(-feetX, -feetY);
+        drawPlayer();
         ctx.restore();
     }
 

@@ -17,20 +17,75 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.49` (`index.html` → `#version-tag`) · **Git:** v4.39–v4.43 committattu ja
-  pushattu 20.9.2026 (`2ffcd94`, `e941778`, origin/main) · **työpuu:** v4.44 (Nuku → +1 🍔) + v4.45 (✕ sulkee huoneet, ei resettiä) + v4.46 (jukeboxin monivalinta) + v4.47 (ajoneuvon törmäyksen tärinä + `playKnock`) + v4.48 (✕-nappi: sulku kaikista tiloista, reset vain kadulta) + v4.49 (nälkä kulkee kaikkialla paitsi nukkuessa).
-- **🍔 Nälkä kulkee kaikkialla (v4.49, 21.9.2026):** nälkäblokki siirrettiin `update()`in alkuun
-  (kuolemasekvenssin jälkeen) → 🍔 kuluu nyt myös **BAR:ssa, jukeboxissa ja iframe-peleissä**
-  kuten kadulla. **Syy:** blokki oli huoneiden `return`ien jälkeen, ja lisäksi `closeGame()` teki
-  `hamburgerTimer = 2400` → jokainen alapelistä poistuminen täytti 40 s (hedelmäpelin lyhyet
-  sessiot eivät kuluttaneet mitään). Jäissä **vain** nukkuessa (`hungerOnHold`) ja kuolleena.
-  **Siirretty kuolema:** jos viimeinen 🍔 kuluu huoneessa/pelissä, kuolema ei laukea näkymättömissä
-  (`insideHiddenState()` → `starvingOnExit`) vaan **vasta kadulla**, jossa `checkStarvingOnExit()`
-  antaa 10 s (`HUNGER_WAKE_GRACE`) aikaa ostaa 🍔 BAR:sta; armoaika vain kerran eikä sitä tipu jos
-  ruokaa ehti saada. Uusi nuppi: `HUNGER_WARN`-logiikka ennallaan, `hamburgerTimer <= 0` + 🍔 > 0
-  → 10 s top-up (esim. BAR-osto 0-tilanteesta). **Lukitut arvot ennallaan:** 2400 framet (1/40 s),
-  katto 10, hinnat, RTP (sääntö 04 + `docs/economy-balance-memo.md` päivitetty). Validoitu
-  `%TEMP%\street-hunger-scope-test.cjs` (26 tarkistusta, 0 löydöstä). Versio `v4.49`, ei committia.
+- **Versio:** `v4.55` (`index.html` → `#version-tag`) · **Git:** v4.47–v4.49 committattu ja
+  pushattu 21.9.2026 (`db52af6`, origin/main) · **työpuu:** v4.55 (manuaalisivu) + v4.54
+  (liikenne lukiessa) + v4.53 (sanomalehti) + v4.52 (avoin kaivo) + v4.51 + v4.50 + samat
+  aiemmat työpuun muutokset.
+- **📐 Sanomalehden manuaalisivu (v4.55, 21.9.2026, käyttäjän pyyntö):** lehden **5. sivu
+  `MANUAALI`** näyttää rahavirran ASCII-piirroksena (kadun tulot → käytön kohteet → paine).
+  Kaksi piirrosversiota: `NEWS_MANUAL_WIDE` (64 merkkiä, PC/vaaka) ja `NEWS_MANUAL_NARROW`
+  (40 merkkiä, pystykännykkä); `newsLayout()` valitsee sen, jolla teksti on ruudulla isompi
+  (fsW = `rowW / 0.6·cols`, fsH = tekstialan korkeus / rivit) ja piirtää sen **merkki kerrallaan
+  kiinteälle ruudukolle** (cellW = `measureText('M')`) → reunat pysyvät kohdakkain myös emojien
+  kanssa (`Array.from` = emoji on yksi solu). Piirros piirretään omalla fonttikoolla
+  (`scr.art = { fs, cellW, lineH, cols, top, lines }`) ja keskitetään sekä vaaka- että
+  pystysuunnassa. Rivit validoitu 64/46 merkkiin (`%TEMP%\np-verify.cjs`), px-generaattori
+  `%TEMP%\newspaper-art.cjs` (rakentaa laatikot tarkalleen kohdakkain – käytä tätä, jos
+  piirrosta muokataan). Sivumäärä 5 → lehden alatunniste näyttää `SIVU 5/5`. Ei talousmuutoksia
+  (sääntö 04), ei uutta localStorage-avainta. Versio `v4.55`, ei committia.
+- **🚗 Liikenne jatkuu sanomalehteä lukiessa (v4.54, 21.9.2026, käyttäjän pyyntö):** lukutila ei
+  enää jäädytä liikennettä – ajoneuvolohko (liike, spawnit, törmäys) eristettiin omaksi
+  funktioksi **`updateTraffic(dt)`** (r. ~1162) ja sitä kutsutaan sekä kadulla (r. ~1890) että
+  `newsRoom`-haarassa (r. ~1542). Osuma lukiessa = **lehti putoaa kädestä**
+  (`closeNewspaper()`) ja pelaaja kaatuu kadulle: tainnutus + **−1 🍔** (0 🍔 = kuolema)
+  täsmälleen kuten ennenkin → **talouteen ei uusia arvoja (sääntö 04 ennallaan)**.
+  **Fair-play-varoitus:** lehden ylätunnisteen vasen teksti vaihtuu vilkkuvaksi
+  `⚠ VARO AUTOA – liikenne ei pysähdy!`, kun kadulla on ajoneuvo (`vehicles[0] || vehicles[1]`),
+  joten lukija ehtii sulkea lehden. Turvassa ovat kaistojen välinen rako ja aidan juuri
+  (samat rajat kuin ennen); lehteä ei voi poimia tainnutettuna. Muu maailma on yhä jäissä
+  lukiessa (kolikot, kaivot, sää, eläimet). Versio `v4.54`, ei committia.
+- **📰 Sanomalehti kadulla (v4.53, 21.9.2026, käyttäjän pyyntö):** kadulla lojuva lehti
+  (`foreground.newspaper`, siirretty rauta-aidan aukkoon `x 338–352` – kauas ovista eikä enää
+  aidan takana) **poimitaan toimintonapilla** (`nearNewspaper()`, säde 26 px; `handleAction()`in
+  ensimmäinen haara) → **`newsRoom`**: vaalea paperiarkki + tumma teksti, jossa pelin peliohjeet
+  **4 sivuna** (`NEWSPAPER_PAGES`; katu, uni/valo, talojen pelit, rahapeli).
+  Ohjaus (käyttäjän valinta): **▲/▼ = edellinen/seuraava sivu** (ei kierrä yli) ·
+  **Space (⚡) = seuraava sivu, viimeisellä sivulla poistuu kadulle** · **(o)/Enter = poistu heti** ·
+  **✕ = sulje** (`closeRoom`). Kadulla pieni vihje `⚡ = lue` (`drawNewspaperHint()` pelaajan päälle).
+  Teksti **sanakääritetään ja sivutetaan** näkyvään ikkunaan (`newsLayout()`, `winW`/`vs`/`needPx`,
+  tulos välimuistissa) → luettavissa myös kännykällä, ei leikkaudu millään näytöllä.
+  **Lukeminen on ilmaista eikä muuta taloutta (sääntö 04)**; nälkä kuluu myös lukiessa
+  (v4.49/v4.50) ja 🍔 0 sulkee lehden kuolemaa varten (`insideHiddenState()` / `closeRoom()`).
+  Päivä/yö-liuku pysähtyy lukemisen ajaksi; `trackHiddenStreet()` **ei** muutu (ei viemärin
+  uudelleenarpoa). Ei uutta localStorage-avainta, `gameState.js` ennallaan. Versio `v4.53`
+  (liikenne lukiessa: v4.54), ei committia.
+- **🕳️ Avoin viemärinkansi / kaivo (v4.51/v4.52, 21.9.2026):** kadun 2 viemäristä (`foreground.manholes`,
+  x ≈ 215 ja ≈ 585) toisesta voi puuttua kansi → kohta on **musta reikä** (`drawManholeHole()`).
+  Siihen astuva pelaaja **putoaa alas (katoaa)** ja **köpii takaisin ylös** reiän keskeltä
+  (pudotus ~0,6 s, nousu ~3,5 s). **Menetys (v4.52): enintään −2 🪙** (`MH_COIN_COST`:
+  **3 → 1, 2 → 0, 1 → 0, 0 → ei mitään**); ei 🍔-menetystä, ei kuolemaa eikä tainnutusta. Arvonta **1/6** pelin
+  alussa ja **1/10** joka kerta kun huone tai alapeli sulkeutuu (`trackHiddenStreet()`; kansi voi
+  myös palata paikalleen). Putoaminen on **reunaehtoinen** (jalkapiste siirtyy ellipsiin
+  `MH_HIT_RX 11` / `MH_HIT_RY 5`), joten kansi saa kadota jalkojen altakin ilman pakkoputousta – ja
+  reiän voi kiertää. Tila vain muistissa (ei uutta localStorage-avainta). Testityökalut `?hole=1` /
+  `?hole=2` / `?hole=0`. Koodi: `street.js` (`MH_*`, `rollManholeState`, `maybeRerollManholeState`,
+  `startManholeFall`, `updateManholeAction`, `drawManholeHole`, `drawManholeSteam`,
+  `drawManholeOverlay`, `drawPlayerManhole`). Sääntö 04 + `docs/economy-balance-memo.md` päivitetty,
+  versio `v4.52`, ei committia.
+- **🍔 Nälkä kulkee kaikkialla + kuolema myös sisällä (v4.49/v4.50, 21.9.2026):** nälkäblokki
+  siirrettiin `update()`in alkuun (kuolemasekvenssin jälkeen) → 🍔 kuluu myös **BAR:ssa,
+  jukeboxissa ja iframe-peleissä** kuten kadulla. **Syy (v4.49):** blokki oli huoneiden `return`ien
+  jälkeen, ja `closeGame()` teki `hamburgerTimer = 2400` → jokainen alapelistä poistuminen täytti
+  40 s. Jäissä **vain** nukkuessa (`hungerOnHold`) ja kuolleena.
+  **v4.50-korjaus:** v4.49:n "siirretty kuolema + 10 s armoaika" osoittautui vääräksi (0 🍔:lla
+  saattoi olla huoneessa/pelissä loputtomiin) → `starvingOnExit`/`checkStarvingOnExit` **poistettu**.
+  Kun 🍔 = 0, kuolema laukeaa **heti paikasta riippumatta**; `leaveHiddenStateForDeath()` sulkee
+  ensin alapelin (`closeGame()`) tai canvas-huoneen (`closeRoom()`), joten pelaaja romahtaa
+  **näkyvästi kadulle** → tuttu 3 s kuolinanimaatio + resetti. `closeGame()` ei enää muuta
+  tallennettua 0 🍔:ää 5:ksi. **Käyttäjän linjaus:** *"pelaajan tulee aina huolehtia, että
+  hampurilaisaldoa riittää paitsi nukkuessa."* **Lukitut arvot ennallaan:** 2400 framet (1/40 s),
+  katto 10, hinnat, RTP (sääntö 04 + memo päivitetty). Validoitu
+  `%TEMP%\street-hunger-scope-test.cjs` (25 tarkistusta, 0 löydöstä). Versio `v4.50`, ei committia.
 - **✕-nappi korjattu (v4.48, 21.9.2026):** sama `handleCloseButton()` (`index.html`) palvelee **molempia**
   ✕-nappeja (`#reset-btn` kadulla/huoneissa, `#iframe-close-btn` iframe-overlayn päällä). Järjestys:
   (1) iframe auki (`#game-iframe-overlay.active`) → `Street.closeGame()` = takaisin kadulle,

@@ -19,6 +19,7 @@
    │ Jukebox:    1 kolikko = 1 koko kappale             │
    │ Hedelmäpeli:1 kolikko / pyöräytys, RTP 78,5 %      │
    │ Makuuhuone: aina auki (Nuku/Poistu ilmaisia)       │
+   │ Avoin kaivo (v4.52): ≤ 2 🪙 (1 → 0, 0 → 0)             │
    └────────────────────────┬───────────────────────────┘
                             ▼
    ┌──────────── paine (pakko pitää huolta) ────────────┐
@@ -61,6 +62,7 @@ ihan kuin oikeassa elämässä".
 | Nukkuminen – nälkä jäissä (v4.41) | Nälkäajastin ei tikitä makuuhuoneessa eikä Zzz-pimennyksen aikana (`hungerOnHold()`), joten pelaaja **ei kuole nukkuessaan**. Herätessä ajastin jatkuu siitä mihin jäi, mutta vähintään **10 s** (`HUNGER_WAKE_GRACE = 600`). Tahti 1/40 s (2400 framet) ennallaan |
 | Nukkuminen – 🍔-palkkio (v4.44) | Nuku → **+1 🍔** herätessä (katto 10, sama kuin BAR). Ei vaikuta muuhun talouteen |
 | Oviukko / kukkaruukku / sähkökaappi | osuma = tainnutus + **−1 🍔** (🍔 0 → kuolema) |
+| Avoin viemärinkansi (kaivo, v4.51/v4.52) | kansi voi puuttua: **1/6** pelin alussa, **1/10** joka kerta kun huone/alapeli sulkeutuu (kansi voi myös palata). Astuminen = **enintään −2 🪙** (`MH_COIN_COST`: 3 → 1, 2 → 0, 1 → 0, 0 → ei mitään); ei 🍔:tä, ei kuolemaa, ei tainnutusta |
 | Syntymäpaketti | uusi peli / reset: **2 kolikkoa + 5 🍔** |
 
 ### Aukioloaika (v4.34) – ei lukittu talousarvo
@@ -89,7 +91,7 @@ pitää mennä onholdiin. Pelaaja ei saa kuolla nukkuessa."* Rajaus: **vain nukk
 - **Lukitut arvot ennallaan:** 2400 framet (1 🍔 / 40 s), katto 10, BAR 1 kolikko = 1 🍔,
   RTP ≈ 78,5 %. Muutos koskee vain *sitä, milloin* ajastin käy – ei sen tahtia eikä hintoja.
 
-### Kulutus jatkuu kaikkialla muualla kuin nukkuessa (v4.49) – ei lukittu talousarvo
+### Kulutus jatkuu kaikkialla muualla kuin nukkuessa (v4.49/v4.50) – ei lukittu talousarvo
 
 Käyttäjän havainto 21.9.2026: *"hampurilaisia kuluu myös Jukebox-tilassa ja hedelmäpeliä pelatessa.
 Nyt tuntuu että kulutus pysähtyy ko tiloissa. … Nukkuessa=levossa hampurilaiskulutus onkin
@@ -102,15 +104,20 @@ tarkoituksella tauolla, muissa ei tarvisi olla vaan jatkuu, kunten katuelämä."
 - **Nyt:** blokki on heti kuolemasekvenssin jälkeen → kulutus jatkuu kadulla, BAR:ssa, jukeboxissa
   ja iframe-peleissä; jäissä vain `hungerOnHold()` (makuuhuone + Zzz). `closeGame()` ei enää
   nollaa ajastinta (se jatkaa siitä mihin jäi) eikä lue tallennusta jos `localStorage` puuttuu.
-- **Siirretty kuolema:** viimeisen 🍔:n kuluessa huoneessa/pelissä kuolema ei laukea näkymättömissä
-  (huone peittää kadun / iframe on auki) → `starvingOnExit`; kadulle palatessa
-  `checkStarvingOnExit()` antaa **10 s** (`HUNGER_WAKE_GRACE`) aikaa ostaa 🍔 BAR:sta, minkä jälkeen
-  tavallinen nälkäkuolema alkaa näkyvästi kadulla. Armoaika vain kerran (lippu nollataan) eikä sitä
-  tipu, jos pelaaja ehti ostaa ruokaa. 0 🍔 + armoaika loppu ei anna lisää aikaa ovikävelyllä.
+- **Kuolema myös huoneessa/pelissä (v4.50):** v4.49:n "siirretty kuolema + 10 s armoaika" oli
+  **väärä ratkaisu** – 0 🍔:lla saattoi jäädä huoneeseen/peliin loputtomiin, eli 1 🍔 riitti
+  "ilmaiseksi lipuksi" sisätiloihin. Käyttäjän linjaus 21.9.2026: *"Pelaajan PITI kuolla jos hän
+  menee syömättä eri tiloihin ja hampurilaissaldo loppuu. … pelaajan tulee aina huolehtia, että
+  hampurilaisaldoa riittää paitsi nukkuessa."* → `starvingOnExit`/`checkStarvingOnExit` **poistettu**;
+  kun 🍔 = 0, kuolema laukeaa **heti paikasta riippumatta**. Jotta kuolema ei jää näkymättömiin,
+  `leaveHiddenStateForDeath()` sulkee ensin alapelin (`closeGame()`) tai canvas-huoneen
+  (`closeRoom()`) → pelaaja romahtaa **kadulla** (3 s kuolinanimaatio) → tuttu resetti.
+  `closeGame()` ei enää muuta tallennettua 0 🍔:ää 5:ksi (`|| 5` → eksplisiittinen tarkistus).
 - **Lukitut arvot ennallaan:** 2400 framet (1 🍔 / 40 s), katto 10, BAR 1 kolikko = 1 🍔,
   jukebox 1 kolikko / kappale, RTP ≈ 78,5 %, syntymäpaketti 2 🪙 + 5 🍔.
-- **Validointi:** `%TEMP%\street-hunger-scope-test.cjs` (26 tarkistusta, 0 löydöstä) –
-  kulutus kadulla/BAR:ssa/jukeboxissa/iframessa, jäissä makuuhuoneessa, siirretty kuolema.
+- **Validointi:** `%TEMP%\street-hunger-scope-test.cjs` (25 tarkistusta, 0 löydöstä) –
+  kulutus kadulla/BAR:ssa/jukeboxissa/iframessa, jäissä makuuhuoneessa, kuolema huoneessa
+  (huone sulkeutuu + resetti) ja jukeboxissa burgerien loputtua.
 
 ### Makuuhuoneen ovi auki ilman avaimia (v4.43) – ei lukittu talousarvo
 
@@ -128,6 +135,37 @@ Pitähän sen pelaajan itse voida päättää milloin haluaa nukkua."*
   ratketa Nuku-valinnalla ennen avaimia → v4.32:n "3 avainta → päivä kerran" -auringonnousu ei enää
   laukea sen jälkeen (sama tila syntyi aiemminkin nukkumalla avaimet koossa). Vapaa huone on samalla
   paikka pitää nälkä jäissä (`hungerOnHold()`, v4.41) – se ei tuota rahaa eikä 🍔:tä.
+
+### Avoin viemärinkansi (kaivo) – kolikkomenetys (v4.51, hinta vaihdettu v4.52)
+
+Käyttäjän pyyntö 21.9.2026: *"Kadulla on 2 kaivonkantta. Toisinaan niistä toinen voisi puuttua ja
+pelaaja voisi pudota kaivoon. Kun kansi puuttuu kohta on musta. … Kansi voi puuttua kun peli alkaa
+random kansi 1/6 tapauksesta ja tilanne voi myös muuttua 1/10 kun pelaaja käy jossain huoneessa ja
+palaa takaisin kadulle."* Aluksi hinnaksi valittiin −1 🍔 ilman tainnutusta; **v4.52** hinta vaihdettiin
+kolikoihin ja tarkennettiin: *"Aina menee 2 kolikkoa jos on mitä mennä. Jos vain 1 kolikko, se ainutkin
+menee."* → sääntö **3 → 1, 2 → 0, 1 → 0, 0 → ei mitään**.
+
+- **Mekaniikka:** kansi voi puuttua toisesta kahdesta viemäristä (`foreground.manholes`, x ≈ 215 ja
+  ≈ 585). Silloin kohta on **musta reikä** (`drawManholeHole()`). Siihen astuva pelaaja **vajoaa alas
+  (katoaa)** ja **köpii takaisin ylös** reiän keskeltä (`MH_FALL_FRAMES 36` ≈ 0,6 s nopea pudotus +
+  `MH_CLIMB_FRAMES 210` ≈ 3,5 s köpiminen, `drawPlayerManhole()`).
+- **Menetys (v4.52):** **enintään −2 🪙** (`MH_COIN_COST`) – kolikot hulahtavat viemäriin:
+  **3 → 1, 2 → 0, 1 → 0, 0 → ei mitään** (ainutkin kolikko menee, jos se on ainoa). Ei 🍔-menetystä,
+  ei kuolemaa eikä tainnutusta. (Ennen v4.52: −1 🍔, ja 🍔 0 → kuolema.) Putoaminen ei siis kosketa
+  elämiä – se on puhdas **kolikkomenetys**.
+- **Arvonta:** `MANHOLE_START_CHANCE 1/6` (uusi peli / sivun lataus) ja `MANHOLE_RETURN_CHANCE 1/10`
+  joka kerta kun huone tai alapeli sulkeutuu (`trackHiddenStreet()`; kansi katoaa TAI palaa
+  paikalleen). Tila on vain muistissa → **ei uutta localStorage-avainta**, `gameState.js` ei muutu.
+- **Reunaehto:** putoaminen laukeaa vain kun jalkapiste **siirtyy** reiän ellipsin sisään
+  (`MH_HIT_RX 11` / `MH_HIT_RY 5`) – jos kansi katoaa jalkojen alta, putoamista ei tapahdu ennen kuin
+  astuu pois ja takaisin. Reiän voi myös kiertää (ovien käyttösäde on 19 px ja törmäysellipsi on
+  piirtoa pienempi), joten vaara on **vältettävissä**.
+- **Lukitut arvot ennallaan:** 🍔-tahti 2400 framet (1/40 s), katto 10, BAR 1 🪙 = 1 🍔, jukebox
+  1 🪙 / kappale, hedelmäpelin panos/painot/maksut/RTP ≈ 78,5 %, syntymäpaketti 2 🪙 + 5 🍔, kadun
+  kolikko 120 s ja potkukolikko 1/5. Kaivo on uusi **kolikkojen käyttökohde** (kuten BAR/jukebox),
+  ei uusi 🍔-paine.
+- **Testityökalut:** `?hole=1` (1. kansi auki), `?hole=2` (2. kansi auki), `?hole=0` (molemmat
+  paikallaan) – eivät tallenna.
 
 ---
 
@@ -170,4 +208,6 @@ vapaasti (esim. `COIN_CHEAT_COOLDOWN = 0` nopeampaan testaukseen) ilman versiono
 | 20.9.2026 | v4.43 | Makuuhuoneen (talo 7) ovi oli lukossa ilman **3 avainta** (avaimilla ovi auki ilman lamppua) | Ovi **aina auki kuten BAR** – ei avaimia eikä lamppua, päivällä ja yöllä; avainpopup poistettu (`handleAction`). **Talousarvot ennallaan** (Nuku/Poistu ilmaisia, 2400 / katto 10 / hinnat / RTP). Nukkua voi nyt heti ensimmäisenä yönä → `state.isDay` voi ratketa ennen avaimia |
 | 21.9.2026 | v4.44 | Nukkuminen antoi 0 🍔:tä | Nuku → **+1 🍔** (katto 10). Ei muutoksia muihin talousarvoihin (2400, katto 10, hinnat, RTP, aukiolo). Käyttäjän pyyntö 21.9.2026 |
 | 21.9.2026 | v4.46 | Jukebox: yksi valinta (rivi 0 = "ei valintaa"), Space/Enter/⚡ = poistu → **−1 🪙 ja yksi kappale** | Jukebox: **monivalinta** – rivi 0 = Poistu, (o)/Space/⚡ = ota/poista, Enter = soita & poistu; veloitus **1 🪙 / valittu kappale** (niin moneen kuin kolikoita riittää) ja valitut soivat peräkkäin 1 → 3. **Hinta per kappale, RTP, painot, 🍔-tahti, BAR-hinnat ja syntymäpaketti ennallaan** – vain käyttöliittymä ja soittologiikka (jono) muuttuivat |
+| 21.9.2026 | v4.52 | Putoaminen vei **−1 🍔** (ja 🍔 0 → kuolema) | Putoaminen vie **enintään −2 🪙**: 3 → 1, 2 → 0, 1 → 0, 0 → ei mitään (ei 🍔-menetystä, ei kuolemaa). Kolikot ovat uusi käyttökohde – muut arvot ennallaan |
+| 21.9.2026 | v4.51 | Kadun 2 viemärinkantta olivat aina ehjiä – vaaralistalla vain oviukko / kukkaruukku / sähkökaappi | **Avoin kaivo:** kansi voi puuttua (1/6 alussa, 1/10 huoneesta/alapelistä palatessa; voi myös palata). Astuminen = **putoaa alas + kiipeää ylös** = **−1 🍔**, **ei tainnutusta** (🍔 0 → kuolema). Uusi menolähde, jonka voi välttää kiertämällä. Muut arvot ennallaan (2400, katto 10, hinnat, RTP, syntymäpaketti). Käyttäjän pyyntö + valinta 21.9.2026 |
 

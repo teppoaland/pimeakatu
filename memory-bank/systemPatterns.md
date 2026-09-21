@@ -83,13 +83,13 @@ joka ohjaa myös puiden huojuntaa) eivät muutu. HUD:ssa 🍔-varoitus vilkkuu, 
 pois ja auringon näkyviin (päivä → yö toisinpäin) → `dayT = 0` on bitilleen entinen yökuva ja
 `dayT = 1` jättää auringon vasemmalle. Makuuhuoneen ikkunan oma aurinko/kuu säilyy ennallaan.
 
-**Nälkä jäissä vain nukkuessa (v4.41 / v4.49):** `hungerOnHold()` (`sleepRoom || sleepPhase > 0`)
+**Nälkä jäissä vain nukkuessa (v4.41 / v4.49 / v4.50):** `hungerOnHold()` (`sleepRoom || sleepPhase > 0`)
 portittaa `hamburgerTimer`in (`street.js`) → pelaaja ei voi kuolla nukkuessaan; herätessä
 `HUNGER_WAKE_GRACE 600` (väh. 10 s). **Kaikkialla muualla** (katu, BAR, jukebox, iframe-pelit)
-kulutus jatkuu kuten kadulla (v4.49) – pelaaja huolehtii itse, ettei pelaa eikä käy "ostoksilla"
-nälissään. Nälkäblokki on `update()`in alussa (kuolemasekvenssin jälkeen) eikä `closeGame()`
-nollaa ajastinta. Jos viimeinen 🍔 kuluu huoneessa/pelissä, kuolema siirtyy **kadulle**
-(`insideHiddenState()` → `starvingOnExit` → `checkStarvingOnExit()` + 10 s armoaika). Ks. sääntö 04.
+kulutus jatkuu kuten kadulla – pelaaja huolehtii itse, että 🍔 riittää. Nälkäblokki on `update()`in
+alussa (kuolemasekvenssin jälkeen) eikä `closeGame()` nollaa ajastinta. **🍔 = 0 → kuolema myös
+huoneessa/pelissä (v4.50):** `leaveHiddenStateForDeath()` sulkee ensin alapelin (`closeGame()`) tai
+canvas-huoneen (`closeRoom()`), jotta kuolinsekvenssi näkyy kadulla. Ks. sääntö 04.
 
 **Liikenne (v4.37):** ajoneuvojen spawn-väli puolittuu päivällä (`TRAFFIC_DAY_MULT 2`, kerroin
 `1 + (MULT − 1) · dayT`) → yö 20–40 s/kaista, täysi päivä 10–20 s/kaista. Kaistat (`LANE_DEFS`),
