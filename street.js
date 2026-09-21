@@ -182,10 +182,15 @@ const Street = (() => {
         { url: 'jukebox/Knived_Unafraid_instrumental.mp3', title: 'Knived - Unafraid (inst.)' }
     ];
     let jukeboxRoom = false;
-    let jukeSel = 0;               // 0 = ei valintaa, 1..N = kappale
+    let jukeSel = 0;               // kursori: 0 = Poistu-rivi, 1..N = kappale
     let jukeHeldUp = false;        // ▲ reunanilmaisu
     let jukeHeldDown = false;      // ▼ reunanilmaisu
-    let jukeTrack = 0;             // soiva kappale (1..N, 0 = ei mitään tällä istunnolla)
+    /* Monivalinta (v4.46): kappaleita voi valita useamman ja valitut soitetaan
+       poistuttaessa yksi kerrallaan (1 → 3). Hinta ennallaan: 1 🪙 / kappale. */
+    let jukePick = [false, false, false];   // valitut kappaleet (true = listalla)
+    let jukeSpaceHeld = false;     // Space/⚡/(o) reunanilmaisu (ota/poista)
+    let jukeEnterHeld = false;     // Enter-reunanilmaisu (soita & poistu)
+    let jukeQueue = [];            // soivat kappaleet numeroina (1..N), sama kuin audio-jono
     let coinCount = 0;
     let coinRespawnTimer = 0;
     let hamburgerCount = 5;
@@ -1096,6 +1101,12 @@ const Street = (() => {
                         state.isDay = isDay;
                         GameState.save(state);
                     }
+                    // +1 🍔 nukkumisesta (v4.44, käyttäjän pyyntö 21.9.2026)
+                    if (!DAY_FORCE && hamburgerCount < 10) {
+                        hamburgerCount++;
+                        state.inventory.hamburgerCount = hamburgerCount;
+                        GameState.save(state);
+                    }
                     // Herätysrauha (v4.41): ajastin jatkuu siitä mihin se jäi,
                     // mutta vähintään HUNGER_WAKE_GRACE-verran – muuten 1 🍔:lla
                     // nukkunut voisi kuolla heti herätessään.
@@ -1172,18 +1183,24 @@ const Street = (() => {
             return;
         }
 
-        // JUKEBOX-huone (talo 5) – valinta nuolilla, osto + soitto poistuttaessa
-        //   ▲ / W = valitse YLÖS (pienempi rivi)   ▼ / S = valitse ALAS (isompi rivi)
-        //   Rivi 0 ("ei valintaa") on listan ylimpänä → ▲ = jukeSel - 1, ▼ = jukeSel + 1
-        //   0 = ei valintaa → poistuminen ei veloita eikä soita mitään
-        //   (o) / Space / Enter / ⚡ = poistu: valinta 1-N → 1 kolikko + koko kappale
+        // JUKEBOX-huone (talo 5) – monivalinta (v4.46)
+        //   ▲ / W = kursori ylös   ▼ / S = kursori alas (0 = Poistu-rivi, 1..N = kappale)
+        //   (o) / Space / ⚡ = ota kappale listalle tai poista se
+        //   (o) / Space / ⚡ rivillä 0 = soita valitut & poistu
+        //   Enter = soita valitut & poistu mistä tahansa
+        //   Kun jono soi (valinta lukossa) Space/(o)/⚡ ja Enter vain poistuvat
+        //   Ei valintoja → poistuminen ei veloita eikä soita mitään
+        //   Valitut soitetaan poistuttaessa yksi kerrallaan (1 → 3), 1 🪙 / kappale
         if (jukeboxRoom) {
             const selUp = !!(keys['ArrowUp'] || keys['w'] || keys['W']);
             const selDown = !!(keys['ArrowDown'] || keys['s'] || keys['S']);
             const trackCount = JUKEBOX_TRACKS.length;
             const songPlaying = StreetAudio.isJukeboxPlaying();
+            // Space ja ⚡ asettavat saman keyn (' ') → sama reuna molemmille
+            const toggleDown = !!(keys[' '] || keys['o'] || keys['O']);
+            const enterDown = !!keys['Enter'];
 
-            // Valinta on lukossa kun kappale soi (soi aina loppuun asti)
+            // Kursori on lukossa kun jono soi (kappaleet soivat aina loppuun asti)
             if (!songPlaying) {
                 if (selUp && !jukeHeldUp) jukeSel = Math.max(0, jukeSel - 1);
                 if (selDown && !jukeHeldDown) jukeSel = Math.min(trackCount, jukeSel + 1);
@@ -1191,33 +1208,19 @@ const Street = (() => {
             jukeHeldUp = selUp;
             jukeHeldDown = selDown;
 
-            if (actionJustPressed) {
-                if (!songPlaying && jukeSel > 0) {
-                    if (coinCount > 0) {
-                        coinCount--;
-                        state.inventory.coinCount = coinCount;
-                        GameState.save(state);
-                        updateHUD();
-                        if (StreetAudio.playJukebox(JUKEBOX_TRACKS[jukeSel - 1].url)) {
-                            jukeTrack = jukeSel;
-                            playCoin();
-                        } else {
-                            // Ääntä ei saatu lainkaan → kolikko takaisin
-                            coinCount++;
-                            state.inventory.coinCount = coinCount;
-                            GameState.save(state);
-                            updateHUD();
-                            showNotification('🔇 Ääntä ei saatu – kolikko palautettiin.');
-                        }
-                    } else {
-                        showNotification('💰 Ei kolikoita!');
-                    }
-                }
-                jukeboxRoom = false;
-                jukeSel = 0;
-                jukeHeldUp = false;
-                jukeHeldDown = false;
+            // Ota / poista kappale (rivi 0 = Poistu: soita valitut & poistu).
+            // Kun jono soi jo, valinta on lukossa → Space/(o)/⚡ vain poistuu
+            // huoneesta (ei veloitusta eikä uutta soittoa, sama kuin Enter).
+            if (toggleDown && !jukeSpaceHeld) {
+                if (songPlaying || jukeSel === 0) jukeboxExitAndPlay();
+                else jukePick[jukeSel - 1] = !jukePick[jukeSel - 1];
             }
+            jukeSpaceHeld = toggleDown;
+
+            // Enter: soita valitut & poistu mistä tahansa riviltä
+            if (enterDown && !jukeEnterHeld) jukeboxExitAndPlay();
+            jukeEnterHeld = enterDown;
+
             actionJustPressed = false;
             return;
         }
@@ -1705,6 +1708,12 @@ const Street = (() => {
             jukeSel = 0;
             jukeHeldUp = false;
             jukeHeldDown = false;
+            // Estä sama painallus (Space/Enter) laukaisemasta valintaa heti perään
+            jukeSpaceHeld = !!(keys[' '] || keys['o'] || keys['O']);
+            jukeEnterHeld = !!keys['Enter'];
+            jukePick = [];
+            for (let i = 0; i < JUKEBOX_TRACKS.length; i++) jukePick.push(false);
+            if (!StreetAudio.isJukeboxPlaying()) jukeQueue = [];  // ei vanhaa "♪ SOI" -riviä
             return;
         }
 
@@ -1945,6 +1954,99 @@ const Street = (() => {
         window.addEventListener('message', window._streetReturn);
     }
 
+    /* ═══ JUKEBOX: valinnat ja poistuminen (v4.46) ═════════════
+       Rivi 0 = Poistu, rivit 1..N = kappaleet. (o) / Space / ⚡ ottaa kappaleen
+       listalle tai poistaa sen; rivillä 0 sama nappi soittaa valitut ja poistuu.
+       Enter soittaa valitut ja poistuu mistä tahansa riviltä. Valitut soitetaan
+       yksi kerrallaan (1 → 3), hinta ennallaan 1 🪙 / kappale. Jos kolikot eivät
+       riitä kaikkiin, soitetaan niin monta kuin niillä saa. */
+
+    /* Nollaa huoneen tila: kursori, valinnat ja reunanilmaisut.
+       HUOM: jukeQueuea ei nollata – jono saa soida loppuun huoneen ulkopuolella. */
+    function resetJukeboxRoom() {
+        jukeboxRoom = false;
+        jukeSel = 0;
+        jukeHeldUp = false;
+        jukeHeldDown = false;
+        jukeSpaceHeld = false;
+        jukeEnterHeld = false;
+        for (let i = 0; i < jukePick.length; i++) jukePick[i] = false;
+    }
+
+    /* Valitut kappaleet nousevassa järjestyksessä (1 → 3) */
+    function jukePickedTracks() {
+        const out = [];
+        for (let i = 0; i < JUKEBOX_TRACKS.length; i++) {
+            if (jukePick[i]) out.push(i + 1);
+        }
+        return out;
+    }
+
+    /* Poistu ja soita valitut: veloitus 1 🪙 / kappale, soitto yhtenä jonona. */
+    function jukeboxExitAndPlay() {
+        const picks = jukePickedTracks();
+        // Jos jono soi jo, valinta on lukossa eikä tuplaveloitusta tehdä
+        if (picks.length > 0 && !StreetAudio.isJukeboxPlaying()) {
+            // Veloitus vain niistä kappaleista, joihin kolikot riittävät
+            const play = [];
+            for (let i = 0; i < picks.length && coinCount > 0; i++) {
+                coinCount--;
+                play.push(picks[i]);
+            }
+            if (play.length > 0) {
+                state.inventory.coinCount = coinCount;
+                GameState.save(state);
+                updateHUD();
+                const urls = [];
+                for (let i = 0; i < play.length; i++) urls.push(JUKEBOX_TRACKS[play[i] - 1].url);
+                if (StreetAudio.playJukeboxQueue(urls)) {
+                    jukeQueue = play.slice();
+                    playCoin();
+                    if (play.length < picks.length) {
+                        showNotification('💰 Ei kolikoita kaikkiin – soitetaan ' +
+                                         play.length + '/' + picks.length);
+                    }
+                } else {
+                    // Ääntä ei saatu lainkaan → kolikot takaisin
+                    coinCount += play.length;
+                    state.inventory.coinCount = coinCount;
+                    GameState.save(state);
+                    updateHUD();
+                    showNotification('🔇 Ääntä ei saatu – kolikot palautettiin.');
+                }
+            } else {
+                showNotification('💰 Ei kolikoita!');
+            }
+        }
+        resetJukeboxRoom();
+    }
+
+    /* ═══ SULJE HUONE (BAR/sleep/jukebox) ✕-napista ═════════════ */
+    /* Palauttaa true jos huone suljettiin, false jos ei oltu huoneessa. */
+    function closeRoom() {
+        if (barRoom) {
+            barRoom = false;
+            barBuyQty = 0;
+            barBuyHeldUp = false;
+            barBuyHeldDown = false;
+            return true;
+        }
+        if (sleepRoom) {
+            sleepRoom = false;
+            sleepSel = 0;
+            sleepHeldUp = false;
+            sleepHeldDown = false;
+            if (sleepPhase > 0) { sleepPhase = 0; }  // kesken nukkumisen → herätä
+            return true;
+        }
+        if (jukeboxRoom) {
+            // ✕ = peruuta: valinnat pois ilman veloitusta (v4.46)
+            resetJukeboxRoom();
+            return true;
+        }
+        return false;
+    }
+
     function closeGame() {
         const overlay = document.getElementById('game-iframe-overlay');
         const iframe = overlay.querySelector('iframe');
@@ -2000,10 +2102,7 @@ const Street = (() => {
         sleepPhase = 0;
         isDay = (state.isDay === true);   // tallennettu päivä/yö pysyy
         barRoom = false;
-        jukeboxRoom = false;
-        jukeSel = 0;
-        jukeHeldUp = false;
-        jukeHeldDown = false;
+        resetJukeboxRoom();   // jono (jukeQueue) saa jatkua alapelin aikana
         player.x = savedPlayerX; player.y = savedPlayerY;
         player.vx = 0; player.vy = 0;
         updateHUD();
@@ -4054,8 +4153,9 @@ const Street = (() => {
     }
 
     /* ── Jukebox-huone (talo 5) ────────────────────
-       Valinta: 0 = ei valintaa (ei veloitusta), 1..N = kappale (1 kolikko,
-       soi kokonaan loppuun). HUOM: jukebox ei muuta peliääniä mitenkään.
+       Monivalinta (v4.46): rivi 0 = Poistu, rivit 1..N = kappaleet (1 🪙 /
+       kappale). Valitut soitetaan poistuttaessa yksi kerrallaan (1 → 3).
+       HUOM: jukebox ei muuta peliääniä mitenkään.
 
        SELKEYS (v4.22): kaikki tekstit piirretään terävinä (ei
        shadowBlur-sumennusta eikä läpinäkyvää tekstiä) ja koko asettelu
@@ -4069,6 +4169,12 @@ const Street = (() => {
         const now = Date.now();
         const playing = StreetAudio.isJukeboxPlaying();
         const trackCount = JUKEBOX_TRACKS.length;
+        /* Soiva kappale jonon sijainnista (v4.46): montako on jo soitettu.
+           jukeQueue = kadun oma kopio soitettavista raidoista (1..N). */
+        const qPos = StreetAudio.getJukeboxQueuePos();
+        const curTrack = (playing && qPos >= 0 && qPos < jukeQueue.length) ? jukeQueue[qPos] : 0;
+        let pickCount = 0;
+        for (let i = 0; i < jukePick.length; i++) { if (jukePick[i]) pickCount++; }
 
         ctx.save();
         // Ei pehmennystä: nollataan kadulta mahdollisesti periytynyt hehku
@@ -4099,9 +4205,10 @@ const Street = (() => {
             Math.round(Math.max(base, Math.min(max, target / vsafe)));
 
         /* Sarakeleveydet paneelin leveydestä; pisin kappalenimi on 25 merkkiä
-           → fonttikoko ei koskaan ylitä nimen saraketta */
+           → fonttikoko ei koskaan ylitä nimen saraketta. Oikea sarake on
+           hieman leveämpi kuin ennen, koska valittu rivi näyttää "✓ 1 🪙". */
         const numW     = Math.max(20, Math.round(rowW * 0.055));
-        const priceW   = Math.max(46, Math.round(rowW * 0.14));
+        const priceW   = Math.max(52, Math.round(rowW * 0.16));
         const nameMaxW = rowW - numW - priceW - 16;
         const nameFs = Math.max(9, Math.min(needPx(16, 13, 16),
                              Math.floor(nameMaxW / (0.62 * 25))));
@@ -4119,14 +4226,19 @@ const Street = (() => {
            katkea keskeltä (luettavuus + testit nojaavat kokonaisiin riveihin) */
         const info = [];
         if (playing) {
-            const t = (jukeTrack > 0) ? JUKEBOX_TRACKS[jukeTrack - 1].title : '';
-            info.push({ text: '🔊 SOI NYT: ' + t, color: '#ffdd88' });
+            const t = (curTrack > 0) ? JUKEBOX_TRACKS[curTrack - 1].title : '';
+            const total = jukeQueue.length;
+            const posTxt = (total > 1) ? '  (' + (qPos + 1) + '/' + total + ')' : '';
+            info.push({ text: '🔊 SOI NYT: ' + t + posTxt, color: '#ffdd88' });
             info.push({ text: 'Soi loppuun asti – valinta lukossa', color: '#c9a95f' });
-        } else if (jukeSel > 0) {
-            info.push({ text: 'Valinta: ' + jukeSel + ' – ' + JUKEBOX_TRACKS[jukeSel - 1].title,
+        } else if (pickCount > 0) {
+            info.push({ text: 'Valittu: ' + pickCount + ' kpl – ' + pickCount + ' 🪙',
                         color: '#ffffff' });
-            if (coinCount > 0) {
-                info.push({ text: 'Poistu (⚡/Space) = soita (1 🪙)', color: '#8ce88c' });
+            if (coinCount >= pickCount) {
+                info.push({ text: 'Poistu (⚡/Space/Enter) = soita valitut', color: '#8ce88c' });
+            } else if (coinCount > 0) {
+                info.push({ text: '💰 Ei kolikoita kaikkiin – soitetaan ' + coinCount + '/' + pickCount,
+                            color: '#ffcc66' });
             } else {
                 info.push({ text: '💰 Ei kolikoita!', color: '#ff8080' });
             }
@@ -4202,14 +4314,16 @@ const Street = (() => {
         ctx.textAlign = stacked ? 'left' : 'right';
         ctx.fillText(balText, stacked ? rowX : rowX + rowW, balY);
 
-        // 4) Kappalelista: rivi 0 = ei valintaa, rivit 1..N = kappaleet
+        // 4) Kappalelista: rivi 0 = Poistu, rivit 1..N = kappaleet (valitut ✓)
         for (let i = 0; i <= trackCount; i++) {
             const y = listTop + i * (rowH + rowGap);
             const selected = (i === jukeSel);
-            const playingRow = playing && i > 0 && i === jukeTrack;
-            // Tausta: valittu = kirkas pinkki (tumma teksti), soitossa = kulta
-            const bg     = selected ? '#ff3d7f' : (playingRow ? '#2b2410' : '#171122');
-            const border = selected ? '#ffd0e2' : (playingRow ? '#ffdd88' : '#3a3348');
+            const picked = (i > 0) && !!jukePick[i - 1];
+            const playingRow = playing && i > 0 && i === curTrack;
+            // Tausta: kursori = kirkas pinkki (tumma teksti), soitossa = kulta,
+            // listalle otettu = violetti, muut = tumma
+            const bg     = selected ? '#ff3d7f' : (playingRow ? '#2b2410' : (picked ? '#241a3a' : '#171122'));
+            const border = selected ? '#ffd0e2' : (playingRow ? '#ffdd88' : (picked ? '#ffd700' : '#3a3348'));
             const fg     = selected ? '#1c000a' : (playingRow ? '#ffe9a8' : '#eae4f2');
             const dim    = selected ? '#5c1230' : (playingRow ? '#c9a95f' : '#948ca8');
 
@@ -4231,7 +4345,7 @@ const Street = (() => {
             ctx.fillText(String(i), rowX + 10, cy);
 
             // Kappaleen nimi (leikataan vain jos ei mahdu sarakkeeseen)
-            let trackName = (i === 0) ? 'ei valintaa' : JUKEBOX_TRACKS[i - 1].title;
+            let trackName = (i === 0) ? 'Poistu' : JUKEBOX_TRACKS[i - 1].title;
             ctx.font = nameFs + 'px "Courier New", monospace';
             while (trackName.length > 4 && ctx.measureText(trackName).width > nameMaxW) {
                 trackName = trackName.slice(0, -2) + '…';
@@ -4239,7 +4353,8 @@ const Street = (() => {
             ctx.fillStyle = fg;
             ctx.fillText(trackName, rowX + 10 + numW, cy);
 
-            // Oikea reuna: soitossa ♪ SOI, kappaleilla hinta, rivillä 0 viiva
+            // Oikea reuna: soitossa ♪ SOI, valitulla ✓ + hinta, muilla hinta,
+            // Poistu-rivillä valittujen määrä
             ctx.textAlign = 'right';
             if (playingRow) {
                 ctx.font = 'bold ' + sideFs + 'px "Courier New", monospace';
@@ -4247,8 +4362,12 @@ const Street = (() => {
                 ctx.fillText('♪ SOI', rowX + rowW - 10, cy);
             } else if (i > 0) {
                 ctx.font = sideFs + 'px "Courier New", monospace';
-                ctx.fillStyle = selected ? fg : '#ffd700';
-                ctx.fillText('1 🪙', rowX + rowW - 10, cy);
+                ctx.fillStyle = selected ? fg : (picked ? '#ffe9a8' : '#ffd700');
+                ctx.fillText((picked ? '✓ ' : '') + '1 🪙', rowX + rowW - 10, cy);
+            } else if (pickCount > 0) {
+                ctx.font = sideFs + 'px "Courier New", monospace';
+                ctx.fillStyle = selected ? fg : '#8ce88c';
+                ctx.fillText('▶ ' + pickCount + ' kpl', rowX + rowW - 10, cy);
             } else {
                 ctx.font = sideFs + 'px "Courier New", monospace';
                 ctx.fillStyle = dim;
@@ -4275,14 +4394,16 @@ const Street = (() => {
 
         // 6) Jukebox-kone oikealla – vain kun sille jää tilaa (ei peitä listaa)
         if (wide) {
-            drawJukeboxCabinet(panelX + panelW + CAB_GAP, GROUND_Y + 4, now, playing, jukeSel > 0);
+            drawJukeboxCabinet(panelX + panelW + CAB_GAP, GROUND_Y + 4, now, playing,
+                               jukeSel > 0 || pickCount > 0);
         }
 
         // 7) Alaohje (kiinteä ja terävä – ei vilkkumista)
+        const helpTxt = '▲/▼ = valitse   (o)/Space = ota/poista   Enter = soita & poistu';
         ctx.textAlign = 'center';
-        setFitFont('▲/▼ = valitse   POISTU: (o) / Space', winW - 16, 12, 10, 'Arial, sans-serif');
+        setFitFont(helpTxt, winW - 16, 12, 9, 'Arial, sans-serif');
         ctx.fillStyle = '#e9e9ef';
-        ctx.fillText('▲/▼ = valitse   POISTU: (o) / Space', 400, 380);
+        ctx.fillText(helpTxt, 400, 380);
         ctx.textAlign = 'left';
 
         ctx.restore();
@@ -5596,7 +5717,7 @@ const Street = (() => {
         camX = Math.max(0, Math.min(WORLD_W - viewW, camX));
     }
 
-    return { init, resize, closeGame };
+    return { init, resize, closeGame, closeRoom };
 })();
 
 window.addEventListener('DOMContentLoaded', () => {

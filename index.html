@@ -40,7 +40,7 @@
         <div id="notification"></div>
 
         <!-- Versionumero -->
-        <div id="version-tag">v4.43</div>
+        <div id="version-tag">v4.46</div>
     </div>
 
     <!-- ═══ PELI-IFRAME (alapelit) ═══════════════════════ -->
@@ -63,8 +63,12 @@
             }
         });
 
-        // Reset-nappi – tyhjennä localStorage ja aloita alusta
+        // Reset-nappi – tyhjennä localStorage ja aloita alusta.
+        // Jos ollaan canvas-huoneessa (BAR/sleep/jukebox), sulje huone sen sijaan.
         document.getElementById('reset-btn').addEventListener('click', () => {
+            if (typeof Street !== 'undefined' && Street.closeRoom) {
+                if (Street.closeRoom()) return;
+            }
             if (confirm('Haluatko varmasti aloittaa alusta?\nKaikki edistyminen katoaa.')) {
                 localStorage.removeItem('pimeakatu_gamestate');
                 location.reload();

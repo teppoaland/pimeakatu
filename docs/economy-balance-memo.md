@@ -56,9 +56,10 @@ ihan kuin oikeassa elämässä".
 | Kolikko potkusta | **1/5** (`Math.random() < 0.2`) + **30 s** cooldown (`kickCoinCooldown = 1800`) |
 | Hampurilaiset | alussa **5**, +1 / **40 s** (`hamburgerTimer = 2400` framet) |
 | BAR | **1 kolikko = 1 🍔** (katto 10, ▼ peruu vain vierailun ostot) |
-| Jukebox | **1 kolikko = 1 koko kappale**, auki vain öisin (v4.34) |
-| Makuuhuone (ex-palkintohuone, talo 7) | **Aina auki, ei lukkoa** (v4.43: ei avaimia eikä lamppua). Nuku/Poistu **ilmaisia** → ei vaikutusta talouteen |
+| Jukebox | **1 kolikko = 1 koko kappale**, auki vain öisin (v4.34). **v4.46:** kappaleita voi valita useamman (max 3, järjestys 1 → 3) ja veloitus tehdään poistuttaessa **1 🪙 / valittu kappale** – hinta per kappale ei muutu |
+| Makuuhuone (ex-palkintohuone, talo 7) | **Aina auki, ei lukkoa** (v4.43: ei avaimia eikä lamppua). Nuku → **+1 🍔** (katto 10, v4.44), Poistu **ilmainen** |
 | Nukkuminen – nälkä jäissä (v4.41) | Nälkäajastin ei tikitä makuuhuoneessa eikä Zzz-pimennyksen aikana (`hungerOnHold()`), joten pelaaja **ei kuole nukkuessaan**. Herätessä ajastin jatkuu siitä mihin jäi, mutta vähintään **10 s** (`HUNGER_WAKE_GRACE = 600`). Tahti 1/40 s (2400 framet) ennallaan |
+| Nukkuminen – 🍔-palkkio (v4.44) | Nuku → **+1 🍔** herätessä (katto 10, sama kuin BAR). Ei vaikuta muuhun talouteen |
 | Oviukko / kukkaruukku / sähkökaappi | osuma = tainnutus + **−1 🍔** (🍔 0 → kuolema) |
 | Syntymäpaketti | uusi peli / reset: **2 kolikkoa + 5 🍔** |
 
@@ -144,4 +145,6 @@ vapaasti (esim. `COIN_CHEAT_COOLDOWN = 0` nopeampaan testaukseen) ilman versiono
 | 20.9.2026 | v4.34 | Jukebox ja Hedelmäpeli olivat auki aina (yöllä ja päivällä) | Auki **vain öisin (klo 20–06)**; päivällä ovesta teksti-popup `Avoinna` / `Klo 20 - 06` (`street.js`: `CLOSED_SIGN`, `CLOSED_AT_DAYT 0.5`). **Panos, painot, maksut, RTP, 🍔-tahti ja hinnat ennallaan** – muuttui vain aukioloaika |
 | 20.9.2026 | v4.41 | Nälkäajastin tikitti myös nukkuessa – herätessä se jatkui täsmälleen siitä mihin jäi, joten 1 🍔:lla nukkuja saattoi kuolla heti herätessään | Nälkä **jäissä** nukkuessa (`hungerOnHold()`: makuuhuone + Zzz-pimennys) + herätysrauha 10 s (`HUNGER_WAKE_GRACE 600`). **2400 framet (1/40 s), katto 10, hinnat ja RTP ennallaan**; rajaus vain nukkumiseen |
 | 20.9.2026 | v4.43 | Makuuhuoneen (talo 7) ovi oli lukossa ilman **3 avainta** (avaimilla ovi auki ilman lamppua) | Ovi **aina auki kuten BAR** – ei avaimia eikä lamppua, päivällä ja yöllä; avainpopup poistettu (`handleAction`). **Talousarvot ennallaan** (Nuku/Poistu ilmaisia, 2400 / katto 10 / hinnat / RTP). Nukkua voi nyt heti ensimmäisenä yönä → `state.isDay` voi ratketa ennen avaimia |
+| 21.9.2026 | v4.44 | Nukkuminen antoi 0 🍔:tä | Nuku → **+1 🍔** (katto 10). Ei muutoksia muihin talousarvoihin (2400, katto 10, hinnat, RTP, aukiolo). Käyttäjän pyyntö 21.9.2026 |
+| 21.9.2026 | v4.46 | Jukebox: yksi valinta (rivi 0 = "ei valintaa"), Space/Enter/⚡ = poistu → **−1 🪙 ja yksi kappale** | Jukebox: **monivalinta** – rivi 0 = Poistu, (o)/Space/⚡ = ota/poista, Enter = soita & poistu; veloitus **1 🪙 / valittu kappale** (niin moneen kuin kolikoita riittää) ja valitut soivat peräkkäin 1 → 3. **Hinta per kappale, RTP, painot, 🍔-tahti, BAR-hinnat ja syntymäpaketti ennallaan** – vain käyttöliittymä ja soittologiikka (jono) muuttuivat |
 

@@ -1,7 +1,8 @@
 # 🎵 Jukebox – memo (talo 5)
 
-> Päivitetty 20.9.2026 – versio **v4.34**. Talo 5 (`buildings[4]`) on jukebox-huone,
-> josta voi soittaa koko kappaleita 1 kolikolla. Kappaleet ovat `jukebox/`-kansiossa.
+> Päivitetty 21.9.2026 – versio **v4.46**. Talo 5 (`buildings[4]`) on jukebox-huone,
+> josta voi valita **useamman kappaleen** (1 🪙 / kappale) ja valitut soitetaan
+> poistuttaessa yksi kerrallaan (1 → 3). Kappaleet ovat `jukebox/`-kansiossa.
 > **Aukiolo (v4.34): auki vain öisin (klo 20–06)** – päivällä ovesta tulee teksti-popup.
 
 ---
@@ -34,23 +35,34 @@
 
 ---
 
-## Säännöt
+## Säännöt (v4.46: monivalinta)
 
 | Tilanne | Lopputulos |
 |---|---|
-| Valinta 0 + poistuminen | ei veloitusta, ei soittoa |
-| Valinta 1–3 + poistuminen | **−1 kolikko** + koko kappale alkaa soida |
-| Valinta 1–3, 0 kolikkoa | ilmoitus `💰 Ei kolikoita!`, ei veloitusta, poistuminen onnistuu |
-| Kappale soi jo | valinta lukossa (`🔊 SOI NYT: <nimi>` + rivi `Soi loppuun asti – valinta lukossa`), ei tuplaveloitusta |
-| Ääntä ei saada lainkaan | kolikko palautetaan + `🔇 Ääntä ei saatu – kolikko palautettiin.` |
+| 0 valintaa + poistuminen (rivi 0 / Enter) | ei veloitusta, ei soittoa |
+| 1–3 valintaa + poistuminen | **−1 🪙 / valittu kappale** + valitut soivat jonossa 1 → 3 |
+| Valintoja enemmän kuin kolikoita | soitetaan niin monta kuin kolikoilla saa (esim. 2/3) + `💰 Ei kolikoita kaikkiin – soitetaan 2/3` |
+| Valintoja, 0 kolikkoa | ilmoitus `💰 Ei kolikoita!`, ei veloitusta, poistuminen onnistuu |
+| Jono soi jo | valinta lukossa (`🔊 SOI NYT: <nimi> (i/n)` + rivi `Soi loppuun asti – valinta lukossa`), ei tuplaveloitusta; **Space/(o)/⚡ ja Enter vain poistuvat** huoneesta |
+| Ääntä ei saada lainkaan | **kaikki veloitetut kolikot palautetaan** + `🔇 Ääntä ei saatu – kolikot palautettiin.` |
 
-- Kappale soitetaan **aina kokonaan loppuun** (`loop = false`, ei katkaisua).
-- Valinta: **▲ / W** = valitse **ylös** (−1), **▼ / S** = valitse **alas** (+1)
-  (0…3, reunanilmaisu → ei toistoa pohjassa). Rivi 0 ("ei valintaa") on listan
-  ylimpänä, joten ▲ pienentää ja ▼ kasvattaa valintaa – **korjattu v4.21**
-  (v4.20:ssä nuolet olivat väärinpäin).
-- Poistuminen: **(o) / Space / Enter / ⚡-nappi**. Uusi vierailu alkaa aina valinnasta 0.
-- Kappale soi myös alapelien (iframe) aikana; kuolema (`StreetAudio.stop()`) hiljentää sen.
+- Kappaleet soitetaan **aina kokonaan loppuun** (`loop = false`, ei katkaisua) ja
+  **peräkkäin ilman taukoa**; vasta viimeisen jälkeen `JUKEBOX_GAP` (2,5 s) →
+  taustamusiikki palaa. **Ei järjestysvalintoja:** jono on aina **1 → 3**.
+- **Kursori:** **▲ / W** = ylös (−1), **▼ / S** = alas (+1) (0…N, reunanilmaisu →
+  ei toistoa pohjassa). Rivi 0 = **Poistu**, rivit 1..3 = kappaleet. Nuolikorjaus
+  v4.21: rivi 0 on ylimpänä → ▲ pienentää ja ▼ kasvattaa valintaa.
+- **Ota / poista kappale:** **(o) / Space / ⚡-nappi**. Space ja ⚡ asettavat saman
+  keyn (`' '`); `(o)`/`(O)` luetaan huoneessa erikseen (keydown ei tee siitä
+  action-näppäintä, joten muualla kadulla `(o)` ei tee mitään). Valittu rivi
+  näkyy violetilla reunuksella (`#241a3a` / `#ffd700`) ja `✓ 1 🪙`-merkinnällä.
+- **Poistu ja soita valitut:** rivillä 0 sama nappi (**o / Space / ⚡**) **tai Enter**
+  mistä tahansa riviltä. **Kun jono soi jo** (valinta lukossa), **Space/(o)/⚡ ja Enter
+  vain poistuvat** huoneesta – ei veloitusta eikä uutta soittoa (PC:llä Space on
+  luontevin tapa poistua). **✕-nappi (`#reset-btn` → `Street.closeRoom()`) = peruuta:**
+  valinnat pois ilman veloitusta.
+- Uusi vierailu alkaa aina tyhjältä listalta (kursori rivillä 0, `jukePick` nollataan).
+- Jono soi myös alapelien (iframe) aikana; kuolema (`StreetAudio.stop()`) hiljentää sen.
 
 ---
 
@@ -66,8 +78,9 @@ koko asettelu sovitetaan näkyvään ikkunaan:
   otsikon, kolikkosaldon, kappalelistan ja tilatekstit → teksti ei koskaan ole
   läpinäkyvän taustan tai seinän kohinan päällä.
 - **Tekstit ovat teräviä:** `shadowBlur = 0` (nollataan heti huoneen alussa),
-  ei `rgba`-tekstivärejä, ei vilkkuvaa alphaa. Valittu rivi = kirkas pinkki
-  `#ff3d7f` + tumma teksti, soitossa oleva rivi = kulta `#2b2410`/`#ffdd88`.
+  ei `rgba`-tekstivärejä, ei vilkkuvaa alphaa. Kursori = kirkas pinkki
+  `#ff3d7f` + tumma teksti, soitossa oleva rivi = kulta `#2b2410`/`#ffdd88`,
+  listalle otettu rivi = violetti `#241a3a` / `#ffd700` (v4.46).
 - **Fonttikoko valitaan näytön mukaan:** `vs = canvas.clientHeight / canvas.height`
   (kapea kännykkä zoomataan 1:1:tä suuremmaksi) ja `needPx(target, base, max)`
   takaa, että ruudulla näkyy vähintään ~13–16 px. Kappalenimen fontti rajataan
@@ -75,10 +88,16 @@ koko asettelu sovitetaan näkyvään ikkunaan:
   hintasarakkeen päälle.
 - **Jukebox-kaappi piirretään vain kun sille jää tilaa** (`winW >= 620`), muuten
   lista saa koko leveyden (kaappi ei peitä eikä kutista tekstiä).
-- Tilatekstit: `Ei valintaa – poistuminen ei maksa mitään` ·
-  `Valinta: N – <nimi>` + `Poistu (⚡/Space) = soita (1 🪙)` tai `💰 Ei kolikoita!` ·
-  soidessa `🔊 SOI NYT: <nimi>` + `Soi loppuun asti – valinta lukossa`.
-- Alaohje: `▲/▼ = valitse   POISTU: (o) / Space` (kiinteä, ei vilkkumista).
+- Tilatekstit (v4.46):
+  - ei valintoja: `Ei valintaa – poistuminen ei maksa mitään`
+  - valintoja: `Valittu: N kpl – N 🪙` + `Poistu (⚡/Space/Enter) = soita valitut`
+    (jos kolikot eivät riitä: `💰 Ei kolikoita kaikkiin – soitetaan i/N`, 0 🪙 → `💰 Ei kolikoita!`)
+  - soidessa: `🔊 SOI NYT: <nimi> (i/n)` + `Soi loppuun asti – valinta lukossa`
+- Rivien oikea sarake: soitossa `♪ SOI`, valitulla `✓ 1 🪙`, muilla `1 🪙`,
+  Poistu-rivillä valittujen määrä `▶ N kpl` (tai `–`). Hintasarake on hieman
+  leveämpi kuin ennen (`priceW = max(52, rowW · 0.16)`), jotta `✓ 1 🪙` mahtuu.
+- Alaohje: `▲/▼ = valitse   (o)/Space = ota/poista   Enter = soita & poistu`
+  (kiinteä, ei vilkkumista; `setFitFont` kutistaa tarvittaessa 9 px asti).
 - Kaapin kolikkoluukun `1 🪙` on yksivärinen (`#c8a000` / valittuna `#FFD700`),
   ei enää 60 % läpinäkyvyyttä eikä hehkua.
 
@@ -142,14 +161,18 @@ koko asettelu sovitetaan näkyvään ikkunaan:
 
 ## `audio.js` – rajapinta
 
-- `playJukebox(url)` → **peruuttaa taustamusiikin syklin** (`cycleTimer`/`loopId`/`fadeTimer`
-  nollaan, `musicEl.pause()` + `currentTime = 0`, `synthGain = 0`, `phase = 'jukebox'`),
-  soittaa koko kappaleen. Palauttaa `false` jos AudioContext/ääni ei ole saatavilla
-  (katu palauttaa silloin kolikon).
-- `isJukeboxPlaying()`, `stopJukebox()`.
-- Kappaleen `ended` → `JUKEBOX_GAP` (2,5 s) kuluttua `playPhase()` → taustamusiikki palaa
-  ja alkaa alusta. Myös `error` ja autoplay-esto palauttavat taustamusiikin; estetty
-  kappale soitetaan seuraavassa eleessä (`pendingJukeUrl`).
+- `playJukeboxQueue(urls)` (v4.46) → **peruuttaa taustamusiikin syklin**
+  (`cycleTimer`/`loopId`/`fadeTimer` nollaan, `musicEl.pause()` + `currentTime = 0`,
+  `synthGain = 0`, `phase = 'jukebox'`) ja soittaa **jonon** alusta: `jukeQueue` =
+  url-lista, `jukePos` = monesko soi. Palauttaa `false` jos AudioContext/ääni ei ole
+  saatavilla (katu palauttaa silloin kolikot). `playJukebox(url)` on ohut kääre
+  (`playJukeboxQueue([url])`).
+- `isJukeboxPlaying()`, `getJukeboxQueuePos()` (monesko jonon kappale soi, −1 = ei
+  jonoa – katu näyttää tämän avulla `♪ SOI` -rivin ja `(i/n)`-laskurin), `stopJukebox()`.
+- Kappaleen `ended` → **seuraava jonosta heti perään** (ei taukoa); kun viimeinen on
+  soinut, `JUKEBOX_GAP` (2,5 s) → `playPhase()` → taustamusiikki palaa ja alkaa alusta.
+  Myös `error` ja autoplay-esto palauttavat taustamusiikin; estetty jono soitetaan
+  seuraavassa eleessä (`pendingJukeQueue`).
 - **Suojat:** `start()` ja `onGesture()` eivät käynnistä taustamusiikkia kun
   `jukePlaying` tai `phase === 'jukebox'`; `stop()` (kuolema) pysäyttää myös jukeboxin.
 - Peliäänet (SFX) eivät muutu: potku, kolikko, kävely ja kuolin-gongi toimivat kappaleen
@@ -160,7 +183,14 @@ koko asettelu sovitetaan näkyvään ikkunaan:
 ## `street.js` – kytkentä
 
 - Vakiot/tila: `JUKEBOX_BLDG_IDX = 4`, `JUKEBOX_TRACKS` (3 raitaa), `jukeboxRoom`,
-  `jukeSel`, `jukeHeldUp/Down`, `jukeTrack`.
+  `jukeSel` (kursori 0..N), `jukePick` (valinnat), `jukeQueue` (soivat raidat 1..N),
+  `jukeHeldUp/Down`, `jukeSpaceHeld` (Space/⚡/(o)), `jukeEnterHeld` (Enter).
+- `jukeboxExitAndPlay()` (v4.46): kerää valinnat (1 → 3), veloittaa 1 🪙 / kappale
+  niin monta kuin kolikoita riittää, soittaa jonon (`playJukeboxQueue`) ja nollaa
+  huoneen (`resetJukeboxRoom()`). Äänen puuttuessa veloitetut kolikot palautetaan.
+  `closeRoom()` (✕-nappi) nollaa vain valinnat – **ei veloitusta**.
+  Huoneeseen astuttaessa `handleAction()` nollaa valinnat ja asettaa
+  reunanilmaisut nykyisten näppäinten mukaan (sama painallus ei laukaise valintaa).
 - `handleAction()`: oma oviblokki **ennen** lamppusilmukkaa ja potkusilmukkaa.
   Järjestys: ① `jkInReach && nightOnlyClosed()` → `CLOSED_SIGN`-popup + `return`
   (päiväkiinni, v4.34) ② `smallHouseLights[4].lit && jkInReach` → huone auki.
@@ -171,12 +201,19 @@ koko asettelu sovitetaan näkyvään ikkunaan:
   fonttikoot näytön skaalan mukaan – ks. **Huoneen ulkoasu ja luettavuus (v4.22)**.
   Koko piirto on `ctx.save()`/`restore()`-parin sisällä, joten huone ei vuoda
   fontti-/hehkutilaa kadulle.
-- `closeGame()` nollaa `jukeboxRoom`/`jukeSel`; potku- ja lamppulogiikka sekä muut
-  talot ovat ennallaan.
+- `closeGame()` kutsuu `resetJukeboxRoom()`ia (jono saa soida alapelin aikana);
+  potku- ja lamppulogiikka sekä muut talot ovat ennallaan.
 
 ---
 
 ## Testit (eivät repossa, `%TEMP%`)
+
+> ⚠️ **v4.46 (monivalinta) rikkoi vanhat oletukset:** `street-jukebox-test.cjs` ja
+> `street-jukebox-layout-test.cjs` odottavat **yhtä** valintaa (`jukeSel` = 0 =
+> "ei valintaa", Space/Enter = poistu ja veloita 1 🪙) ja rivi 0:n nimeä
+> `ei valintaa`. Uudessa mallissa rivi 0 on **Poistu**, Space/(o)/⚡ = ota/poista,
+> Enter = soita & poistu ja veloitus on **1 🪙 / valittu kappale** (jono).
+> Testit pitää päivittää ennen uutta ajoa.
 
 - **`street-jukebox-test.cjs`** – Node `vm` + canvas/document-stub + DOM-nappirekisteri:
   portti (potku → valot → sisään), valinta ▲/▼ (clamp 0…3, reunanilmaisu), osto
@@ -186,7 +223,8 @@ koko asettelu sovitetaan näkyvään ikkunaan:
   per painallus, koska potku asettaa hit-pausen (2 f).
 - **`audio-jukebox-test.cjs`** – fake-kello + `<audio>`-stubi: syklin peruutus,
   `ended` → 2,5 s → taustamusiikki palaa, `start()`/ele-suojat, `stop()`,
-  autoplay-eston uudelleenyritys.
+  autoplay-eston uudelleenyritys. (v4.46: `ended` keskellä jonoa → seuraava heti,
+  ei 2,5 s taukoa eikä taustamusiikkia.)
 - **`street-jukebox-layout-test.cjs`** (v4.22) – selkeys kolmella näyttökoolla:
   pysty-kännykkä 390×700, pieni kännykkä 320×568, vaaka-kännykkä 844×390 ja
   työpöytä 1024×700 (touch / ei touch). Tarkistaa että **kaikki huoneen tekstit mahtuvat näkyvään ikkunaan**

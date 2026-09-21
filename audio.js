@@ -41,7 +41,11 @@ const StreetAudio = (() => {
     const JUKEBOX_GAP = 2500;            // ms taukoa ennen kuin taustamusiikki palaa
     let jukeEl = null;                   // <audio> jukebox-kappaleelle (koko kappale)
     let jukePlaying = false;              // soiko jukebox-kappale parhaillaan
-    let pendingJukeUrl = null;            // autoplay-esto: soitetaan seuraavassa eleessä
+    let pendingJukeQueue = null;          // autoplay-esto: soitetaan seuraavassa eleessä
+    /* Jono (v4.46): jukeboxista voi valita useamman kappaleen, jotka soitetaan
+       yksi kerrallaan (1 → 3). Jono on url-lista, jukePos = monesko soi. */
+    let jukeQueue = [];
+    let jukePos = -1;
 
     const BPM_MIN = 110;
     const BPM_MAX = 142;
@@ -206,9 +210,17 @@ const StreetAudio = (() => {
         if (synthGain) synthGain.gain.value = 0;    // syntikka ei soi päällekkäin
     }
 
-    /* Kappale päättyi (koko kappale soi) → taustamusiikki palaa hetken kuluttua. */
+    /* Kappale päättyi → jonossa seuraava heti perään (ei taukoa), tai
+       taustamusiikki palaa hetken kuluttua kun viimeinen on soinut loppuun. */
     function onJukeboxEnded() {
+        if (jukePos + 1 < jukeQueue.length) {
+            jukePos++;
+            startJukeTrack();
+            return;
+        }
         jukePlaying = false;
+        jukeQueue = [];
+        jukePos = -1;
         if (phase !== 'jukebox') return;
         phase = 'silent';
         if (cycleTimer) { clearTimeout(cycleTimer); cycleTimer = null; }
@@ -222,9 +234,30 @@ const StreetAudio = (() => {
         if (!cycleTimer) cycleTimer = setTimeout(playPhase, JUKEBOX_GAP);
     }
 
-    /* Soittaa koko kappaleen alusta loppuun. Palauttaa false jos ääntä ei saada
-       lainkaan (kadun puoli voi silloin palauttaa kolikon). */
-    function playJukebox(url) {
+    /* Soittaa jonon nykyisen kappaleen (jukePos). Palauttaa false jos ääntä
+       ei saada lainkaan (esim. <audio>-elementtiä ei voi luoda). */
+    function startJukeTrack() {
+        const url = jukeQueue[jukePos];
+        if (!url || !jukeEl) return false;
+        try { jukeEl.src = url; } catch (e) { return false; }
+        jukePlaying = true;
+        const p = jukeEl.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(() => {
+                // Autoplay estetty → soitetaan seuraavassa eleessä (osto on jo tehty)
+                jukePlaying = false;
+                pendingJukeQueue = jukeQueue.slice();
+                resumeAfterJukebox();
+            });
+        }
+        return true;
+    }
+
+    /* Soittaa koko jonon alusta loppuun (v4.46): valitut kappaleet yksi
+       kerrallaan (1 → 3). Palauttaa false jos ääntä ei saada lainkaan
+       (kadun puoli voi silloin palauttaa kolikot). */
+    function playJukeboxQueue(urls) {
+        if (!urls || !urls.length) return false;
         init();
         if (!ctx) return false;
         try { if (ctx.state === 'suspended') ctx.resume(); } catch (e) {}
@@ -242,31 +275,36 @@ const StreetAudio = (() => {
             jukeEl.addEventListener('error', () => {
                 // Kappale ei aukea → älä jää jumiin, taustamusiikki takaisin
                 jukePlaying = false;
-                pendingJukeUrl = null;
+                pendingJukeQueue = null;
+                jukeQueue = [];
+                jukePos = -1;
                 jukeEl = null;
                 resumeAfterJukebox();
             });
         }
         try { jukeEl.volume = JUKEBOX_VOLUME; } catch (e) {}
+        jukeQueue = urls.slice();
+        jukePos = 0;
+        pendingJukeQueue = null;
         jukePlaying = true;
-        pendingJukeUrl = null;
-        try { jukeEl.src = url; } catch (e) { jukePlaying = false; return false; }
-        const p = jukeEl.play();
-        if (p && typeof p.catch === 'function') {
-            p.catch(() => {
-                // Autoplay estetty → soitetaan seuraavassa eleessä (osto on jo tehty)
-                jukePlaying = false;
-                pendingJukeUrl = url;
-                resumeAfterJukebox();
-            });
+        if (!startJukeTrack()) {
+            jukePlaying = false;
+            jukeQueue = [];
+            jukePos = -1;
+            return false;
         }
         return true;
     }
 
-    /* Pysäyttää jukeboxin (kuolema, uusi kappale, sivun sulku). */
+    /* Yhden kappaleen soitto – ohut kääre jonolle (sama rajapinta kuin ennen). */
+    function playJukebox(url) { return playJukeboxQueue([url]); }
+
+    /* Pysäyttää jukeboxin ja tyhjentää jonon (kuolema, sivun sulku). */
     function stopJukebox() {
         jukePlaying = false;
-        pendingJukeUrl = null;
+        pendingJukeQueue = null;
+        jukeQueue = [];
+        jukePos = -1;
         if (jukeEl) {
             try { jukeEl.pause(); } catch (e) {}
             try { jukeEl.currentTime = 0; } catch (e) {}
@@ -274,6 +312,9 @@ const StreetAudio = (() => {
     }
 
     function isJukeboxPlaying() { return jukePlaying; }
+    /* Monesko jonon kappale soi (0 = ensimmäinen, -1 = ei jonoa). Kadun
+       jukebox-huone näyttää tämän avulla, mikä kappale soi parhaillaan. */
+    function getJukeboxQueuePos() { return jukePos; }
 
     /* ═══════════════════════════════════════════════════
        RUMMUT: Kick, Snare, Hi-hat
@@ -644,11 +685,11 @@ const StreetAudio = (() => {
         if (ctx && ctx.state === 'suspended') ctx.resume();
         // Jukebox soi → ei taustamusiikkia päälle
         if (jukePlaying || phase === 'jukebox') return;
-        // Autoplay-eston jälkeen soitetaan odottava jukebox-kappale (osto on jo tehty)
-        if (pendingJukeUrl) {
-            const url = pendingJukeUrl;
-            pendingJukeUrl = null;
-            playJukebox(url);
+        // Autoplay-eston jälkeen soitetaan odottava jukebox-jono (osto on jo tehty)
+        if (pendingJukeQueue && pendingJukeQueue.length) {
+            const q = pendingJukeQueue;
+            pendingJukeQueue = null;
+            playJukeboxQueue(q);
             return;
         }
         // Käyttäjän ele avaa autoplay-lukon → kokeile MP3:a uudelleen jos se oli estetty
@@ -755,5 +796,6 @@ const StreetAudio = (() => {
     function getDestination() { init(); return ctx ? ctx.destination : null; }
 
     return { init, start, stop, playDeathGong, getCtx, getDestination,
-             playJukebox, stopJukebox, isJukeboxPlaying };
+             playJukebox, playJukeboxQueue, stopJukebox, isJukeboxPlaying,
+             getJukeboxQueuePos };
 })();

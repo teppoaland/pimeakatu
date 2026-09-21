@@ -17,8 +17,8 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.43` (`index.html` → `#version-tag`) · **Git:** v4.39–v4.43 committattu ja
-  pushattu 20.9.2026 (`2ffcd94`, `e941778`, origin/main) · **työpuu puhdas**.
+- **Versio:** `v4.46` (`index.html` → `#version-tag`) · **Git:** v4.39–v4.43 committattu ja
+  pushattu 20.9.2026 (`2ffcd94`, `e941778`, origin/main) · **työpuu:** v4.44 (Nuku → +1 🍔) + v4.45 (✕ sulkee huoneet, ei resettiä) + v4.46 (jukeboxin monivalinta).
 - **Testaus:** v4.39–v4.42 käyttäjän testaus OK ("Tuli hieno" – led-valot syttyvät naksahdellen,
   vanhat lamput olivat dramaattisempia). **v4.43 odottaa käyttäjän testausta** (sääntö 05):
   makuuhuoneen oven pitää aueta ilman avaimia ja lamppua sekä yöllä (`?day=0`) että päivällä (`?day=1`).
@@ -34,7 +34,7 @@
   ilman potkua **vasta kun päivä/yö on ratkaistu**. Testityökalu `?day=0` näyttää efektin heti.
   **Käyttäjän testaus 20.9.2026: "Tuli hieno" – sopivasti pikkuisen liioiteltu; syttymisnaksahdus on
   terävämpi kuin vanhojen dramaattisten lamppujen (led-ajan valot) → hyväksytty.**
-- **Makuuhuoneen ovi auki (v4.43):** talo 7:n makuuhuoneeseen pääsee **aina** – ei 3 avainta eikä
+- **Makuuhuoneen ovi auki (v4.43) + 🍔-palkkio (v4.44):** talo 7:n makuuhuoneeseen pääsee **aina** – ei 3 avainta eikä
   lamppua, päivällä ja yöllä (kuten BAR). `handleAction()` avaa huoneen oven edestä; sama tila ohjaa
   oven ulkoasua (`drawDoor()`) ja kynnysvaloa (`drawThresholdPaving()`), ja avainpopup ("Ei tänne
   pääse ilman avainta") poistui tästä ovesta. Käyttäjän pyyntö 20.9.2026: *"Vapauta ovi, että ei
@@ -42,10 +42,23 @@
   nukkua."* Talous ennallaan (sääntö 04). **Seuraus:** nukkua voi heti ensimmäisenä yönä →
   `state.isDay` voi ratketa ennen avaimia (v4.32:n auringonnousu ei enää laukea sen jälkeen);
   huone on nyt myös vapaa paikka pitää nälkä jäissä (v4.41).
+**Nuku → +1 🍔** (katto 10, v4.44, käyttäjän pyyntö 21.9.2026).
 - **Nukkuminen (v4.41):** nälkä on **jäissä** makuuhuoneessa ja Zzz-pimennyksen ajan
   (`hungerOnHold()`) → pelaaja ei voi kuolla nukkuessaan; herätessä ajastimelle jää vähintään
   `HUNGER_WAKE_GRACE 600` (10 s). Rajaus: **vain nukkuminen** – muualla (BAR, jukebox,
   iframe-pelit) nälkä tikittää ennallaan.
+- **Jukeboxin monivalinta (v4.46, 21.9.2026):** jukebox-huoneessa (talo 5) voi nyt valita **useamman
+  kappaleen** ja valitut soitetaan poistuttaessa **yksi kerrallaan (1 → 3)**. Ohjaus: **▲/▼ = kursori**
+  (rivi 0 = **Poistu**, rivit 1–3 = kappaleet) · **(o) / Space / ⚡ = ota kappale listalle tai poista se** ·
+  **Enter = soita valitut & poistu** mistä tahansa riviltä · rivillä 0 sama nappi kuin Enter ·
+  **kun jono soi jo** (valinta lukossa), Space/(o)/⚡ ja Enter vain poistuvat huoneesta ·
+  **✕-nappi = peruuta** ilman veloitusta. Valittu rivi näkyy violetilla + `✓ 1 🪙`, Poistu-rivillä `▶ n kpl`.
+  **Talous ennallaan (sääntö 04):** 1 🪙 / kappale, veloitus vasta poistuttaessa, niin moneen kuin kolikoita
+  riittää (`💰 Ei kolikoita kaikkiin – soitetaan 2/3`); äänen puuttuessa kaikki veloitetut palautetaan.
+  `audio.js`: uusi `playJukeboxQueue(urls)` + `getJukeboxQueuePos()` (jono, `jukePos`); `ended` → seuraava
+  heti, ja vasta viimeisen jälkeen `JUKEBOX_GAP` → taustamusiikki. `(o)`-näppäin luetaan **vain** jukebox-
+  huoneessa (globaali action-mäppäys on ennallaan Space/Enter). Memo: `docs/jukebox-memo.md`.
+  **Huom:** `%TEMP%`-testit (`street-jukebox-*`) odottavat vanhaa yhden valinnan mallia → päivitettävä.
 - **Taivas (v4.41):** kuu ja aurinko **eivät liu'u** – kumpikin seisoo paikallaan omalla
   puolellaan ja vain häivytetään ristikkäin: yöllä kuu oikealla (`MOON_X 680`), päivällä aurinko
   vasemmalla (`SUN_X 140`); `dayT` ohjaa pelkkää alphaa. Yö → päivä häivyttää kuun pois ja tuo
@@ -462,12 +475,12 @@ katuun (v4.11 ✅).
   `isDay`-kenttää → `deepMerge` tuo `null`in → päivä nousee kuten ennen. Päivänvalo on additive-kerros
   (`'lighter'`), eli se ei muuta yhtään väripalettia: jos kadun pitää näyttää vielä valoisammalta,
   nosta `DAY_LIGHT_ALPHA` (0.30) tai vaalenna `DAY_SKY_*`-sävyjä.
-- **Makuuhuone (v4.33, ovi auki v4.43):** liuku on pysähdyksissä huoneessa (`!sleepRoom`), joten
+- **Makuuhuone (v4.33, ovi auki v4.43, 🍔-palkkio v4.44):** liuku on pysähdyksissä huoneessa (`!sleepRoom`), joten
   nukahduksen jälkeen auringonnousu/-lasku näkyy vasta kadulle palatessa – sama portti kuin
   iframe-peleillä. Huone piirretään `render()`issa ennen päivänvalo-washiä → sisätila ei kirkastu.
-  Nukkuminen **ei** kosketa taloutta, 🍔-ajastinta, lamppuja, ovia eikä avaimia. Ovi on aina auki
+  Nukkuminen antaa **+1 🍔** (katto 10, v4.44), mutta **ei** kosketa lamppuja, ovia eikä avaimia. Ovi on aina auki
   ilman avaimia ja lamppua (v4.43), joten myös nälkäpysäytys (`hungerOnHold()`) on käytettävissä
-  heti pelin alusta – se ei tuota kolikoita eikä 🍔:tä.
+  heti pelin alusta – **Nuku → +1 🍔** (katto 10, v4.44).
 - `handleAction()` palaa heti osumasta → hit pause asetetaan haaroissa, `actionJustPressed` nollataan
   framen lopussa (ei tuplapotkua). `KICK_DURATION` ja törmäyslogiikka ennallaan.
 - `street.js` `lamps[].label` on **kuollutta dataa** – kadun kyltit eivät näytä pelien nimiä (vain BAR
