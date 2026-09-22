@@ -36,6 +36,13 @@
   BAR, jukebox, RTP, syntymäpaketti); ei uutta localStorage-avainta eikä `gameState.js`-muutosta.
   Testityökalu `?burgers=N` pakottaa vain vauhtilaskennan (ei tallenna). Sääntö 04 + memo päivitetty.
   **Ei committia.**
+- **🔪 Oviukko hidastettu ½:een (parametrin säätö 23.9.2026, ei versionnostoa):** `AVENGER_SPEED
+  2.0 → 1.0`. Pelaaja luulee pääsevänsä karkuun, mutta katu on rajattu (800 px) → laidalla oviukko
+  nappaa ("jahtaa kuvaruudun laitaan asti ja antaa turpaan"). Nälkäisenä (≤3 🍔 = 0,82) se tavoittaa
+  jo avoimella kadulla. Huoneet ja sanomalehti jäädyttävät sen edelleen – käyttäjän linjaus:
+  *"Vain ½-nopeus – ei muita muutoksia"*. Korvaa v4.70-bulletin maininnan "oviukko 2.0"; rosvo 1.05
+  ja talouslukko ennallaan. **Ei versionnostoa** (sääntö 03: vihollisen nopeus = asetusarvo),
+  **ei committia.**
 - **🕳️ Kaivoon putoaminen voi tuottaa rahaa, mutta harvemmin (parametrin säätö 23.9.2026):** *"vain joka 1/6
   kun kaivoon putoaa voi saada rahaa."* Plussakerroin pienennettiin `MH_BONUS_CHANCE 1/6`:
   osuessa **+3 🪙** (`MH_BONUS_COINS`) + kolikon pling (`playCoin()`) + kultahiukkaset reiästä;
@@ -500,7 +507,9 @@ katuun (v4.11 ✅).
 
 ## ⚙️ Nupit (säädettävät parametrit)
 
-- **Oviukko:** `AVENGER_CHANCE 0.12` (1/8) · `AVENGER_COOLDOWN 1800` (30 s) · `AVENGER_SPEED 2.0` ·
+- **Oviukko:** `AVENGER_CHANCE 0.12` (1/8) · `AVENGER_COOLDOWN 1800` (30 s) · **`AVENGER_SPEED 1.0`**
+  (½: pelaaja luulee pääsevänsä karkuun, mutta katu on rajattu → laidalla se nappaa; nälkäisenä
+  ≤3 🍔 = 0,82 → tavoittaa heti) ·
   `AVENGER_STUN 600` (360 = 6 s) · `AVENGER_FREEZE 180` (3 s) · `AVENGER_TELEGRAPH 21` · `AVENGER_HIT_R 18` ·
   `AVENGER_KIND 'twin'`.
 - **Musiikki:** `MUSIC_SOURCE 'synth' | 'mp3'` · `MUSIC_FILE 'knived_unafraid.mp3'` ·

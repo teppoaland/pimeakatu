@@ -307,13 +307,17 @@ const Street = (() => {
 
     /* ── Oviukko (Avenger): kolikon vastakohta ────────
        Ei putoa ikkunasta kuten ruukku/kolikko – astuu OVESTA kynnykseltä ja
-       juoksee pelaajan kiinni. Nopeus > pelaajan nopeus → ei väistettävissä.
-       Osuma = tainnutus + 1 hampurilainen (kuten kukkaruukku), mutta pakollinen.
+       lähtee perään. Nopeus on ½ pelaajan nopeudesta: pelaaja luulee
+       pääsevänsä karkuun, mutta katu on rajattu (800 px) → laidalla se
+       nappaa ("jahtaa kuvaruudun laitaan asti ja antaa turpaan").
+       Nälkäisenä (≤3 🍔 = 0,82) se tavoittaa jo avoimella kadulla.
+       Huoneet ja sanomalehti jäädyttävät sen (updateAvenger ei pyöri).
+       Osuma = tainnutus + 1 hampurilainen (kuten kukkaruukku).
        AVENGER_KIND: 'twin' = pelaajan kaksonen (nyt). 'dog' = koira myöhemmin. */
     const AVENGER_KIND      = 'twin';
     const AVENGER_CHANCE    = 0.12;    // 1/8 – harvinaisempi kuin kolikko (1/5)
     const AVENGER_COOLDOWN  = 1800;    // 30s tauko @ ~60fps (kuten potkukolikolla)
-    const AVENGER_SPEED     = 2.0;     // > PLAYER_SPEED (1.225) → tavoittaa aina
+    const AVENGER_SPEED     = 1.0;     // ½ nopeudesta (oli 2.0) – teeskennelty karkuunpääsy
     const AVENGER_TELEGRAPH = 21;      // ~350ms oviaukon varoitus ennen ulostuloa
     const AVENGER_HIT_R     = 18;      // osumasäde (px)
     const AVENGER_STUN      = 600;     // 10s tainnutus (sama kuin ruukulla/autolla)

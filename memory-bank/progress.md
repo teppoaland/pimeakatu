@@ -18,7 +18,7 @@
 | Puut + ruohotupsut | ✅ v3.82–v4.02 – siluetit, huojunta tuulessa, 3 tupsua / puu |
 | Sähkökaapit (2) | ✅ v3.90 / v4.01 – 2 px alemmas, 20 % pienempi (8×14), vilkkutahti /520; osuma −1 🍔 |
 | Mopo + ajoneuvoäänet | ✅ v3.81 / v4.08 – punainen runko + kuski pelaajan väreillä; panoroiva surina |
-| Kolikko potkusta / oviukko | ✅ v3.93 / v4.14–v4.15 – 1/5 kolikko (30 s cooldown); oviukko 1/8 + 30 s, ei väistettävissä, 3 s jäädytys + −1 🍔 |
+| Kolikko potkusta / oviukko | ✅ v3.93 / v4.14–v4.15 / **23.9.2026** – 1/5 kolikko (30 s cooldown); oviukko 1/8 + 30 s, **½-nopeus (`AVENGER_SPEED 1.0`, parametri): avoimella kadulla se ei saa kiinni – katu loppuu 800 px:iin, joten laidalla se nappaa** (nälkäisenä ≤3 🍔 se tavoittaa heti), 3 s jäädytys + −1 🍔; huoneet/lehti jäädyttävät sen |
 | 🔪 Rosvo jalkakäytävällä | ✅ v4.66–v4.68 – yllätysesiintyminen: ilmestyy satunnaiseen kohtaan vasta kun pelaaja palaa kadulle pelistä/jukeboxista/BARista (trackHiddenStreet/maybeSpawnRobber; appearence 0.4, cooldown 1500, min. etäisyys 130 px, ttl 900 ~15 s) – ei ole kadulla koko ajan. Mustat vaatteet + puukko (Spy vs Spy); kävelynopeus 1.05 (< pelaaja 1.225). Kiinniotto vain kun pelaaja samalla kaistalla + lähellä = tainnutus + **−1 🍔 + kaikki kolikot (v4.68, coinCount → 0, ei ilmoitusta – sääntö 06)** kuten avenger, ja rosvo katoaa nappauksen jälkeen (ja ttl:n loputtua) → väistö/välttely onnistuu (loiki kadun toiselle puolelle ↓). Ei mene tielle; tila vain muistissa, ei localStorage-avainta |
 
 | Ovikynnykset | ✅ v4.13 – kynnyslaatta + 1 kivirivi, kiveys vain y 317–324 |
