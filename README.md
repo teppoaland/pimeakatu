@@ -57,5 +57,8 @@ omaisuutta. Sitä **ei saa** kopioida, muokata, julkaista uudelleen, levittää 
 käyttää omissa projekteissa tai kaupallisesti ilman tekijän kirjallista lupaa.
 Tarkemmat ehdot: [`LICENSE`](LICENSE).
 
-`jukebox/`-kansion kappaleet ovat tekijän omia teoksia (Knived).
+`jukebox/`-kansion kappaleet 1–3 ovat tekijän omia teoksia (Knived, 2013).
+Kaikki oikeudet pidätetään.
+`jukebox/`-kansion kappaleet 4–6 ovat kolmannen osapuolen ilmaisia
+(royalty-free) raitoja (Alec Koff, MrClaps) – ks. [`LICENSE`](LICENSE).
 `assets/justiina.png` on BAR-huoneen seinätaulun kuva-aineisto.

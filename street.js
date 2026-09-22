@@ -180,19 +180,51 @@ const Street = (() => {
     const SLEEP_BLDG_IDX = 7;
     /* Tiedostonimet vastaavat sisältöä (korjattu 20.9.2026, v4.27): aiemmin
        `our_song.mp3` ja `unafraid.mp3` olivat ristissä keskenään → raita 1 ja 2
-       soivat valitun nimen vastaisesti. Älä "korjaa" nimiä takaisin ristiin. */
+       soivat valitun nimen vastaisesti. Älä "korjaa" nimiä takaisin ristiin.
+       Rivit 4–6 lisätty 22.9.2026 (v4.60): D:\AI\free_music -kansion kolme
+       ilmaista heavy metal -raitaa entisten jatkoksi (1 → 6). Hinta ja
+       veloitus ennallaan: 1 🪙 / kappale (sääntö 04). */
     const JUKEBOX_TRACKS = [
         { url: 'jukebox/Knived_Our_song.mp3',              title: 'Knived - Our Song' },
         { url: 'jukebox/Knived_Unafraid.mp3',              title: 'Knived - Unafraid' },
-        { url: 'jukebox/Knived_Unafraid_instrumental.mp3', title: 'Knived - Unafraid (inst.)' }
+        { url: 'jukebox/Knived_Unafraid_instrumental.mp3', title: 'Knived - Unafraid (inst.)' },
+        { url: 'jukebox/alec_koff-heavy-doom-dark-metal-493397.mp3', title: 'Alec Koff - Heavy Doom',
+          cover: 'jukebox/covers/4.png' },
+        { url: 'jukebox/alec_koff-in-heavy-metal-492175.mp3',        title: 'Alec Koff - In Heavy Metal',
+          cover: 'jukebox/covers/5.png' },
+        { url: 'jukebox/mrclaps-this-heavy-metal-492569.mp3',        title: 'MrClaps - This Heavy Metal',
+          cover: 'jukebox/covers/6.png' }
     ];
+    /* Kansikuvat (22.9.2026): raidoilla 4–6 on kansikuva, joka näytetään
+       jukebox-kaapin levykuvan paikalla **kappaleen soidessa**. Raidoilla 1–3
+       ei ole kuvaa → niiden kohdalla levy piirretään täsmälleen kuten ennen.
+       Lataus BAR-taulun mallilla: `ready`-lippu + `typeof Image` -tarkistus
+       (headless-validonnat), varapinta jos kuva ei lataudu. Ei uusia
+       localStorage-avaimia eikä talousmuutoksia (sääntö 04).
+
+       ⚠ MÄPPÄYS – kansiotiedoston nimi = **jukebox-rivi** (`covers/4.png` =
+       rivi 4). D:\AI\free_music -kansion numerointi EI vastaa jukeboxin rivejä,
+       koska jukeboxissa raidat ovat aakkosjärjestyksessä:
+         jukebox rivi 4 (Alec Koff - Heavy Doom)     ← 6_img.PNG
+         jukebox rivi 5 (Alec Koff - In Heavy Metal) ← 5_img.PNG
+         jukebox rivi 6 (MrClaps - This Heavy Metal) ← 4_img.PNG
+       Älä kopioi kuvia uudelleen "numero numeroa vasten" – tarkista tämä lista.
+       Kuvien sisällöllä ei ole väliä, vain rivi↔kuva-paritus ratkaisee. */
+    const jukeCovers = JUKEBOX_TRACKS.map((t) => {
+        if (!t.cover || typeof Image !== 'function') return null;
+        const rec = { img: new Image(), ready: false };
+        rec.img.onload  = () => { rec.ready = true;  };
+        rec.img.onerror = () => { rec.ready = false; };
+        rec.img.src = t.cover;
+        return rec;
+    });
     let jukeboxRoom = false;
     let jukeSel = 0;               // kursori: 0 = Poistu-rivi, 1..N = kappale
     let jukeHeldUp = false;        // ▲ reunanilmaisu
     let jukeHeldDown = false;      // ▼ reunanilmaisu
     /* Monivalinta (v4.46): kappaleita voi valita useamman ja valitut soitetaan
-       poistuttaessa yksi kerrallaan (1 → 3). Hinta ennallaan: 1 🪙 / kappale. */
-    let jukePick = [false, false, false];   // valitut kappaleet (true = listalla)
+       poistuttaessa yksi kerrallaan (1 → N). Hinta ennallaan: 1 🪙 / kappale. */
+    let jukePick = JUKEBOX_TRACKS.map(() => false);  // valitut kappaleet (true = listalla)
     let jukeSpaceHeld = false;     // Space/⚡/(o) reunanilmaisu (ota/poista)
     let jukeEnterHeld = false;     // Enter-reunanilmaisu (soita & poistu)
     let jukeQueue = [];            // soivat kappaleet numeroina (1..N), sama kuin audio-jono
@@ -899,10 +931,20 @@ const Street = (() => {
             if (!audioCtx || audioCtx.state !== 'running') return null;
             const now = audioCtx.currentTime;
             let baseFreq, gainVal, lfoRate, lowpassFreq;
+            let lfoDepth = 0.22;    // LFO:n modulaatiosyvyys (osuus perustaajuudesta)
+            let tankDrive = false;  // panssarivaunu: särö + toinen oskillaattori
             if (v.type === 'motorcycle') {
                 baseFreq = 185; gainVal = 0.025; lfoRate = 15; lowpassFreq = 2200;
             } else if (v.type === 'ambulance') {
                 baseFreq = 55; gainVal = 0.08; lfoRate = 6; lowpassFreq = 420;
+            } else if (v.type === 'tank') {
+                // Raskas panssarivaunu: todella matala perusjyrinä (28 Hz) ja kova,
+                // säröity sävy. Suodatin päästää yläsävelet ~900 Hz asti, jotta ääni
+                // kuuluu myös puhelimen pienestä kaiuttimesta – pelkkä 35 Hz +
+                // 200 Hz suodatin jäi kännykässä käytännössä kuulumattomiin.
+                baseFreq = 28; gainVal = 0.30; lfoRate = 3; lowpassFreq = 900;
+                lfoDepth = 0.35;
+                tankDrive = true;
             } else { // car
                 baseFreq = 82; gainVal = 0.065; lfoRate = 9; lowpassFreq = 640;
             }
@@ -915,13 +957,34 @@ const Street = (() => {
             lfo.type = 'triangle';
             lfo.frequency.value = lfoRate;
             const lfoGain = audioCtx.createGain();
-            lfoGain.gain.value = baseFreq * 0.22;
+            lfoGain.gain.value = baseFreq * lfoDepth;
             lfo.connect(lfoGain);
             lfoGain.connect(osc.frequency);
             // Alipäästösuodatin pehmentää sahahampaan
             const filter = audioCtx.createBiquadFilter();
             filter.type = 'lowpass';
             filter.frequency.value = lowpassFreq;
+            // Panssarivaunu: toinen oskillaattori oktaavia ylempänä (kova, koneellinen
+            // sävy) + tanh-särö → lisää yläsäveliä, jotta matala jyrinä kuuluu myös
+            // puhelimen kaiuttimesta. Molemmat ajetaan saman suodattimen läpi.
+            let osc2 = null, shaper = null;
+            if (tankDrive) {
+                osc2 = audioCtx.createOscillator();
+                osc2.type = 'square';
+                osc2.frequency.value = baseFreq * 2;
+                osc2.detune.value = 12;             // hieno detune → karkea, elävä jyrinä
+                const osc2Gain = audioCtx.createGain();
+                osc2Gain.gain.value = 0.5;
+                osc2.connect(osc2Gain);
+                osc2Gain.connect(filter);
+                shaper = audioCtx.createWaveShaper();
+                const n = 1024, curve = new Float32Array(n);
+                for (let i = 0; i < n; i++) {
+                    curve[i] = Math.tanh(((i / (n - 1)) * 2 - 1) * 3.5);
+                }
+                shaper.curve = curve;
+                shaper.oversample = '2x';
+            }
             // Äänenvoimakkuus (pehmeä fade-in)
             const gain = audioCtx.createGain();
             gain.gain.setValueAtTime(0.0001, now);
@@ -929,12 +992,14 @@ const Street = (() => {
             // Stereopanorointi – ääni seuraa auton x-sijaintia
             const panner = (typeof audioCtx.createStereoPanner === 'function') ? audioCtx.createStereoPanner() : null;
             osc.connect(filter);
-            filter.connect(gain);
+            if (shaper) { filter.connect(shaper); shaper.connect(gain); }
+            else { filter.connect(gain); }
             if (panner) { gain.connect(panner); panner.connect(audioCtx.destination); }
             else { gain.connect(audioCtx.destination); }
             osc.start(now);
             lfo.start(now);
-            const engine = { osc, lfo, gain, panner };
+            if (osc2) osc2.start(now);
+            const engine = { osc, lfo, gain, panner, osc2 };
             updateVehicleEngine(engine, v);
             return engine;
         } catch (e) { return null; }
@@ -957,6 +1022,7 @@ const Street = (() => {
             engine.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
             engine.osc.stop(now + 0.4);
             engine.lfo.stop(now + 0.4);
+            if (engine.osc2) engine.osc2.stop(now + 0.4);
         } catch (e) {}
     }
 
@@ -1157,9 +1223,13 @@ const Street = (() => {
        Palauttaa true, jos ajoneuvo osui pelaajaan tällä framella.
        HUOM (v4.54): liikenne pyörii myös sanomalehteä lukiessa → kadulla
        voi jäädä auton alle kesken lukemisen (lehti putoaa kädestä).
+       HUOM (v4.61): liikenne pyörii myös jukebox-huoneessa. Siellä pelaaja
+       on sisällä talossa → `playerSafe = true` ohittaa pelaajan
+       törmäystestin, joten auto ei voi tainnuttaa kesken musiikin valinnan
+       (muuten liike, spawnit ja äänet toimivat täsmälleen kuten kadulla).
        `PLAYER_DEPTH_MAX_Y` (WORLD_H - 50 = 350) on sama raja kuin
        update()in paikallinen PLAYER_Y_MAX (aidan yläreuna). */
-    function updateTraffic(dt) {
+    function updateTraffic(dt, playerSafe) {
         let playerHit = false;
 
         // 1) Liike ja spawnit
@@ -1171,12 +1241,17 @@ const Street = (() => {
                     const dir = lane.direction;
                     const vehRnd = Math.random();
                     let type, w, h, speed;
-                    if (vehRnd < 0.4) {
+                    if (vehRnd < 0.37) {
                         type = 'car'; w = 80; h = 30; speed = 1.0 + Math.random() * 0.5;
-                    } else if (vehRnd < 0.8) {
+                    } else if (vehRnd < 0.74) {
                         type = 'motorcycle'; w = 40; h = 22; speed = 1.5 + Math.random() * 1.0;
-                    } else {
+                    } else if (vehRnd < 0.98) {
                         type = 'ambulance'; w = 80; h = 34; speed = 1.8 + Math.random() * 1.2;
+                    } else {
+                        // Panssarivaunu on tarkoituksella todella harvinainen: ~2 %
+                        // (1/50) spawnauksista. Muu liikenne: auto 37 %, mopo 37 %,
+                        // ambulanssi 24 %. (Aiempi vaunun osuus oli 8 %.)
+                        type = 'tank'; w = 86; h = 36; speed = 0.4 + Math.random() * 0.4;
                     }
                     const vehicle = {
                         type,
@@ -1185,7 +1260,7 @@ const Street = (() => {
                         w, h,
                         vx: dir * speed,
                         direction: dir,
-                        hasHeadlight: type !== 'motorcycle' || Math.random() < 0.5
+                        hasHeadlight: (type === 'tank') ? false : (type !== 'motorcycle' || Math.random() < 0.5)
                     };
                     vehicle.engine = startVehicleEngine(vehicle);
                     vehicles[li] = vehicle;
@@ -1202,8 +1277,8 @@ const Street = (() => {
             }
         }
 
-        // 2) Törmäys (molemmat kaistat)
-        if (!player.knockedDown) {
+        // 2) Törmäys (molemmat kaistat) – ohitetaan, kun pelaaja on sisällä
+        if (!playerSafe && !player.knockedDown) {
             const playerCY = player.y + player.h / 2;
             const gapCenter = (LANE_DEFS[0].y + LANE_DEFS[1].y) / 2;  // 334
             const inGap = Math.abs(playerCY - gapCenter) < 5;          // ±5px turvakaista
@@ -1494,8 +1569,16 @@ const Street = (() => {
         //   Enter = soita valitut & poistu mistä tahansa
         //   Kun jono soi (valinta lukossa) Space/(o)/⚡ ja Enter vain poistuvat
         //   Ei valintoja → poistuminen ei veloita eikä soita mitään
-        //   Valitut soitetaan poistuttaessa yksi kerrallaan (1 → 3), 1 🪙 / kappale
+        //   Valitut soitetaan poistuttaessa yksi kerrallaan (1 → N), 1 🪙 / kappale
         if (jukeboxRoom) {
+            /* Liikenne ei pysähdy (v4.61): kadun autot ajavat taustalla
+               normaalisti, jotta yksikään ajoneuvo ei jää jyrräämään
+               paikalleen huoneeseen mentäessä. Pelaaja on sisällä talossa →
+               `playerSafe = true` (ei törmäystestiä, ei tainnutusta eikä
+               🍔-menetystä kesken musiikin valinnan). Ei talousmuutoksia
+               (sääntö 04); nälkä kuluu kuten ennenkin (v4.49/v4.50). */
+            updateTraffic(dt, true);
+
             const selUp = !!(keys['ArrowUp'] || keys['w'] || keys['W']);
             const selDown = !!(keys['ArrowDown'] || keys['s'] || keys['S']);
             const trackCount = JUKEBOX_TRACKS.length;
@@ -1662,8 +1745,8 @@ const Street = (() => {
         // ── Kolikon keräys ──────────────────────────
         if (!coin.collected) {
             const dx = (player.x + player.w/2) - coin.x;
-            const dy = (player.y + player.h/2) - coin.y;
-            if (Math.sqrt(dx*dx + dy*dy) < 30) {
+            const dy = (player.y + player.h) - coin.y;    // jalkojen alin piste, ei keskikohta
+            if (Math.sqrt(dx*dx + dy*dy) < 8) {           // tarkka osuma – ei enää kaukaa nappausta
                 const cx = coin.x, cy = coin.y;
                 coinCount++;
                 state.inventory.coin = true;
@@ -2022,7 +2105,7 @@ const Street = (() => {
                     if (lamp.gameUrl) { enterGame(lamp.gameUrl); }
                     else { showNotification('🚧 Ei tänne pääse ilman avainta! Hanki avaimet tai keksi jotain muuta.'); }
                 } else {
-                    showNotification('💡 Ovi on lukossa.\nSytytä lamppu ensin!');
+                    showNotification('Pimeää\nOvi on lukossa\nSytytä lamppu!');
                 }
                 return;
             }
@@ -2224,7 +2307,7 @@ const Street = (() => {
        Rivi 0 = Poistu, rivit 1..N = kappaleet. (o) / Space / ⚡ ottaa kappaleen
        listalle tai poistaa sen; rivillä 0 sama nappi soittaa valitut ja poistuu.
        Enter soittaa valitut ja poistuu mistä tahansa riviltä. Valitut soitetaan
-       yksi kerrallaan (1 → 3), hinta ennallaan 1 🪙 / kappale. Jos kolikot eivät
+       yksi kerrallaan (1 → N), hinta ennallaan 1 🪙 / kappale. Jos kolikot eivät
        riitä kaikkiin, soitetaan niin monta kuin niillä saa. */
 
     /* Nollaa huoneen tila: kursori, valinnat ja reunanilmaisut.
@@ -2239,7 +2322,7 @@ const Street = (() => {
         for (let i = 0; i < jukePick.length; i++) jukePick[i] = false;
     }
 
-    /* Valitut kappaleet nousevassa järjestyksessä (1 → 3) */
+    /* Valitut kappaleet nousevassa järjestyksessä (1 → N) */
     function jukePickedTracks() {
         const out = [];
         for (let i = 0; i < JUKEBOX_TRACKS.length; i++) {
@@ -4229,7 +4312,7 @@ const Street = (() => {
         if (newsRoom || iframeOpen) return;
         const n = (foreground && foreground.newspaper) ? foreground.newspaper : null;
         if (!n || !nearNewspaper()) return;
-        const label = '⚡ = lue';
+        const label = 'Lue';
         const cx = n.x + 11;
         const cy = n.y - 16;
         ctx.save();
@@ -4938,7 +5021,7 @@ const Street = (() => {
 
     /* ── Jukebox-huone (talo 5) ────────────────────
        Monivalinta (v4.46): rivi 0 = Poistu, rivit 1..N = kappaleet (1 🪙 /
-       kappale). Valitut soitetaan poistuttaessa yksi kerrallaan (1 → 3).
+       kappale). Valitut soitetaan poistuttaessa yksi kerrallaan (1 → N).
        HUOM: jukebox ei muuta peliääniä mitenkään.
 
        SELKEYS (v4.22): kaikki tekstit piirretään terävinä (ei
@@ -4994,17 +5077,40 @@ const Street = (() => {
         const numW     = Math.max(20, Math.round(rowW * 0.055));
         const priceW   = Math.max(52, Math.round(rowW * 0.16));
         const nameMaxW = rowW - numW - priceW - 16;
-        const nameFs = Math.max(9, Math.min(needPx(16, 13, 16),
-                             Math.floor(nameMaxW / (0.62 * 25))));
+        /* Lista on kasvanut (v4.60: 6 kappaletta = 7 riviä). Kun rivejä on
+           enemmän kuin 4, rivit tiivistetään ja koko lista sovitetaan niin,
+           ettei paneeli valu lattialle (GROUND_Y) eikä peitä alaohjetta.
+           3 kappaleen ulkoasu säilyy täsmälleen ennallaan (compact = false). */
+        const totalRows = trackCount + 1;         // rivi 0 = Poistu
+        const compact   = totalRows > 4;
+        const nameFs = compact
+            ? Math.max(9, Math.min(needPx(12, 11, 12),
+                     Math.floor(nameMaxW / (0.62 * 25))))
+            : Math.max(9, Math.min(needPx(16, 13, 16),
+                     Math.floor(nameMaxW / (0.62 * 25))));
 
         /* Pystyasettelu */
-        const titleY   = 82;
+        const titleY   = compact ? 74 : 82;
         const stacked  = panelW < 470;            // kolikkosaldo omalle rivilleen
-        const balY     = stacked ? titleY + 22 : titleY;
-        const listTop  = stacked ? balY + 20 : titleY + 22;
-        const rowGap   = 6;
-        const rowH     = Math.max(18, Math.round(nameFs * 1.9));
-        const listH    = (trackCount + 1) * (rowH + rowGap) - rowGap;
+        const balY     = stacked ? titleY + (compact ? 20 : 22) : titleY;
+        const listTop  = stacked ? balY + (compact ? 14 : 20) : titleY + (compact ? 20 : 22);
+        /* Tilatekstilaatikolle varataan tila (enintään 2 riviä) ennen kuin
+           rivikorkeus lasketaan – muuten 7 rivin lista työntäisi paneelin
+           alareunan lattialle asti. */
+        const infoFsPre = Math.max(9, Math.min(nameFs - 2, 15));
+        const infoHPre  = 2 * (infoFsPre + 4) + 10;
+        const listMaxH  = Math.max(48, (GROUND_Y - 6) - listTop - 10 - infoHPre - 8);
+        let rowGap = compact ? 3 : 6;
+        let rowH   = compact ? Math.max(16, Math.round(nameFs * 1.7))
+                             : Math.max(18, Math.round(nameFs * 1.9));
+        if (compact) {
+            // Tiivistä rivejä, kunnes koko lista mahtuu seinälle
+            while (totalRows * (rowH + rowGap) - rowGap > listMaxH &&
+                   (rowH > 16 || rowGap > 2)) {
+                if (rowGap > 2) rowGap--; else rowH--;
+            }
+        }
+        const listH = totalRows * (rowH + rowGap) - rowGap;
 
         /* Tilatekstit: yksi rivi = yksi fillText, jotta rivi ei koskaan
            katkea keskeltä (luettavuus + testit nojaavat kokonaisiin riveihin) */
@@ -5014,7 +5120,7 @@ const Street = (() => {
             const total = jukeQueue.length;
             const posTxt = (total > 1) ? '  (' + (qPos + 1) + '/' + total + ')' : '';
             info.push({ text: '🔊 SOI NYT: ' + t + posTxt, color: '#ffdd88' });
-            info.push({ text: 'Soi loppuun asti – valinta lukossa', color: '#c9a95f' });
+            info.push({ text: 'Soittolista lukittu!', color: '#c9a95f' });
         } else if (pickCount > 0) {
             info.push({ text: 'Valittu: ' + pickCount + ' kpl – ' + pickCount + ' 🪙',
                         color: '#ffffff' });
@@ -5178,8 +5284,10 @@ const Street = (() => {
 
         // 6) Jukebox-kone oikealla – vain kun sille jää tilaa (ei peitä listaa)
         if (wide) {
+            /* Soivan kappaleen kansikuva (v4.61): raidat 4–6 → kuva, muut → null */
+            const cover = (curTrack > 0) ? jukeCovers[curTrack - 1] : null;
             drawJukeboxCabinet(panelX + panelW + CAB_GAP, GROUND_Y + 4, now, playing,
-                               jukeSel > 0 || pickCount > 0);
+                               jukeSel > 0 || pickCount > 0, cover);
         }
 
         // 7) Alaohje (kiinteä ja terävä – ei vilkkumista)
@@ -5193,8 +5301,9 @@ const Street = (() => {
         ctx.restore();
     }
 
-    /* Jukebox-kone: Wurlitzer-henkinen kaappi (proseduraalinen, ei kuvatiedostoja) */
-    function drawJukeboxCabinet(x, baseY, now, playing, armed) {
+    /* Jukebox-kone: Wurlitzer-henkinen kaappi (proseduraalinen, ei kuvatiedostoja
+       – paitsi soivan kappaleen kansikuva, jos sellainen on, v4.61) */
+    function drawJukeboxCabinet(x, baseY, now, playing, armed, cover) {
         const w = 176, h = 210;
         const top = baseY - h;
         const cx = x + w / 2;
@@ -5253,21 +5362,46 @@ const Street = (() => {
             ctx.fillRect(rx - 2, top + 62, 4, baseY - top - 64);
         }
 
-        // Levypesä + levy (pyörii kun kappale soi)
+        /* Levypesä + levy. Jos **soivalla** kappaleella on kansikuva (raidat
+           4–6) ja se on latautunut, kuva piirretään levypesän paikalle
+           kuvasuhde säilyttäen; muuten levy piirretään täsmälleen kuten ennen
+           (raidat 1–3 sekä tilanne, jossa mikään ei soi). */
         const recY = top + 80, recR = 28;
         ctx.fillStyle = '#0d0a10';
         ctx.beginPath(); ctx.arc(cx, recY, recR + 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#171320';
-        ctx.beginPath(); ctx.arc(cx, recY, recR, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-        ctx.lineWidth = 1;
-        for (let r = 9; r < recR - 3; r += 3) { ctx.beginPath(); ctx.arc(cx, recY, r, 0, Math.PI * 2); ctx.stroke(); }
-        ctx.fillStyle = '#ffdd88';
-        ctx.beginPath(); ctx.arc(cx, recY, 3, 0, Math.PI * 2); ctx.fill();
+        const showCover = playing && !!cover && cover.ready;
+        if (showCover) {
+            const box = recR * 2;                              // kuvan neliöalue
+            const iw  = cover.img.naturalWidth  || 1;
+            const ih  = cover.img.naturalHeight || 1;
+            const k   = Math.min(box / iw, box / ih);          // kuvasuhde säilyy
+            const dw  = Math.max(1, Math.round(iw * k));
+            const dh  = Math.max(1, Math.round(ih * k));
+            const dx  = Math.round(cx - dw / 2);
+            const dy  = Math.round(recY - dh / 2);
+            ctx.fillStyle = '#120e18';                         // taustalaatta
+            ctx.fillRect(cx - recR, recY - recR, box, box);
+            ctx.imageSmoothingEnabled = true;                  // valokuva → pehmennetty
+            ctx.drawImage(cover.img, dx, dy, dw, dh);
+            ctx.imageSmoothingEnabled = false;
+            ctx.strokeStyle = 'rgba(255,221,136,0.55)';        // ohut kehys
+            ctx.lineWidth = 1;
+            ctx.strokeRect(cx - recR + 0.5, recY - recR + 0.5, box - 1, box - 1);
+        } else {
+            ctx.fillStyle = '#171320';
+            ctx.beginPath(); ctx.arc(cx, recY, recR, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+            ctx.lineWidth = 1;
+            for (let r = 9; r < recR - 3; r += 3) { ctx.beginPath(); ctx.arc(cx, recY, r, 0, Math.PI * 2); ctx.stroke(); }
+            ctx.fillStyle = '#ffdd88';
+            ctx.beginPath(); ctx.arc(cx, recY, 3, 0, Math.PI * 2); ctx.fill();
+        }
         if (playing) {
+            /* Kierto näkyy myös kuvan päällä: piste levypesän reunalla */
             const spin = (now / 300) % (Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.fillRect(cx + Math.cos(spin) * 18 - 1, recY + Math.sin(spin) * 18 - 1, 2, 2);
+            const spinR = showCover ? recR + 2 : 18;
+            ctx.fillStyle = showCover ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.4)';
+            ctx.fillRect(cx + Math.cos(spin) * spinR - 1, recY + Math.sin(spin) * spinR - 1, 2, 2);
         }
 
         // Kaiutinritilä alaosassa
@@ -6092,7 +6226,7 @@ const Street = (() => {
             ctx.beginPath(); ctx.arc(cx + v.w - 14, cy + v.h - 4, 2.5, 0, Math.PI * 2); ctx.fill();
             // Takavalo
             ctx.fillStyle = '#cc3333'; ctx.fillRect(cx - 1, cy + v.h - 16, 4, 3);
-        } else {
+        } else if (v.type === 'motorcycle') {
             // ── Mopo + kuski (kerrokset: runko → kuski → etukate/tanko) ──
             const cx = vx, cy = vy;
 
@@ -6164,6 +6298,88 @@ const Street = (() => {
                 ctx.fillRect(cx + 37, cy + 3, 2, 4);
                 ctx.globalAlpha = 1;
             }
+        } else if (v.type === 'tank') {
+            const cx = vx, cy = vy;
+            
+            // 1. Varjo (pidetään vähän leveämpänä)
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; 
+            ctx.fillRect(cx - 2, cy + v.h - 4, v.w + 4, 8);
+
+            // 2. Tykkiputki – osoittaa AINA kulkusuuntaan (eteenpäin +x; dir = -1
+            //    peilataan drawVehiclesin alussa, joten sama piirto kääntyy itse).
+            //    3× pidempi kuin ennen (25 → 75 px). Gradientti kuten lampputolvessa
+            //    (tumma–vaalea–tumma) mutta mustana.
+            const barrelLen = 75;                 // 3 × vanha 25 px
+            const barrelH   = 5;                  // putken paksuus
+            const barrelY   = cy + 8;             // putken yläreuna
+            const barrelX   = cx + v.w - 20;      // takaosa jää tornin sisään piiloon
+            const muzzleW   = 9, muzzleH = 9;     // suujarru (paksumpi pää)
+            const muzzleY   = barrelY - (muzzleH - barrelH) / 2;
+            const barrelGrad = ctx.createLinearGradient(0, muzzleY, 0, muzzleY + muzzleH);
+            barrelGrad.addColorStop(0,   '#0e0e0e');  // yläreuna (tumma)
+            barrelGrad.addColorStop(0.5, '#555555');  // keskusta (vaalea)
+            barrelGrad.addColorStop(1,   '#0a0a0a');  // alareuna (tummin)
+            ctx.fillStyle = barrelGrad;
+            ctx.fillRect(barrelX, barrelY, barrelLen, barrelH);                     // putki
+            ctx.fillRect(barrelX + barrelLen - muzzleW, muzzleY, muzzleW, muzzleH); // suujarru
+
+            // 3. Maastovärinen panssarirunko
+            ctx.fillStyle = '#5a6b3c'; 
+            ctx.fillRect(cx, cy + 8, v.w, v.h - 18);
+            // Rungon viisteet/yksityiskohdat
+            ctx.fillStyle = '#4a5730';
+            ctx.fillRect(cx, cy + 8, v.w, 3); // Tummempi yläreuna rungossa
+
+            // 4. Torni (Keskitetympi, vähän korkeampi)
+            ctx.fillStyle = '#4d5c32'; 
+            ctx.fillRect(cx + 10, cy + 2, v.w - 20, v.h - 22);
+            ctx.fillStyle = '#3f4d28'; 
+            ctx.fillRect(cx + 14, cy + 2, v.w - 28, v.h - 22);
+            
+            // 5. Tornin luukku (Se mitä piirsit punaisella ylös)
+            ctx.fillStyle = '#2a2a2a';
+            ctx.fillRect(cx + v.w / 2 - 8, cy, 16, 3); // Luukun pohja
+            ctx.fillStyle = '#111';
+            ctx.fillRect(cx + v.w / 2 - 4, cy - 1, 8, 2); // Luukun kansi
+
+            // 6. Telaketjujen tausta (Koko alaosan peittävä muoto)
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath();
+            ctx.moveTo(cx + 2, cy + v.h - 10);      // Ylä-vasen
+            ctx.lineTo(cx + v.w - 2, cy + v.h - 10);// Ylä-oikea
+            ctx.lineTo(cx + v.w, cy + v.h - 2);     // Ala-oikea (viistottu)
+            ctx.lineTo(cx, cy + v.h - 2);           // Ala-vasen (viistottu)
+            ctx.fill();
+
+            // Telaketjun ylänauhan korostus
+            ctx.fillStyle = '#333';
+            ctx.fillRect(cx + 2, cy + v.h - 10, v.w - 4, 2);
+
+            // 7. Telapyörät (Renkaat telaketjun sisällä)
+            const numWheels = 5;
+            const wheelSpacing = (v.w - 10) / (numWheels - 1); 
+            
+            for (let i = 0; i < numWheels; i++) {
+                const wx = cx + 5 + (i * wheelSpacing);
+                const wy = cy + v.h - 5; // Renkaiden Y-korkeus
+                
+                // Ulkorengas (harmaa)
+                ctx.fillStyle = '#555555';
+                ctx.beginPath(); 
+                ctx.arc(wx, wy, 3.5, 0, Math.PI * 2); 
+                ctx.fill();
+                
+                // Renkaan napa/keskiö (tumma)
+                ctx.fillStyle = '#111111';
+                ctx.beginPath(); 
+                ctx.arc(wx, wy, 1.5, 0, Math.PI * 2); 
+                ctx.fill();
+            }
+
+            // 8. Tummia yksityiskohtia (pieniä pakoputkia/tuuletusaukkoja takaosaan, vasemmalle)
+            ctx.fillStyle = '#222';
+            ctx.fillRect(cx + 4, cy + 10, 6, 2);
+            ctx.fillRect(cx + 4, cy + 14, 6, 2);
         }
 
         // ── Ajovalot eteenpäin (kaikille ajoneuvotyypeille) ──
