@@ -49,6 +49,15 @@ ja samalla hedelmäpeli imee kolikoita, koska voitot eivät kata panoksia.
 > putoamista kohden: 0 🪙 **+0,50** · 1 🪙 **−0,33** · 2+ 🪙 **−1,17** → selvästi tappiollista, kun
 > rahaa on vähintään 1 🪙. Käyttäjän pyyntö: *"vain joka 1/6 kun kaivoon putoaa voi saada rahaa."*
 > **Pelkkä arvon säätö (sääntö 03) → ei versionnostoa.** Muut lukitut arvot ennallaan.
+>
+> **V4.70 (23.9.2026):** 🍔-määrä vaikuttaa nyt **pelaajan kävelyvauhtiin** (ei lukittu arvo, mutta
+> muuttaa pelin rytmiä): **≤3 🍔 → 2/3** · **4–7 🍔 → 1,00** · **8–10 🍔 → 2,00** (`hungerSpeedMult()`,
+> nupit `HUNGER_SPEED_SLOW_MAX/FAST_MIN/SLOW_MULT/FAST_MULT`). Nälkäisenä hidastuu (vaarojen väistö
+> vaikeampaa – sama raja kuin HUD-varoitus 3) ja täydellä vatsalla kulkee tuplanopeutta (oviukko
+> `AVENGER_SPEED 2.0` jää jälkeen → karkuun pääsee, kuten käyttäjä hyväksyi). Koskee myös
+> kävelyanimaation ja askeläänen tahtia. **Lukitut arvot ennallaan:** 2400 framet (1/40 s), katto 10,
+> BAR 1 🪙 = 1 🍔, jukebox 1 🪙 / kappale, RTP ≈ 78,5 %, syntymäpaketti 2 🪙 + 5 🍔, rosvo (v4.68),
+> MH_COIN_COST 2 (1/6). Testityökalu `?burgers=N` pakottaa vain vauhtilaskennan eikä tallenna mitään.
 
 ---
 
@@ -210,7 +219,9 @@ menee."* → sääntö **3 → 1, 2 → 0, 1 → 0, 0 → ei mitään**.
 
 ## 4. Testityökalut eivät ole osa balanssia
 
-`COIN_CHEAT_*` (v4.23, kadun vitoslamppu), `fruitgame?coins=N` / `?debug`, `bm`:n debug-moodi ja
+`COIN_CHEAT_*` (v4.23, kadun vitoslamppu), `fruitgame?coins=N` / `?debug`, `bm`:n debug-moodi,
+`?day=0/1` ja `?hole=0/1/2` (`street.js`) sekä **`?burgers=N` (v4.70 – pakottaa vain vauhtilaskennan
+käyttämään N 🍔:ää → kolme vauhtitasoa testattavissa heti, ei tallenna mitään)** ja
 `MUSIC_SOURCE`-kytkin ovat **testausta** varten eivätkä ne kuvaa pelaajan taloutta. Niitä saa säätää
 vapaasti (esim. `COIN_CHEAT_COOLDOWN = 0` nopeampaan testaukseen) ilman versionostoa tai lupaa.
 

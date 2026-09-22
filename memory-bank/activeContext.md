@@ -17,13 +17,25 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.69` (`index.html` → `#version-tag`) · **Git:** v4.47–v4.49 committattu ja
-  pushattu 21.9.2026 (`db52af6`, origin/main) · **työpuu:** v4.69 (kaivo: 1/3 → **1/6** putoamisista
+- **Versio:** `v4.70` (`index.html` → `#version-tag`) · **Git:** v4.47–v4.49 committattu ja
+  pushattu 21.9.2026 (`db52af6`, origin/main) · **työpuu:** v4.70 (🍔-määrä vaikuttaa vauhtiin) +
+  v4.69 (kaivo: 1/3 → **1/6** putoamisista
   +3 🪙 – pelkkä parametrin säätö, **ei versionnostoa**) +
   v4.68 (rosvo: vie kaikki rahat) +
   v4.67 (rosvo: yllätys + katoaminen) + v4.66 (rosvo) + v4.65 (kuun rata) + v4.64 +
   v4.55 (manuaalisivu) + v4.54 + v4.53 + v4.52 + v4.51 + v4.50 + samat aiemmat työpuun muutokset.
   (Huom: membank oli jäljessä – `activeContext` sanoi v4.55, mutta koodi oli jo v4.64.)
+- **🍔-määrä vaikuttaa kävelyvauhtiin (v4.70, käyttäjän pyyntö 23.9.2026):** *"3 =< nykyisestä 2/3
+  nopeus · 3 > nykyinen nopeus · 8–10 tuplanopeus"*. Uusi `hungerSpeedMult()` (`street.js`, nupit
+  `HUNGER_SPEED_SLOW_MAX 3` / `FAST_MIN 8` / `SLOW_MULT 2/3` / `FAST_MULT 2`):
+  **≤3 🍔 → 2/3** · **4–7 🍔 → 1,00** (nykyinen) · **8–10 🍔 → 2,00**. Koskee vain pelaajan liikettä:
+  `moveSpeed = PLAYER_SPEED * hungerSpeedMult()` (vaaka `player.vx`, pysty `player.y`) sekä
+  kävelyanimaation ja askeläänen tahtia (`walkTimer`) → jalat eivät liu'u. **Vihollisten nopeudet
+  ennallaan** (oviukko `AVENGER_SPEED 2.0`, rosvo 1.05) → 8–10 🍔:llä oviukon voi karistaa karkuun –
+  käyttäjän hyväksymä palkinto täydestä vatsasta. **Talouslukko ennallaan** (2400 framet, katto 10,
+  BAR, jukebox, RTP, syntymäpaketti); ei uutta localStorage-avainta eikä `gameState.js`-muutosta.
+  Testityökalu `?burgers=N` pakottaa vain vauhtilaskennan (ei tallenna). Sääntö 04 + memo päivitetty.
+  **Ei committia.**
 - **🕳️ Kaivoon putoaminen voi tuottaa rahaa, mutta harvemmin (parametrin säätö 23.9.2026):** *"vain joka 1/6
   kun kaivoon putoaa voi saada rahaa."* Plussakerroin pienennettiin `MH_BONUS_CHANCE 1/6`:
   osuessa **+3 🪙** (`MH_BONUS_COINS`) + kolikon pling (`playCoin()`) + kultahiukkaset reiästä;

@@ -1,6 +1,6 @@
 ﻿# 📊 Projektin edistyminen
 
-> **v4.55 – 21.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
+> **v4.70 – 23.9.2026** · Kompaktoitu 20.9.2026 (täysi historia git-historiassa, viimeisin täysi versio `ffb1dd9`)
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -11,6 +11,7 @@
 | Pelaajan syvyysskaalaus | ✅ v4.31 – `playerDepthScale()`: ±10 % (0,90 kauas / 1,00 keskikohdalla y=315 / 1,10 lähelle), ankkuri jalkojen kosketuspisteessä (myös tainnutusasento + varjo); visuaalinen vain – hitboxit, törmäykset ja kamera ennallaan |
 | Kolikot | ✅ v3.86 / v4.22 – katu: 1 kpl, näkyvissä 10 s + 30 s tauko, 120 s respawn; DG1 1 kpl, DG2 1/taso; syntymäpaketti 2 kolikkoa (tallennettu saldo voittaa) |
 | Hampurilaiset + BAR | ✅ v3.73 / v4.12 – 5 alussa, +1 / 40 s; BAR: `▲/W` osta 1 (katto 10), `▼/S` peru vierailun ostot, `(o)/Space` poistu |
+| 🍔-määrä → kävelyvauhti | ✅ **v4.70** – `hungerSpeedMult()`: **≤3 🍔 → 2/3 · 4–7 🍔 → 1,00 · 8–10 🍔 → 2,00** (`moveSpeed = PLAYER_SPEED × kerroin`; myös kävelyanimaatio ja askelääni `walkTimer` skaalautuvat → jalat eivät liu'u). Vihollisten nopeudet **ennallaan** (oviukko 2.0, rosvo 1.05) → 8–10 🍔:llä oviukon voi karistaa karkuun, kunnes syö/nälkiintyy takaisin (testityökalu `?burgers=N`, ei tallenna). **Talouslukko ennallaan** (2400 framet, katto 10, BAR, jukebox, RTP, syntymäpaketti) |
 | 🖼️ BAR-huoneen seinätaulu | ✅ v4.25–v4.26 – `assets/justiina.png` mustilla kehyksillä (kuva 57,9×48, kehys 61,9×52), hampurilainen 2/3, asettelu alhaalta ylös, `winW`/`needPx`/`fitFs`-sovitus vaakanäyttöön; memo `docs/bar-memo.md` |
 | Talot: syvyys + ikkunat | ✅ v4.07–v4.10 – `buildingScale` 100/95/90 %, kehykset pois 3 rivin taloista, pimeiden ikkunoiden syvennys |
 | Taustan kaupungin siluetti | ✅ v4.06 – parallaksi 0.4, skaala 0.5, 4 kattomallia |

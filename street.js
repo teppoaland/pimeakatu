@@ -255,6 +255,32 @@ const Street = (() => {
        vähemmän on jäljellä. 3 on oikea raja – siinä kannattaa jo syödä,
        ettei henki lähde seuraavasta osumasta. */
     const HUNGER_WARN = 3;
+    /* ── 🍔-määrä vaikuttaa kävelyvauhtiin ────────────────────────
+       Pelaaja tuntee olonsa kropassa: nälkäisenä jalka painaa, hyvin
+       syöneenä kulkee lujaa. Vain pelaajan liike hidastuu/kiihtyy –
+       talousarvot (kolikot, 🍔-tahti 2400, katto 10, hinnat, RTP) ja
+       vihollisten nopeudet (oviukko 2.0, rosvo 1.05) ovat ennallaan
+       (sääntö 04). Seuraus: 8–10 🍔:llä oviukon voi karistaa karkuun –
+       se on tarkoituksellinen palkinto täydestä vatsasta. */
+    const HUNGER_SPEED_SLOW_MAX  = 3;      // tähän asti hidas (sama raja kuin HUD-varoitus)
+    const HUNGER_SPEED_FAST_MIN  = 8;      // tästä ylöspäin nopea
+    const HUNGER_SPEED_SLOW_MULT = 2 / 3;  // nälkäinen: 2/3 normaalista
+    const HUNGER_SPEED_FAST_MULT = 2;      // täysi vatsa: tuplanopeus
+    /* Testityökalu (ei tallenna mitään, kuten ?day / ?hole): ?burgers=9
+       pakottaa VAIN vauhtilaskennan käyttämään tätä 🍔-määrää → kaikki
+       kolme vauhtitasoa voi testata heti. HUD ja oikea saldo näyttävät
+       edelleen totuuden eikä localStorageen kirjoiteta mitään. */
+    const BURGER_PARAM = (typeof location !== 'undefined' && typeof URLSearchParams !== 'undefined')
+        ? new URLSearchParams(location.search).get('burgers') : null;
+    const BURGER_FORCE = (BURGER_PARAM !== null && /^\d+$/.test(BURGER_PARAM))
+        ? Number(BURGER_PARAM) : null;
+    /* Vauhtikerroin: ≤3 🍔 → 2/3 · 4–7 🍔 → 1,00 (normaali) · ≥8 🍔 → 2,00 */
+    function hungerSpeedMult() {
+        const n = (BURGER_FORCE !== null) ? BURGER_FORCE : hamburgerCount;
+        if (n <= HUNGER_SPEED_SLOW_MAX) return HUNGER_SPEED_SLOW_MULT;
+        if (n >= HUNGER_SPEED_FAST_MIN) return HUNGER_SPEED_FAST_MULT;
+        return 1;
+    }
     let firstHouseWindowsLit = false;
     let firstHouseKickCount = 0;
     let firstHouseKickTarget = 0;    // random 3-6, arvotaan ekan potkun yhteydessä
@@ -1855,10 +1881,14 @@ const Street = (() => {
         }
 
         // ── Liike ──────────────────────────────────
+        /* Vauhti riippuu 🍔-määrästä (hungerSpeedMult): nälkäisenä hitaampi,
+           täydellä vatsalla nopeampi. PLAYER_SPEED (1.225) on normitaso. */
+        const speedMult = hungerSpeedMult();
+        const moveSpeed = PLAYER_SPEED * speedMult;
         let moveX = 0;
         if (keys['ArrowLeft'] || keys['a'] || keys['A'])  moveX = -1;
         if (keys['ArrowRight'] || keys['d'] || keys['D']) moveX = 1;
-        player.vx = moveX * PLAYER_SPEED;
+        player.vx = moveX * moveSpeed;
 
         // Vertikaalinen liike ylös/alas (ei hyppyä, ei painovoimaa)
         const PLAYER_Y_MIN = GROUND_Y - player.h;            // 280 = yläraja (maksimoitu liikealue)
@@ -1866,7 +1896,7 @@ const Street = (() => {
         let moveY = 0;
         if (keys['ArrowUp'] || keys['w'] || keys['W'])     moveY = -1;
         if (keys['ArrowDown'] || keys['s'] || keys['S'])   moveY = 1;
-        player.y += moveY * PLAYER_SPEED * dt;
+        player.y += moveY * moveSpeed * dt;
         player.y = Math.max(PLAYER_Y_MIN, Math.min(PLAYER_Y_MAX, player.y));
         player.lookY = moveY;   // katseen suunta piirtoa varten (−1 ylös, +1 alas)
         player.vy = 0;
@@ -1901,7 +1931,8 @@ const Street = (() => {
         if (moveX !== 0) {
             player.facing = moveX;
             player.walking = true;
-            player.walkTimer += dt;
+            // Askel- ja animaatiotahti kulkee vauhdin mukana → jalat eivät liu'u
+            player.walkTimer += dt * speedMult;
             if (player.walkTimer > 8) {
                 player.walkFrame = (player.walkFrame + 1) % 4;
                 player.walkTimer = 0;
