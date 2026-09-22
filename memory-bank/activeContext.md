@@ -17,10 +17,18 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.55` (`index.html` → `#version-tag`) · **Git:** v4.47–v4.49 committattu ja
-  pushattu 21.9.2026 (`db52af6`, origin/main) · **työpuu:** v4.55 (manuaalisivu) + v4.54
-  (liikenne lukiessa) + v4.53 (sanomalehti) + v4.52 (avoin kaivo) + v4.51 + v4.50 + samat
-  aiemmat työpuun muutokset.
+- **Versio:** `v4.65` (`index.html` → `#version-tag`) · **Git:** v4.47–v4.49 committattu ja
+  pushattu 21.9.2026 (`db52af6`, origin/main) · **työpuu:** v4.65 (kuun rata) + v4.64 +
+  v4.55 (manuaalisivu) + v4.54 + v4.53 + v4.52 + v4.51 + v4.50 + samat aiemmat työpuun muutokset.
+  (Huom: membank oli jäljessä – `activeContext` sanoi v4.55, mutta koodi oli jo v4.64.)
+- **🌙 Kuu liukuu vasemmalta oikealle yön aikana (v4.65, käyttäjän pyyntö):** satunnainen
+  `rollMoonX()`/`state.moonX` poistettiin – kuu alkaa aina vasemmasta laidasta
+  (`MOON_X_MIN` 400) ja etenee ajan mukaan oikealle **myös huoneissa ja alapeleissä** (aika kuluu),
+  kunnes laskeutuu kokonaan pois oikean reunan yli (`MOON_SET_X ≈ 884`). Laskeutuessaan se
+  pimentää maisemaa hiukan (`moonDark` 0 → `MOON_SET_DARK_ALPHA 0.15`, alkaa `MOON_SET_START 0.60`).
+  Uusi yö (Nuku) ja spawn/init nollaavat kuun (`resetMoon()`: `moonNightClock 0`,
+  `moonX = MOON_X_MIN`, `moonDark 0`). Ei talousmuutoksia (sääntö 04), ei uutta localStorage-avainta,
+  `state.moonX` poistui käytöstä. Nopeus `MOON_NIGHT_FRAMES 14400`. **Versio `v4.65`, ei committia.**
 - **📐 Sanomalehden manuaalisivu (v4.55, 21.9.2026, käyttäjän pyyntö):** lehden **5. sivu
   `MANUAALI`** näyttää rahavirran ASCII-piirroksena (kadun tulot → käytön kohteet → paine).
   Kaksi piirrosversiota: `NEWS_MANUAL_WIDE` (64 merkkiä, PC/vaaka) ja `NEWS_MANUAL_NARROW`

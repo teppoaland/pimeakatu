@@ -345,11 +345,23 @@ const Street = (() => {
     const DAY_SKY_HORIZON = '#ffd9a0';     // lämmin horisontti
     /* Kuu ja aurinko (v4.41): kumpikin **pysyy paikallaan** omalla puolellaan ja
        vain häivytetään ristikkäin (alpha = dayT / 1 − dayT) – ei liukua.
-       Yöllä kuu seisoo oikealla (MOON_X 680) ja päivällä aurinko vasemmalla
-       (SUN_X 140): yö → päivä häivyttää kuun pois ja tuo auringon näkyviin,
-       päivä → yö täsmälleen toisinpäin. */
-    const SUN_X = 140, SUN_Y = 62, SUN_R = 26;    // auringon päiväpaikka (vasen)
-    const MOON_X = 680, MOON_Y = 60, MOON_R = 28; // kuun yöpaikka (oikea)
+       Päivällä aurinko on vasemmalla (SUN_X 140); yöllä kuu **liukuu vasemmalta
+       oikealle** yön aikana (v4.65) – ei arvota satunnaista paikkaa. */
+    /* KUUN RATA (v4.65): kuu alkaa aina vasemmasta laidasta (MOON_X_MIN) ja
+       liukuu yön kuluessa oikealle, kunnes laskeutuu kokonaan pois näkyvistä
+       (MOON_SET_X, oikean reunan yli). Laskeutuessaan se pimentää maisemaa
+       hiukan (MOON_SET_DARK_ALPHA). Paikkaa EI tallenneta – kuu alkaa alusta
+       joka yö (spawn/init) ja jokaisessa uudessa yössä (Nuku). */
+    const SUN_X = 140, SUN_Y = 62, SUN_R = 26;    // auringon päiväpaikka (vasen, kiinteä)
+    const MOON_Y = 60, MOON_R = 28;               // kuun korkeus ja koko
+    const MOON_X_MIN = SUN_X;                     // kuun alku = sama paikka kuin auringolla (vasen laita)
+    const MOON_SET_X = WORLD_W + MOON_R * 3;      // laskeuma ≈ 884 → kokonaan pois
+    const MOON_NIGHT_FRAMES = 57600;              // ~16 min: kuu kulkee vas.→laskeumaan (hidastettu, nopeusnuppi)
+    const MOON_SET_START = 0.60;                  // tästä p:stä alkaen kuu häipyy → maisema pimenee
+    const MOON_SET_DARK_ALPHA = 0.15;             // "hiukan": max pimeneminen (0 = ei)
+    let moonX = MOON_X_MIN;                       // kuun nykyinen x (ks. update)
+    let moonNightClock = 0;                       // yön kulku (framet) kuun rataa varten
+    let moonDark = 0;                             // kuun laskusta johtuva pimeneminen
     const DAY_LIGHT_RGB   = [70, 58, 40];  // additive-päivänvalon sävy
     const DAY_LIGHT_ALPHA = 0.30;          // 0 = ei valoa … ~0.35 = kirkas päivä
     const LAMP_DAY_DIM    = 0.15;          // paljonko lampun hehkusta jää päivällä
@@ -438,6 +450,16 @@ const Street = (() => {
         if (DAY_FORCE === 'day') return 1;
         if (DAY_FORCE === 'night') return 0;
         return isDay ? 1 : 0;
+    }
+
+    /* ── Kuun nollaus (v4.65) ──
+       Kuu alkaa aina vasemmasta laidasta (MOON_X_MIN) ja pimeneminen
+       nollataan. Kutsutaan spawnissa/initissä sekä jokaisessa uudessa yössä
+       (makuuhuoneen Nuku). */
+    function resetMoon() {
+        moonNightClock = 0;
+        moonX = MOON_X_MIN;
+        moonDark = 0;
     }
 
     // Kaksisuuntainen liikenne: kaksi ajorataa (kaistaa)
@@ -1044,6 +1066,9 @@ const Street = (() => {
         ctx.imageSmoothingEnabled = false;
         randomizeBuildingColors();  // arvo taloille uudet sävyt joka kerta
         state = GameState.load();
+        /* Onko kyseessä aivan uusi peli (0-tila)? Lasketaan ENNEN kuun paikan
+           kirjoitusta, jotta ohjepopupin tarkistus initin lopussa toimii. */
+        const freshGame = (JSON.stringify(state) === JSON.stringify(GameState.defaultState));
         for (let i = 0; i < lamps.length; i++) {
             lamps[i].lit = state.litLamps[i];
             lamps[i].kickCount = lamps[i].kickCount || 0;
@@ -1077,6 +1102,9 @@ const Street = (() => {
         }
         isDay = (state.isDay === true);
         dayT = dayTarget();
+        /* Kuu alkaa aina vasemmasta laidasta (v4.65): ei tallennettua paikkaa,
+           vaan rata lasketaan yön kuluessa (update). */
+        resetMoon();
         stars = [];
         for (let i = 0; i < 80; i++) {
             stars.push({
@@ -1098,7 +1126,7 @@ const Street = (() => {
         updateHUD();
 
         // Näytä ohjepopup vain tuoreessa/0-tilassa (ensimmäinen lataus tai kuoleman reset)
-        if (JSON.stringify(state) === JSON.stringify(GameState.defaultState)) {
+        if (freshGame) {
             showSpawnHint();
         }
     }
@@ -1415,6 +1443,20 @@ const Street = (() => {
             }
         }
 
+        // ── Kuu: liukuu vasemmalta oikealle yön aikana (v4.65) ──
+        // Yöllä kuu etenee ajan mukaan, myös huoneissa ja alapeleissä (aika
+        // kuluu), kunnes laskeutuu kokonaan pois oikealta (MOON_SET_X).
+        // Laskeutuessaan se pimentää maisemaa hiukan. Ei tallennettua paikkaa.
+        if (!isDay) {
+            moonNightClock += dt;
+            const p = Math.min(1, moonNightClock / MOON_NIGHT_FRAMES);
+            moonX = Math.round(MOON_X_MIN + p * (MOON_SET_X - MOON_X_MIN));
+            moonDark = Math.min(1, Math.max(0, (p - MOON_SET_START) / (1 - MOON_SET_START)))
+                       * MOON_SET_DARK_ALPHA;
+        } else {
+            moonDark = 0;
+        }
+
         // ── Kuolemasekvenssi ─────────────────────────
         if (playerDead) {
             deathTimer -= dt;
@@ -1476,6 +1518,8 @@ const Street = (() => {
                     // Tila vaihtuu siitä, miltä katu parhaillaan näyttää
                     // (toimii myös keskellä hämärtymistä ja ?day-testityökalulla)
                     isDay = !(dayT >= 0.5);        // päivä → yö  TAI  yö → päivä
+                    // Uusi yö → kuu nousee uudelleen vasemmalta (v4.65), ei arvota.
+                    if (!isDay) resetMoon();
                     if (!DAY_FORCE) {              // testityökalut eivät tallenna
                         state.isDay = isDay;
                         GameState.save(state);
@@ -3087,11 +3131,12 @@ const Street = (() => {
             ctx.restore();
         }
 
-        // Sirppikuu (häipyy paikallaan päivän tullessa)
+        // Sirppikuu (häipyy päivän tullessa; liukuu yön aikana vasemmalta oikealle
+        // ja laskeutuu pois – v4.65, X päivittyy moonNightClockin mukaan)
         if (dayT < 1) {
             ctx.save();
             ctx.globalAlpha = 1 - dayT;
-            const moonX = MOON_X, moonY = MOON_Y, moonR = MOON_R;
+            const moonY = MOON_Y, moonR = MOON_R;
             const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 2.8);
             moonGlow.addColorStop(0, 'rgba(255,250,210,0.18)');
             moonGlow.addColorStop(0.4, 'rgba(255,250,210,0.06)');
@@ -3254,6 +3299,14 @@ const Street = (() => {
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
             ctx.fillStyle = 'rgba(' + DAY_LIGHT_RGB[0] + ',' + DAY_LIGHT_RGB[1] + ',' + DAY_LIGHT_RGB[2] + ',' + (DAY_LIGHT_ALPHA * dayT).toFixed(3) + ')';
+            ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+            ctx.restore();
+        }
+
+        // ── Kuu laskeutui → maisema pimenee hiukan (v4.65) ──
+        if (moonDark > 0) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,' + moonDark.toFixed(3) + ')';
             ctx.fillRect(0, 0, WORLD_W, WORLD_H);
             ctx.restore();
         }
