@@ -20,6 +20,7 @@
    │ Hedelmäpeli:1 kolikko / pyöräytys, RTP 78,5 %      │
    │ Makuuhuone: aina auki (Nuku/Poistu ilmaisia)       │
    │ Avoin kaivo (v4.52): ≤ 2 🪙 (1 → 0, 0 → 0)             │
+   │   · parametri: 1/6 putoamisista +3 🪙 (löytö pohjalta) │
    └────────────────────────┬───────────────────────────┘
                             ▼
    ┌──────────── paine (pakko pitää huolta) ────────────┐
@@ -30,6 +31,24 @@
 
 Ydinajatus: pelaajan on **pakko jättää 1 kolikko** ja käydä katsomassa, onko 🍔:tä pakko ostaa –
 ja samalla hedelmäpeli imee kolikoita, koska voitot eivät kata panoksia.
+
+> **V4.68 (22.9.2026):** Rosvo vie nappauksessa **−1 🍔 + kaikki kolikot** (`coinCount → 0`, **ei
+> ilmoitusta** – sääntö 06) – selvästi muuta kadun vaaraa (oviukko/kukkaruukku/sähkökaappi = vain
+> −1 🍔) rankkaampi. Käyttäjän pyyntö: *"rosvo vie hampurilaisen lisäksi kaikki rahat."* Muut lukitut
+> arvot (2400 framet, katto 10, BAR, jukebox, RTP, syntymäpaketti) ennallaan. Hedelmäpelin
+> panos/painot/maksut/RTP eivät muutu → maksutaulukko/RTP-simulaatio ei muutu.
+>
+> **V4.69 (23.9.2026):** Kaivoon putoaminen ei ole enää pelkkä menetys: **1/3 putoamisista kaivon
+> pohjalta löytyy +3 🪙** (`MH_BONUS_CHANCE 1/3`, `MH_BONUS_COINS 3`) – kolikon pling + kultahiukkaset,
+> ei uutta tekstiä. Muut 2/3 putoamisista kuten ennen (enintään −2 🪙). Käyttäjän pyyntö:
+> *"randomina 1/3 putoamisista kaivosta saakin 3 rahaa."* Muut lukitut arvot (2400 framet, katto 10,
+> BAR, jukebox, RTP, syntymäpaketti, rosvo v4.68) ennallaan.
+>
+> **Parametrin säätö (23.9.2026, ei versionnostoa):** Plussakerroin pienennetty **1/3 → 1/6**
+> (`MH_BONUS_CHANCE 1/6`, `MH_BONUS_COINS 3` ennallaan) – kaivoon ei kannata hypellä. Odotusarvo
+> putoamista kohden: 0 🪙 **+0,50** · 1 🪙 **−0,33** · 2+ 🪙 **−1,17** → selvästi tappiollista, kun
+> rahaa on vähintään 1 🪙. Käyttäjän pyyntö: *"vain joka 1/6 kun kaivoon putoaa voi saada rahaa."*
+> **Pelkkä arvon säätö (sääntö 03) → ei versionnostoa.** Muut lukitut arvot ennallaan.
 
 ---
 
@@ -136,7 +155,7 @@ Pitähän sen pelaajan itse voida päättää milloin haluaa nukkua."*
   laukea sen jälkeen (sama tila syntyi aiemminkin nukkumalla avaimet koossa). Vapaa huone on samalla
   paikka pitää nälkä jäissä (`hungerOnHold()`, v4.41) – se ei tuota rahaa eikä 🍔:tä.
 
-### Avoin viemärinkansi (kaivo) – kolikkomenetys (v4.51, hinta vaihdettu v4.52)
+### Avoin viemärinkansi (kaivo) – kolikkomenetys tai -löytö (v4.51, hinta v4.52, löytö v4.69)
 
 Käyttäjän pyyntö 21.9.2026: *"Kadulla on 2 kaivonkantta. Toisinaan niistä toinen voisi puuttua ja
 pelaaja voisi pudota kaivoon. Kun kansi puuttuu kohta on musta. … Kansi voi puuttua kun peli alkaa
@@ -153,6 +172,15 @@ menee."* → sääntö **3 → 1, 2 → 0, 1 → 0, 0 → ei mitään**.
   **3 → 1, 2 → 0, 1 → 0, 0 → ei mitään** (ainutkin kolikko menee, jos se on ainoa). Ei 🍔-menetystä,
   ei kuolemaa eikä tainnutusta. (Ennen v4.52: −1 🍔, ja 🍔 0 → kuolema.) Putoaminen ei siis kosketa
   elämiä – se on puhdas **kolikkomenetys**.
+- **Löytö (v4.69):** käyttäjän pyyntö 23.9.2026: *"randomina 1/3 putoamisista kaivosta saakin 3
+  rahaa."* → pohjaan päästyä arvotaan ensin `MH_BONUS_CHANCE 1/6`: osuessa **+3 🪙**
+  (`MH_BONUS_COINS`) ja kolikon pling + kultahiukkaset; muussa tapauksessa menetys yllä olevan
+  säännön mukaan. **Parametrin säätö (23.9.2026, ei versionnostoa):** plussakerroin pienennettiin **1/3 → 1/6**
+  (käyttäjän pyyntö: *"vain joka 1/6 kun kaivoon putoaa voi saada rahaa"*) → kaivoon ei kannata hypellä.
+  Yksi arpa per putoaminen, ei uutta tekstiä/ilmoitusta. **Odotusarvo putoamista
+  kohden:** 0 🪙:lla **+0,50 🪙** · 1 🪙:llä **−0,33 🪙** · 2 🪙:llä **−1,17 🪙** ·
+  3+ 🪙:llä **−1,17 🪙** (menetys on aina `min(rahat, 2)`) – kaivo on siis **selvä
+  menetys** kun rahaa on vähintään 1; vain 0 🪙:lla köyhä pelaaja voi saada sieltä alkupääoman.
 - **Arvonta:** `MANHOLE_START_CHANCE 1/6` (uusi peli / sivun lataus) ja `MANHOLE_RETURN_CHANCE 1/10`
   joka kerta kun huone tai alapeli sulkeutuu (`trackHiddenStreet()`; kansi katoaa TAI palaa
   paikalleen). Tila on vain muistissa → **ei uutta localStorage-avainta**, `gameState.js` ei muutu.

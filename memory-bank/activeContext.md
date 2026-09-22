@@ -17,10 +17,35 @@
 
 ## 📍 Nyt
 
-- **Versio:** `v4.65` (`index.html` → `#version-tag`) · **Git:** v4.47–v4.49 committattu ja
-  pushattu 21.9.2026 (`db52af6`, origin/main) · **työpuu:** v4.65 (kuun rata) + v4.64 +
+- **Versio:** `v4.69` (`index.html` → `#version-tag`) · **Git:** v4.47–v4.49 committattu ja
+  pushattu 21.9.2026 (`db52af6`, origin/main) · **työpuu:** v4.69 (kaivo: 1/3 → **1/6** putoamisista
+  +3 🪙 – pelkkä parametrin säätö, **ei versionnostoa**) +
+  v4.68 (rosvo: vie kaikki rahat) +
+  v4.67 (rosvo: yllätys + katoaminen) + v4.66 (rosvo) + v4.65 (kuun rata) + v4.64 +
   v4.55 (manuaalisivu) + v4.54 + v4.53 + v4.52 + v4.51 + v4.50 + samat aiemmat työpuun muutokset.
   (Huom: membank oli jäljessä – `activeContext` sanoi v4.55, mutta koodi oli jo v4.64.)
+- **🕳️ Kaivoon putoaminen voi tuottaa rahaa, mutta harvemmin (parametrin säätö 23.9.2026):** *"vain joka 1/6
+  kun kaivoon putoaa voi saada rahaa."* Plussakerroin pienennettiin `MH_BONUS_CHANCE 1/6`:
+  osuessa **+3 🪙** (`MH_BONUS_COINS`) + kolikon pling (`playCoin()`) + kultahiukkaset reiästä;
+  muuten menetys kuten v4.52 (enintään −2 🪙: 3 → 1, 2 → 0, 1 → 0, 0 → ei mitään). Yksi arpa per
+  putoaminen, ei uutta tekstiä/ilmoitusta eikä uutta localStorage-avainta. Odotusarvo putoamista
+  kohden: 0 🪙 → **+0,50** · 1 🪙 → **−0,33** · 2+ 🪙 → **−1,17** (menetys = `min(rahat, 2)`) →
+  selvä menetys, kun rahaa on vähintään 1 🪙. **Muut lukitut arvot ennallaan**
+  (2400 framet, katto 10, BAR, jukebox, RTP, syntymäpaketti, rosvo v4.68, MH_COIN_COST 2). Sääntö 04 + memo
+  päivitetty. **Ei versionnostoa (parametri), ei committia.**
+- **🔪 Rosvo yllätysesiintymisenä (v4.67, käyttäjän pyyntö):** rosvo **ei ole kadulla koko ajan** –
+  se ilmestyy **yllätyksenä satunnaiseen kohtaan** vasta kun pelaaja **palaa kadulle
+  pelistä/jukeboxista/BARista** (`trackHiddenStreet()` → `maybeSpawnRobber()`; nupit
+  `ROBBER_APPEAR_CHANCE 0.4` · `ROBBER_COOLDOWN 1500` (~25 s) · `ROBBER_MIN_DIST 130 px` ·
+  `ROBBER_TTL 900` (~15 s elinikä)). Kävelee kohti pelaajaa jalkakäytäväkaistalla (jalat
+  `GROUND_Y..GROUND_Y+16`, ei tielle). **Kiinniotto vain kun pelaajan jalat samalla kaistalla ja
+  rosvo lähellä** → `knockPlayerDown()` (tainnutus + **−1 🍔**, 0 → kuolema). **Rosvo katoaa
+  nappauksen jälkeen** (ja ttl:n loputtua) → **väistö/välttely onnistuu**: loiki kadun toiselle
+  puolelle (↓) tai juokse karkuun (rosvo 1.05 < pelaaja 1.225) eikä se jää jahtaamaan toistuvasti.
+  Spawn ei enää initissä. **Talous (sääntö 04, käyttäjän pyyntö v4.68):** rosvo vie **−1 🍔 +
+  kaikki kolikot** (`coinCount → 0`, **ei ilmoitusta** – sääntö 06: pelaaja huomaa itse) – muilla kadun vaaroilla
+  vain −1 🍔. Muut lukitut arvot (2400 framet, katto 10, BAR, jukebox, RTP, syntymäpaketti)
+  ennallaan. Ei uutta localStorage-avainta. **Versio `v4.68`, ei committia.**
 - **🌙 Kuu liukuu vasemmalta oikealle yön aikana (v4.65, käyttäjän pyyntö):** satunnainen
   `rollMoonX()`/`state.moonX` poistettiin – kuu alkaa aina vasemmasta laidasta
   (`MOON_X_MIN` 400) ja etenee ajan mukaan oikealle **myös huoneissa ja alapeleissä** (aika kuluu),
@@ -471,6 +496,11 @@ katuun (v4.11 ✅).
   tauko `getSilenceDuration()` 30–90 s · `JUKEBOX_GAP 2500` · `JUKEBOX_VOLUME = MUSIC_VOLUME`.
 - **Testicheatit:** `COIN_CHEAT_LAMP/KICKS/REWARD/GAP/COOLDOWN` = 4/20/20/120/3600 · avain-cheat 5 potkua
   (`lamps[4]`).
+- **Kaivo (avoin viemärinkansi):** `MANHOLE_START_CHANCE 1/6` (uusi peli) · `MANHOLE_RETURN_CHANCE 1/10`
+  (paluu huoneesta/alapelistä) · `MH_COIN_COST 2` (menetys: 3 → 1, 2 → 0, 1 → 0, 0 → ei mitään) ·
+  **`MH_BONUS_CHANCE 1/6` · `MH_BONUS_COINS 3`** (parametri: 1/6 putoamisista → +3 🪙) ·
+  `MH_FALL_FRAMES 36` / `MH_CLIMB_FRAMES 210` / `MH_RISE_PART 0.65` / `MH_STEP_PX 9` ·
+  törmäysellipsi `MH_HIT_RX 11` / `MH_HIT_RY 5` · testityökalut `?hole=0` / `?hole=1` / `?hole=2`.
 - **Ovikynnykset:** `THRESH_RINGS`, `THRESH_TOP_Y`, `THRESH_DIP`, `THRESH_DETAILS`, `THRESH_LIGHT`,
   `KERB_GAP_EXTRA`, laatan korko (`slab.h`).
 - **Pelaajan syvyys:** `PLAYER_DEPTH_AMOUNT 0.10` (±10 %) · `PLAYER_DEPTH_MID 315` (koko 1,00 tässä Y:ssä) ·

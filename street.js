@@ -294,6 +294,27 @@ const Street = (() => {
     const AVENGER_FREEZE    = 180;     // 3s jäädytys (hit-stop) kontaktista ennen kosahtamista
     let avenger = null;              // { x, y, w, h, bldgIdx, facing, phase, timer, walkTimer, scale }
     let avengerCooldown = 0;         // tauko ennen kuin uusi oviukko voi tulla
+
+    /* ── Rosvo (v4.66) – partioi jalkakäytävällä ──
+       Pysyvä hahmo: kävelee edestakaisin talojen puoleisella jalkakäytäväkaistalla.
+       Kiinniotto = tainnutus + 1 hampurilainen (kuten avenger), mutta väistettävissä:
+       loiki kadun toiselle puolelle (↓) pois kaistalta → rosvo ei seuraa sinne. */
+    const ROBBER_W       = 20;
+    const ROBBER_H       = 30;
+    const ROBBER_SPEED   = 1.05;      // kävelynopeus – hitaampi kuin pelaaja (1.225) → ehtii väistää
+    const ROBBER_HIT_R   = 16;        // kiinnioton säde (px)
+    const ROBBER_TURN    = 40;        // ~0,7 s reunapysähdys käännöksessä (väistöikkuna)
+    // Jalkakäytäväkaista (talojen puoli): jalat GROUND_Y … GROUND_Y+16
+    const ROBBER_LANE_TOP    = GROUND_Y;          // 310
+    const ROBBER_LANE_BOTTOM = GROUND_Y + 16;     // 326
+    const ROBBER_FOOT_Y      = GROUND_Y + 4;      // rosvon jalkojen lepokorkeus
+    // Yllätysesiintyminen: rosvo ilmestyy vain paluussa pelistä/jukeboxista/BARista
+    const ROBBER_APPEAR_CHANCE = 0.4;   // 1/2.5 että rosvo ilmestyy paluussa
+    const ROBBER_COOLDOWN      = 1500;  // ~25 s tauko rosvon esiintymisten välillä
+    const ROBBER_MIN_DIST      = 130;   // min. etäisyys pelaajasta, kun rosvo ilmestyy
+    const ROBBER_TTL           = 900;   // ~15 s elinikä – katoaa jos ei nappaa kiinni
+    let robber = null;        // { x, y, w, h, facing, dir, speed, pause, walkTimer, ttl }
+    let robberCooldown = 0;   // tauko ennen kuin uusi rosvo voi ilmestyä
     let playerDead = false;          // kuolemasekvenssi käynnissä
     let deathTimer = 0;              // laskuri ennen reloadia (frameä)
     let deathAlpha = 0;              // mustan overlayn alpha (0→1 pimennyksen aikana)
@@ -479,6 +500,8 @@ const Street = (() => {
        köpii takaisin ylös.
        MENETYS (v4.52): putoaminen vie **enintään 2 🪙** (kolikot hulahtavat
        viemäriin): 3 → 1, 2 → 0, 1 → 0 (ainutkin kolikko menee), 0 → ei mitään.
+       TULO (v4.69, käyttäjän pyyntö 23.9.2026): randomina **1/6 putoamisista
+       kaivon pohjalta löytyy rahaa +3 🪙** – muuten menetys kuten ennen.
        Putoaminen ei syö 🍔:tä eikä tapa pelaajaa.
        Ei tainnutusta (toisin kuin auto/sähkökaappi/kukkaruukku).
        Arvonta: pelin alussa 1/6 (satunnainen kansi puuttuu) ja 1/10 joka
@@ -491,6 +514,8 @@ const Street = (() => {
     const MANHOLE_START_CHANCE  = 1 / 6;   // uusi peli / sivun lataus
     const MANHOLE_RETURN_CHANCE = 1 / 10;  // paluu huoneesta / alapelistä
     const MH_COIN_COST = 2;                // putoaminen vie enintään 2 kolikkoa (v4.52)
+    const MH_BONUS_CHANCE = 1 / 6;         // 1/6 putoamisista: kaivosta löytyy rahaa (v4.69, parametri)
+    const MH_BONUS_COINS  = 3;             // löydön suuruus: +3 🪙 (v4.69)
     const MH_HIT_RX = 11;                  // törmäysellipsi: piirros on 14×7,
     const MH_HIT_RY = 5;                   //   hitusen pienempi → ovelle mahtuu
     const MH_FALL_FRAMES  = 36;            // ~0,6 s: vajoaa reikään (katoaa) – nopea
@@ -541,11 +566,21 @@ const Street = (() => {
     }
 
     /* Paluu kadulle -vahti: kun huone tai alapeli sulkeutuu, arvotaan 1/10
-       (kattaa kaikki poistumistiet: ✕, Poistu, Space, Enter, RETURN_TO_STREET). */
+       viemärinkannelle ja (v4.66) mahdollisesti ilmestyy rosvo yllätyksenä.
+       Kattaa kaikki poistumistiet: ✕, Poistu, Space, Enter, RETURN_TO_STREET. */
+    let wasHiddenKind = null;   // 'iframe' | 'sleep' | 'bar' | 'jukebox' | null
     function trackHiddenStreet() {
         const nowHidden = iframeOpen || sleepRoom || barRoom || jukeboxRoom;
-        if (wasHiddenStreet && !nowHidden) maybeRerollManholeState();
+        const nowKind = iframeOpen ? 'iframe' : sleepRoom ? 'sleep' : barRoom ? 'bar' : jukeboxRoom ? 'jukebox' : null;
+        if (wasHiddenStreet && !nowHidden) {
+            maybeRerollManholeState();
+            // Rosvo (v4.66): yllätys vain paluussa pelistä / jukeboxista / BARista
+            if (wasHiddenKind === 'iframe' || wasHiddenKind === 'jukebox' || wasHiddenKind === 'bar') {
+                maybeSpawnRobber();
+            }
+        }
         wasHiddenStreet = nowHidden;
+        wasHiddenKind = nowKind;
     }
 
     /* ── Kukkaruukun pudotus ──────────────────────── */
@@ -566,6 +601,35 @@ const Street = (() => {
             facing: 1, phase: 'emerge', timer: AVENGER_TELEGRAPH,
             walkTimer: 0, scale: buildingScale(bldg)
         };
+    }
+
+    /* ── Rosvo: yllätysesiintyminen jalkakäytävällä (v4.66) ──
+       Ilmestyy satunnaiseen kohtaan vähintään ROBBER_MIN_DIST päähän pelaajasta
+       ja kävelee kohti tätä, kunnes nappaa kiinni (katoaa) tai elinikä (ttl) loppuu.
+       Tila vain muistissa (ei tallenneta localStorageen). */
+    function spawnRobber() {
+        const pcx = player.x + player.w / 2;
+        const side = Math.random() < 0.5 ? -1 : 1;   // kumpi puoli pelaajasta
+        let x = pcx + side * (ROBBER_MIN_DIST + Math.random() * (WORLD_W - 2 * ROBBER_MIN_DIST - ROBBER_W));
+        x = Math.max(4, Math.min(WORLD_W - ROBBER_W - 4, x));
+        const dir = (pcx > x + ROBBER_W / 2) ? 1 : -1;   // kulkee kohti pelaajaa
+        robber = {
+            x: x, y: ROBBER_FOOT_Y - ROBBER_H,
+            w: ROBBER_W, h: ROBBER_H,
+            facing: dir, dir: dir,
+            speed: ROBBER_SPEED,
+            pause: ROBBER_TURN,          // hetki ennen liikettä (pelaajalla aikaa reagoida)
+            walkTimer: 0, ttl: ROBBER_TTL
+        };
+    }
+
+    /* Rosvo ilmestyy vain paluussa pelistä/jukeboxista/BARista (cooldown + sattuma) –
+       ei ole kadulla koko ajan. */
+    function maybeSpawnRobber() {
+        if (playerDead || robber || robberCooldown > 0) return;
+        if (Math.random() >= ROBBER_APPEAR_CHANCE) return;
+        spawnRobber();
+        robberCooldown = ROBBER_COOLDOWN;
     }
 
     /* ── Potkun pudotus: oviukko (1/8) → kolikko (1/5) → kukkaruukku ── */
@@ -647,6 +711,69 @@ const Street = (() => {
         }
     }
 
+    /* ── Rosvon päivitys: partiointi + kiinniotto (v4.66) ──
+       Partioi vain jalkakäytäväkaistalla (ei mene tielle). Kiinniotto
+       tapahtuu vain kun pelaajan jalat ovat samalla kaistalla JA rosvo on
+       riittävän lähellä → väistö = loiki kadun toiselle puolelle (↓). */
+    function updateRobber(dt) {
+        if (!robber) return;
+        const ov = document.getElementById('game-iframe-overlay');
+        if (ov && ov.classList.contains('active')) return;   // peli auki → jäihin
+
+        const r = robber;
+        const pcx = player.x + player.w / 2, pcy = player.y + player.h / 2;
+        const rcx = r.x + r.w / 2, rcy = r.y + r.h / 2;
+
+        // Elinikä: katoaa jos ei nappaa kiinni ajoissa (yllätys – ei kadulla pidempään)
+        if (r.ttl !== undefined) {
+            r.ttl -= dt;
+            if (r.ttl <= 0) {
+                robber = null;
+                return;
+            }
+        }
+
+        // Kävely edestakaisin + reunapysähdys (väistöikkuna)
+        if (r.pause > 0) {
+            r.pause -= dt;
+        } else {
+            r.x += r.dir * r.speed * dt;
+            r.walkTimer += dt;
+        }
+        if (r.x <= 4) {
+            r.x = 4;
+            if (r.dir < 0) { r.dir = 1; r.pause = ROBBER_TURN; }
+        } else if (r.x >= WORLD_W - r.w - 4) {
+            r.x = WORLD_W - r.w - 4;
+            if (r.dir > 0) { r.dir = -1; r.pause = ROBBER_TURN; }
+        }
+        r.facing = r.dir;
+
+        // Kiinniotto: pelaajan jalat samalla jalkakäytäväkaistalla JA lähellä
+        const playerFootY = player.y + player.h;
+        const onLane = playerFootY >= ROBBER_LANE_TOP && playerFootY <= ROBBER_LANE_BOTTOM;
+        if (onLane && !player.knockedDown && !playerDead) {
+            const dx = pcx - rcx, dy = pcy - rcy;
+            if (Math.sqrt(dx * dx + dy * dy) < ROBBER_HIT_R) {
+                spawnParticles(pcx, pcy, '#ff6644', 14);
+                spawnParticles(rcx, rcy, '#ff6644', 8);
+                playKnock();
+                knockPlayerDown();   // tainnutus + −1 🍔 (0 → kuolema)
+                // Rosvo vie kaikki rahat (v4.68): kolikkosaldo nollataan.
+                // Ei erillistä dialogia (sääntö 06) – pelaaja huomaa itse.
+                if (coinCount > 0) {
+                    coinCount = 0;
+                    state.inventory.coinCount = 0;
+                    GameState.save(state);
+                    updateHUD();
+                }
+                const push = (pcx < rcx) ? -1 : 1;
+                player.x = Math.max(0, Math.min(WORLD_W - player.w, player.x + push * 30));
+                robber = null;       // rosvo katoaa nappauksen jälkeen (ei jää jahtaamaan)
+            }
+        }
+    }
+
     /* ── Onnettomuus: tainnutus + 1 hampurilainen ───
        Sama vaikutus kuin kukkaruukulla/autolla/sähköiskulla.
        Käyttää vain uusi oviukko-koodi – vanhat haarat ennallaan. */
@@ -678,10 +805,11 @@ const Street = (() => {
         StreetAudio.playDeathGong(); // gongi kumahtaa
     }
 
-    /* ── Avoin kaivo: pudotus ja ylöskiipeäminen (v4.51/v4.52) ───────
+    /* ── Avoin kaivo: pudotus ja ylöskiipeäminen (v4.51/v4.52/v4.69) ───────
        Pelaaja astui reiän ellipsiin → vajoaa alas (katoaa), köpii takaisin
        ylös ja jatkaa matkaa. Menetys: **enintään 2 🪙** (1 → 0, 0 → ei mitään);
-       ei tainnutusta eikä 🍔-menetystä.
+       mutta **1/6 putoamisista kaivon pohjalta löytyy +3 🪙** (v4.69).
+       Ei tainnutusta eikä 🍔-menetystä.
        Sekvenssin ajan katu on jäissä (update palaa heti alussa). */
     function startManholeFall(idx) {
         const mh = foreground.manholes[idx];
@@ -728,10 +856,18 @@ const Street = (() => {
         player.vx = 0; player.vy = 0;
         if (a.t > 0) return;
 
-        /* Pohjassa: menetys enintään 2 🪙 (v4.52) – kolikot hulahtavat
-           viemäriin: 3 → 1, 2 → 0, 1 → 0 (ainutkin kolikko menee),
-           0 → ei mitään. Ei 🍔-menetystä eikä kuolemaa. */
-        if (coinCount > 0) {
+        /* Pohjassa (v4.52 / v4.69): tavallisesti kolikot hulahtavat viemäriin
+           – menetys enintään 2 🪙: 3 → 1, 2 → 0, 1 → 0 (ainutkin kolikko
+           menee), 0 → ei mitään. Mutta **1/6 putoamisista** kaivon pohjalta
+           löytyy rahaa: **+3 🪙**. Ei 🍔-menetystä eikä kuolemaa. */
+        if (Math.random() < MH_BONUS_CHANCE) {
+            coinCount += MH_BONUS_COINS;
+            state.inventory.coinCount = coinCount;
+            GameState.save(state);
+            updateHUD();
+            playCoin();                                     // kolikon pling
+            spawnParticles(mh.x, mh.y - 4, '#ffd700', 12);  // kultatäplät reiästä
+        } else if (coinCount > 0) {
             coinCount = Math.max(0, coinCount - MH_COIN_COST);
             state.inventory.coinCount = coinCount;
             GameState.save(state);
@@ -1981,6 +2117,10 @@ const Street = (() => {
         // ── Oviukko (Avenger) ────────────────────────
         if (avengerCooldown > 0) avengerCooldown -= dt;
         updateAvenger(dt);
+
+        // ── Rosvo: yllätys + kiinniotto (v4.66) ──
+        if (robberCooldown > 0) robberCooldown -= dt;
+        updateRobber(dt);
 
         // ── Katueläin ────────────────────────────────
         if (!groundAnimal) {
@@ -3263,6 +3403,9 @@ const Street = (() => {
 
         // Oviukko (Avenger) – piirretään pelaajan alle
         if (avenger) drawAvenger();
+
+        // Rosvo – partioi jalkakäytävällä, piirretään pelaajan alle (v4.66)
+        if (robber) drawRobber();
 
         // Pelaaja – avoimessa kaivossa vajoaa/kiipeää (v4.51)
         if (mhAction) { drawPlayerManhole(); } else { drawPlayer(); }
@@ -6538,6 +6681,82 @@ const Street = (() => {
         ctx.fillStyle = '#a03030';
         ctx.fillRect(px + pw / 2 - 6, top, 14, 5);
         ctx.fillStyle = '#7a2020';
+        ctx.fillRect(px + pw / 2 + 2, top + 1, 7, 3);
+
+        ctx.restore();
+    }
+
+    /* ── Rosvo (v4.66) – pelaajan kaksonen mustissa vaatteissa (Spy vs Spy),
+       puukko kädessä. Partioi jalkakäytävällä. Sama blokkityyli kuin
+       drawAvenger, mutta tunnistevärit: musta asu + teräs puukko. */
+    function drawRobber() {
+        const r = robber;
+        if (!r) return;
+        const px = Math.round(r.x), py = Math.round(r.y);
+        const pw = r.w, ph = r.h;
+        const bobY = (Math.floor(r.walkTimer / 6) % 2) * 1;   // 2-frame kävelysykli
+        const top = py;
+
+        ctx.save();
+        // Peilaus kulkusuunnan mukaan (akseli rosvon jalkaviivalla)
+        ctx.translate(px + pw / 2, py + ph - 1);
+        ctx.scale(r.facing === -1 ? -1 : 1, 1);
+        ctx.translate(-(px + pw / 2), -(py + ph - 1));
+
+        // Maakosketusvarjo (2 kerrosta, kuten pelaajalla)
+        const feetX = px + pw / 2, feetY = py + ph - 1;
+        ctx.fillStyle = 'rgba(0,0,0,0.30)';
+        ctx.beginPath(); ctx.ellipse(feetX, feetY, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.beginPath(); ctx.ellipse(feetX, feetY, 6, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+
+        // Housut + kengät (musta)
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(px + 4, top + 21 + bobY, pw - 8, 8);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(px + 4, top + 29, pw - 8, 2);
+        // Vartalo – musta paita (pelaaja #3366cc)
+        ctx.fillStyle = '#151515';
+        ctx.fillRect(px + 4, top + 10 + bobY, pw - 8, ph - 18);
+        // Kylkivarjostus + etureunan valokaista (hienovarainen)
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(px + 4, top + 10 + bobY, 2, ph - 18);
+        ctx.fillStyle = '#2e2e2e';
+        ctx.fillRect(px + pw - 5, top + 10 + bobY, 1, ph - 18);
+        // Vyötärön raja
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillRect(px + 4, top + 21 + bobY, pw - 8, 1);
+        // Kädet (lepoasento) + kädet hihan päissä
+        const backArmX = px + 3, frontArmX = px + pw - 6, armY = top + 12 + bobY;
+        ctx.fillStyle = '#151515';
+        ctx.fillRect(backArmX, armY, 3, 8);
+        ctx.fillRect(frontArmX, armY, 3, 8);
+        ctx.fillStyle = '#ffcc99';
+        ctx.fillRect(backArmX, armY + 8, 3, 2);
+        ctx.fillRect(frontArmX, armY + 8, 3, 2);
+        // Pää + hiukset
+        ctx.fillStyle = '#ffcc99';
+        ctx.beginPath(); ctx.arc(px + pw / 2, top + 6 + bobY, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000000';
+        ctx.beginPath(); ctx.arc(px + pw / 2, top + 3 + bobY, 7, Math.PI, 0); ctx.fill();
+        // Kasvojen varjo + silmä (kulkusuunnan puoleinen)
+        ctx.fillStyle = 'rgba(0,0,0,0.10)';
+        ctx.fillRect(px + 4, top + 6 + bobY, 2, 4);
+        ctx.fillStyle = '#2b2118';
+        ctx.fillRect(px + 13, top + 7 + bobY, 2, 2);
+        // Puukko etummaisessa kädessä (kahva + terä), osoittaa kulkusuuntaan
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(frontArmX + 1, armY + 6, 3, 2);          // kahva
+        ctx.fillStyle = '#cccccc';
+        ctx.fillRect(frontArmX + 4, armY + 4, 2, 5);          // terä
+        ctx.beginPath();
+        ctx.moveTo(frontArmX + 6, armY + 4);
+        ctx.lineTo(frontArmX + 9, armY + 6.5);
+        ctx.lineTo(frontArmX + 6, armY + 9);
+        ctx.closePath(); ctx.fill();                          // terän kärki
+        // Hattu (Spy vs Spy – musta)
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(px + pw / 2 - 6, top, 14, 5);
         ctx.fillRect(px + pw / 2 + 2, top + 1, 7, 3);
 
         ctx.restore();
