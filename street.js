@@ -17,7 +17,8 @@ const Street = (() => {
         vx: 0, vy: 0, facing: 1, lookY: 0, walking: false,
         walkFrame: 0, walkTimer: 0,
         kicking: false, kickFrame: 0,
-        knockedDown: false, knockdownTimer: 0
+        knockedDown: false, knockdownTimer: 0,
+        knockFallY: undefined   // auton osuman putoamistaso; muutoin GROUND_Y+10 (v4.78)
     };
     const PLAYER_SPEED = 1.225;   // hidastettu 30% (oli 1.75) – kävely hitaampi kuin autot
     const GRAVITY = 0.4;
@@ -1588,6 +1589,9 @@ const Street = (() => {
                     player.knockdownTimer = 600;
                     player.kicking = false;
                     player.kickFrame = 0;
+                    // Kaadutaan 10 px ylös osumakohdasta (v4.78) – muuten pelaaja jää
+                    // makaamaan keskelle tietä ja autot kolarijatkuvat katkeamatta päältä
+                    player.knockFallY = player.y + player.h - 10;
                     spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ffaa44', 15);
                     playKnock();   // "Smack"-tömähdys
                     vehicleShakeTimer = 90;  // ~1.5s tärinä
@@ -1955,9 +1959,12 @@ const Street = (() => {
         // Tainnutus - kukkaruukku osui
         if (player.knockedDown) {
             player.knockdownTimer -= dt;
+            // Putoamistaso: auton osuma kaataa 10 px ylös osumakohdasta (v4.78);
+            // muilla tainnutuslähteillä oletus jalkakäytävän taso (GROUND_Y + 10).
+            const fallY = (player.knockFallY !== undefined) ? player.knockFallY : (GROUND_Y + 10);
             player.vx = 0; player.vy += GRAVITY * dt; player.y += player.vy * dt;
-            if (player.y + player.h >= GROUND_Y + 10) { player.y = GROUND_Y + 10 - player.h; player.vy = 0; }
-            if (player.knockdownTimer <= 0) { player.knockedDown = false; player.knockdownTimer = 0; }
+            if (player.y + player.h >= fallY) { player.y = fallY - player.h; player.vy = 0; }
+            if (player.knockdownTimer <= 0) { player.knockedDown = false; player.knockdownTimer = 0; player.knockFallY = undefined; }
             if (player.kicking) { player.kickFrame += dt; if (player.kickFrame >= KICK_DURATION) { player.kicking = false; player.kickFrame = 0; } }
             for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.x += p.vx; p.y += p.vy; p.life--; if (p.life <= 0) particles.splice(i, 1); }
             coin.sparkle += 0.05 * dt;

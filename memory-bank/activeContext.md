@@ -17,9 +17,13 @@
 
 ## 📍 Nyt (23.9.2026)
 
-- **Versio:** `v4.74` (`index.html` → `#version-tag`) · **Git:** HEAD = `d21b0c7` (oviukko ½-nopeuteen);
-  committattu v4.50–v4.70, **työpuussa committaamattomat v4.72 (kuun ulkoasu), v4.73 (pylvään
-  syvyysjärjestys) ja v4.74 (kuun paikka muistiin) sekä muistipankin tiivistys**.
+- **Versio:** `v4.78` (`index.html` → `#version-tag`) · **Git:** HEAD = `b678f37` (v4.77).
+- **🚗 Auton osuma kaataa 10 px ylös osumakohdasta (v4.78):** `player.knockFallY` = osumahetken
+  jalkapiste **− 10 px** (`updateTraffic`) → tainnutushaaran klamppaus käyttää sitä `GROUND_Y + 10`:n
+  sijaan ("lentäminen kadun varteen" pois) – mutta ei jätä pelaajaa makaamaan keskelle tietä limboon
+  (kolarijatkuva). Muut tainnutuslähteet (oviukko, rosvo, kukkaruukku, sähkökaappi, kuolema) ennallaan –
+  `knockFallY` nollautuu ylösnoustessa. **Talous ennallaan** (−1 🍔, 600 f, sääntö 04).
+  Työpuussa, ei committia.
 - **Tila:** pääportaali + 4 alipeliä valmiit ja pelattavat (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️,
   `fruitgame` 🍒); julkaisu GitHub Pages `https://teppoaland.github.io/pimeakatu/`.
 - **Kadun canvas-huoneet (ei iframe):** makuuhuone (talo 7) · BAR (talo 9) · jukebox (`buildings[4]`,

@@ -1,7 +1,7 @@
 # 📊 Projektin edistyminen
 
-> **v4.74 – 23.9.2026** · Kompaktoitu 23.9.2026 (täysi historia git-historiassa: viimeisin täysi versio
-> `ffb1dd9`, HEAD `d21b0c7`)
+> **v4.78 – 23.9.2026** · Kompaktoitu 23.9.2026 (täysi historia git-historiassa: viimeisin täysi versio
+> `ffb1dd9`, HEAD `b678f37`)
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -18,6 +18,7 @@
 | Talot + taustasiluetti | ✅ v4.06–v4.10 – `buildingScale` 100/95/90 %, ikkunakehykset pois 3 rivin taloista, pimeiden ikkunoiden syvennys, parallaksi 0.4 / skaala 0.5 |
 | Puut + ruohotupsut / sähkökaapit / mopo | ✅ v3.81–v4.08 – huojunta tuulessa, 3 tupsua/puu; kaapit 8×14, osuma −1 🍔; mopo punainen + kuski pelaajan väreillä, panoroiva surina |
 | 🛞 Panssarivaunu | ✅ v4.56–v4.63 – liikenteessä `type 'tank'` (86×36, nopeus 0,4–0,8, ei ajovaloa), moottorisaundi (28 Hz + särö), 75 px tykkiputki + telaketjut/telapyörät |
+| 🚗 Auton osuma kaataa 10 px ylös osumakohdasta | ✅ **v4.78** – `player.knockFallY` = osumahetken jalkapiste **−10 px** (`updateTraffic`) → tainnutushaaran klamppi käyttää sitä `GROUND_Y+10`:n sijaan → ei enää "lentoa kadun varteen", mutta ei myöskään limboa keskellä tietä (kolarijatkuva). Muut tainnutuslähteet ennallaan (`knockFallY` nollautuu ylösnoustessa). **Talous ennallaan** (−1 🍔, 600 f, sääntö 04) |
 | Kolikko potkusta / oviukko | ✅ v3.93 / v4.14–v4.15 / 23.9.2026 – 1/5 kolikko (30 s cooldown); oviukko 1/8 + 30 s, **½-nopeus (`AVENGER_SPEED 1.0`)**: avoimella kadulla se ei saa kiinni, mutta laidalla nappaa (nälkäisenä ≤3 🍔 heti), 3 s jäädytys + −1 🍔; huoneet/lehti jäädyttävät sen |
 | 🔪 Rosvo jalkakäytävällä | ✅ v4.66–v4.68 – yllätysesiintyminen vain paluussa kadulle (trackHiddenStreet → maybeSpawnRobber; appearence 0.4, cooldown 1500, min. etäisyys 130 px, ttl 900 ~15 s); mustat vaatteet + puukko, nopeus 1.05 < pelaaja. Kiinniotto = tainnutus + **−1 🍔 + kaikki kolikot** (v4.68, ei ilmoitusta – sääntö 06), rosvo katoaa nappauksen jälkeen → väistö onnistuu. Ei localStorage-avainta |
 | 🕳️ Avoin kaivo (viemärinkansi) | ✅ v4.51 / v4.52 / v4.69 – kansi voi puuttua (1/6 alussa, 1/10 joka paluulla; voi palata) → musta reikä; putoaa alas ja köpii ylös (~0,6 s + ~3,5 s). Menetys **enintään −2 🪙** (3 → 1, 2 → 0, 1 → 0, 0 → ei mitään) · **1/6 putoamisista +3 🪙** (pling + kultahiukkaset). Ei 🍔-menetystä, ei kuolemaa, ei tainnutusta; reiän voi kiertää. `?hole=0/1/2` |
