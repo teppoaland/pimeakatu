@@ -4332,6 +4332,46 @@ const Street = (() => {
         const legW = 2;
         const legTop = cy + halfH;             // laudan alareuna
         const legH = GROUND_Y - legTop;        // maahan asti
+
+        // ── Neonpinkki hohde kyltistä maahan ja ympärille (v4.83) ──
+        // Piirretään kyltirungon ALLE: tumma lauta ja terävä neonteksti
+        // pysyvät päällimmäisinä. Keskus = neontekstin keskipiste, väri
+        // sama kuin tekstissä ja BAR:n kynnysvalossa (#FF66A3 / 255,102,163).
+        // Hidas "hengitys" (±25 %) tekee hohteen selkeämmin erottuvaksi.
+        const gcx = sx + (tailW + shaftLen + headLen) / 2;
+        const gpulse = 0.75 + 0.25 * Math.sin(Date.now() / 3800);
+        // Päivänvalo himmentää hohteen pois (v4.83): auringonnousun (~20 s)
+        // aikana pinkki maa- ja ympäristöhehku hiipuu täyteen päivään mennessä
+        // nollaan – mutta itse kyltti (neon + väri) jää, sillä BAR on auki
+        // myös päivällä (vrt. Jukebox: sammuttaa myös tekstin).
+        const gDayDim = 1 - dayT;
+        if (gDayDim > 0.01) {
+            const gAlpha = gpulse * gDayDim;
+            // 1) Valopohja kyltin alla maassa (rajoitettu katupintaan) – säde
+            // 1/3 pienempi kuin ympäristöhehku, ettei pinkki leviä liian kauas
+            // kadulle
+            const gRad = 72;                        // ympäristöhehkun säde
+            const gRadPool = Math.round(gRad * 2 / 3); // kadulle leviävä valopohja
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, GROUND_Y, WORLD_W, WORLD_H - GROUND_Y);
+            ctx.clip();
+            const gPool = ctx.createRadialGradient(gcx, GROUND_Y + 12, 4, gcx, GROUND_Y + 12, gRadPool);
+            gPool.addColorStop(0, 'rgba(255,102,163,' + (0.19 * gAlpha).toFixed(3) + ')');
+            gPool.addColorStop(0.45, 'rgba(255,102,163,' + (0.08 * gAlpha).toFixed(3) + ')');
+            gPool.addColorStop(1, 'rgba(255,102,163,0)');
+            ctx.fillStyle = gPool;
+            ctx.fillRect(gcx - gRadPool, GROUND_Y, gRadPool * 2, gRadPool * 2);
+            ctx.restore();
+            // 2) Ympäristöhehku kyltin ympärillä (puu, talon seinä)
+            const gAmb = ctx.createRadialGradient(gcx, cy, 4, gcx, cy, gRad - 4);
+            gAmb.addColorStop(0, 'rgba(255,102,163,' + (0.11 * gAlpha).toFixed(3) + ')');
+            gAmb.addColorStop(0.5, 'rgba(255,102,163,' + (0.05 * gAlpha).toFixed(3) + ')');
+            gAmb.addColorStop(1, 'rgba(255,102,163,0)');
+            ctx.fillStyle = gAmb;
+            ctx.beginPath(); ctx.arc(gcx, cy, gRad - 4, 0, Math.PI * 2); ctx.fill();
+        }
+
         ctx.fillStyle = '#1F1614';
         ctx.fillRect(sx + tailW + 2, legTop, legW, legH);
         ctx.fillRect(sx + tailW + shaftLen - legW - 2, legTop, legW, legH);
@@ -4512,9 +4552,15 @@ const Street = (() => {
                 ctx.closePath();
                 ctx.clip();
                 const r = t.depth + 12;
+                // Keltaisten (talojen) ovivalojen hidas syke yöllä (v4.83):
+                // sama ~60 s jakso kuin BAR-kyltillä → koko katu hengittää
+                // samaan tahtiin. Päivällä (dayT → 1) syke hiipuu pois ja
+                // valo palaa tasaisesti kuten ennenkin. BAR/jukebox-värit
+                // (pinkki/violetti) pysyvät sykkimättöminä.
+                const tpulse = 1 + 0.40 * Math.sin(Date.now() / 3800) * (t.lightRGB === THRESH_LIGHT_HOUSE ? 1 - dayT : 0);
                 const lg = ctx.createRadialGradient(t.cx, GROUND_Y + 2, 2, t.cx, GROUND_Y + 2, r);
-                lg.addColorStop(0, 'rgba(' + t.lightRGB + ',0.16)');
-                lg.addColorStop(0.5, 'rgba(' + t.lightRGB + ',0.06)');
+                lg.addColorStop(0, 'rgba(' + t.lightRGB + ',' + (0.16 * tpulse).toFixed(3) + ')');
+                lg.addColorStop(0.5, 'rgba(' + t.lightRGB + ',' + (0.06 * tpulse).toFixed(3) + ')');
                 lg.addColorStop(1, 'rgba(' + t.lightRGB + ',0)');
                 ctx.fillStyle = lg;
                 ctx.fillRect(t.cx - r, GROUND_Y, r * 2, r);
