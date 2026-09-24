@@ -2891,7 +2891,7 @@ const Street = (() => {
 
     function showSpawnHint() {
         // Aloitusohje: pitempi lukuaika (+2s) kuin muilla popupeilla
-        showNotification('Liiku kadulla, mutta omalla vastuulla. Muista syödä, äläkä pelaa kaikkia rahojasi!.', 4500);
+        showNotification('Liiku kadulla, mutta omalla vastuulla. Muista syödä, äläkä pelaa kaikkia rahojasi!', 4500);
     }
 
     function spawnParticles(x, y, color, count) {
