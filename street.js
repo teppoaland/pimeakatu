@@ -348,6 +348,10 @@ const Street = (() => {
     const ROBBER_COOLDOWN      = 1500;  // ~25 s tauko rosvon esiintymisten välillä
     const ROBBER_MIN_DIST      = 130;   // min. etäisyys pelaajasta, kun rosvo ilmestyy
     const ROBBER_TTL           = 900;   // ~15 s elinikä – katoaa jos ei nappaa kiinni
+    const ROBBER_BAR_EXCLUDE_R = 100;   // ei koskaan aivan BAR-oven kohdalle – pelaaja käy
+                                        // BAR:ssa usein; muissa ovissa huono tuuri sallitaan
+    const ROBBER_STUN          = 900;   // ~15 s tainnutus kiinniotosta – pidempi kuin muiden
+                                        // osumien 600, jotta pelaaja ehtii nähdä, mitä kävi
     let robber = null;        // { x, y, w, h, facing, dir, speed, pause, walkTimer, ttl }
     let robberCooldown = 0;   // tauko ennen kuin uusi rosvo voi ilmestyä
     let playerDead = false;          // kuolemasekvenssi käynnissä
@@ -454,10 +458,30 @@ const Street = (() => {
         { x:  0.45, y:  0.32, r: 0.16, a: 0.09 },
         { x:  0.12, y:  0.55, r: 0.12, a: 0.08 },
     ];
+/* ── Talojen kuusta tulevat varjot (v4.80) ──
+       Kuu on talojen TAKANA → talot varjostavat koko kadun. Varjon kauempi
+       reuna siirtyy kuusta poispäin (moonX), joten suunta kääntyy kuun
+       liikkuessa. Puhtaasti visuaalista – ei koske taloutta, hitboxeja eikä
+       mekaniikkoja (sääntö 04). */
+    const MOON_BLD_SHADOW_LEN   = 0.36;   // varjon pituus (× talon korkeus)
+    const MOON_BLD_SHADOW_SKEW  = 0.055;  // vaakasiirtymä (× (talonX − moonX) × korkeus/100)
+    const MOON_BLD_SHADOW_ALPHA = 0.50;   // tummuus talon juuressa (0 = pois)
     let moonX = MOON_X_MIN;                       // kuun nykyinen x (ks. update)
     let moonNightClock = 0;                       // yön kulku (framet) kuun rataa varten
     let moonDark = 0;                             // kuun laskusta johtuva pimeneminen
     let moonSaveTimer = 0;                        // tallennusvälin laskuri (v4.74)
+/* Kuun kuva (v4.79): assets/moon.png (alpha-PNG) – korvaa proseduraalisen
+       sirpin kun kuva on ladattu. Jos kuva ei lataudu (tai headless-testi),
+       piirretään entinen proseduraalinen kuu (fallback). Käännös on tehty jo
+       itse kuvaan → piirrossa ei ole ctx.rotatea. */
+    const MOON_PIC_SRC = 'assets/moon.png';
+    const moonPic = (typeof Image === 'function') ? new Image() : null;
+    let moonPicReady = false;
+    if (moonPic) {
+        moonPic.onload  = () => { moonPicReady = true; };
+        moonPic.onerror = () => { moonPicReady = false; };
+        moonPic.src = MOON_PIC_SRC;
+    }
     const DAY_LIGHT_RGB   = [70, 58, 40];  // additive-päivänvalon sävy
     const DAY_LIGHT_ALPHA = 0.30;          // 0 = ei valoa … ~0.35 = kirkas päivä
     const LAMP_DAY_DIM    = 0.15;          // paljonko lampun hehkusta jää päivällä
@@ -719,9 +743,19 @@ const Street = (() => {
 
     function spawnRobber() {
         const pcx = player.x + player.w / 2;
-        const side = Math.random() < 0.5 ? -1 : 1;   // kumpi puoli pelaajasta
-        let x = pcx + side * (ROBBER_MIN_DIST + Math.random() * (WORLD_W - 2 * ROBBER_MIN_DIST - ROBBER_W));
-        x = Math.max(4, Math.min(WORLD_W - ROBBER_W - 4, x));
+        // BAR-ovi (lamppu 4 → buildings[8], x 765): tähän kohtaan rosvo EI saa
+        // ilmestyä koskaan – pelaaja käy BAR:ssa usein, eikä ulostulossa saa
+        // joutua heti kiinni (reunaklamppi vei spawnin pelaajan kylkeen).
+        // Muissa ovissa huono tuuri sallitaan.
+        const barDoorX = doorCenter(buildings[lamps[4].bldgIdx]).x;
+        let x = null;
+        for (let attempt = 0; attempt < 8 && x === null; attempt++) {
+            const side = Math.random() < 0.5 ? -1 : 1;   // kumpi puoli pelaajasta
+            let cand = pcx + side * (ROBBER_MIN_DIST + Math.random() * (WORLD_W - 2 * ROBBER_MIN_DIST - ROBBER_W));
+            cand = Math.max(4, Math.min(WORLD_W - ROBBER_W - 4, cand));
+            if (Math.abs(cand + ROBBER_W / 2 - barDoorX) >= ROBBER_BAR_EXCLUDE_R) x = cand;
+        }
+        if (x === null) x = Math.max(4, barDoorX - ROBBER_BAR_EXCLUDE_R - ROBBER_W / 2);   // varmistus
         const dir = (pcx > x + ROBBER_W / 2) ? 1 : -1;   // kulkee kohti pelaajaa
         robber = {
             x: x, y: ROBBER_FOOT_Y - ROBBER_H,
@@ -869,6 +903,7 @@ const Street = (() => {
                 spawnParticles(rcx, rcy, '#ff6644', 8);
                 playKnock();
                 knockPlayerDown();   // tainnutus + −1 🍔 (0 → kuolema)
+                if (!playerDead) player.knockdownTimer = ROBBER_STUN;   // pidennetty maassaolo – ehtii nähdä, mitä kävi
                 // Rosvo vie kaikki rahat (v4.68): kolikkosaldo nollataan.
                 // Ei erillistä dialogia (sääntö 06) – pelaaja huomaa itse.
                 if (coinCount > 0) {
@@ -2257,8 +2292,8 @@ const Street = (() => {
             if (animalSpawnTimer <= 0) {
                 const types = ['mouse','mouse','rat','rat','rabbit']; const type = types[Math.floor(Math.random()*types.length)];
                 const dir = Math.random()<0.5?1:-1;
-                // Satunnainen juoksukorkeus: aidan juuresta (335) nykyiseen ylälaitaan (305)
-                const baseY = GROUND_Y - 5 + Math.random() * (GROUND_Y + 25 - (GROUND_Y - 5));
+                // Satunnainen juoksukorkeus: aidan juuresta (335) nykyiseen ylälaitaan (307, ei ihan seinään)
+                const baseY = GROUND_Y - 3 + Math.random() * (GROUND_Y + 25 - (GROUND_Y - 3));
                 let w,h,speed;
                 if (type==='mouse') { w=8; h=4; speed=1.8+Math.random()*1.2; }
                 else if (type==='rat') { w=14; h=6; speed=1.2+Math.random()*0.8; }
@@ -2470,7 +2505,7 @@ const Street = (() => {
         for (let i = 0; i < lamps.length; i++) {
             const lamp = lamps[i];
             const dx = px - lamp.x, dy = py - (GROUND_Y + 15);
-            if (Math.sqrt(dx*dx + dy*dy) < LAMP_RADIUS + 10) {
+            if (Math.sqrt(dx*dx + dy*dy) < (LAMP_RADIUS + 10) / 2) {   // potkurange puolitettu: 40 → 20 px
                 // Jos lamppu on ylikuumentunut, älä tee mitään
                 if (lamp.overheat) {
                     return;
@@ -3473,51 +3508,63 @@ const Street = (() => {
             ctx.fillStyle = moonGlow;
             ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.8, 0, Math.PI*2); ctx.fill();
 
-            // 2) Valoisa kiekko (dayT = 0 → MOON_LIT_RGB; aamunkoitolla lämpenee)
-            ctx.fillStyle = 'rgb(' + mixCh(MOON_LIT_RGB[0], MOON_DAWN_RGB[0]) + ',' +
-                                     mixCh(MOON_LIT_RGB[1], MOON_DAWN_RGB[1]) + ',' +
-                                     mixCh(MOON_LIT_RGB[2], MOON_DAWN_RGB[2]) + ')';
-            ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
-
-            // 3) Kraatterit ja maret (terävinä valoisalla sirpillä, himmeinä tummalla)
-            if (MOON_CRATERS.length) {
-                ctx.save();
-                ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.clip();
-                for (const c of MOON_CRATERS) {
-                    ctx.fillStyle = 'rgba(' + MOON_CRATER_RGB[0] + ',' + MOON_CRATER_RGB[1] + ',' +
-                                    MOON_CRATER_RGB[2] + ',' + c.a.toFixed(3) + ')';
-                    ctx.beginPath();
-                    ctx.arc(moonX + c.x * moonR, moonY + c.y * moonR, c.r * moonR, 0, Math.PI*2);
-                    ctx.fill();
-                }
-                ctx.restore();
-            }
-
-            // 4) Maavalo + pehmeä terminaattori (klipattu kuun kiekkoon)
-            if (earthFade > 0.004) {
-                const esRGB = MOON_EARTHSHINE_RGB[0] + ',' + MOON_EARTHSHINE_RGB[1] + ',' + MOON_EARTHSHINE_RGB[2];
-                const steps = Math.max(1, MOON_TERMINATOR_SOFT);
-                const stepA = MOON_EARTHSHINE_A * 0.4;   // 3 porrasta → ydin ≈ MOON_EARTHSHINE_A
-                ctx.save();
-                ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.clip();
-                for (let i = steps - 1; i >= 0; i--) {
-                    const k = 1 + (steps > 1 ? i / (steps - 1) : 0) * MOON_TERMINATOR_SPREAD;
-                    ctx.fillStyle = 'rgba(' + esRGB + ',' + (stepA * earthFade).toFixed(3) + ')';
-                    ctx.beginPath();
-                    ctx.arc(moonX + shadowOff, moonY + moonR * MOON_SHADOW_Y,
-                            moonR * MOON_SHADOW_R * k, 0, Math.PI*2);
-                    ctx.fill();
-                }
-                ctx.restore();
-            }
-
-            // 5) Pallomaisuus: reuna tummenee hiukan (limb darkening)
-            if (MOON_LIMB_DARK > 0) {
-                const limb = ctx.createRadialGradient(moonX, moonY, moonR * 0.55, moonX, moonY, moonR);
-                limb.addColorStop(0, 'rgba(0,0,0,0)');
-                limb.addColorStop(1, 'rgba(0,0,0,' + MOON_LIMB_DARK.toFixed(3) + ')');
-                ctx.fillStyle = limb;
+            // 2) Kuu-kuva (v4.79): assets/moon.png – sama koko kuin entinen
+            //    kiekko (2 × MOON_R = 60 px). Käännös on tehty jo itse kuvaan
+            //    → ei ctx.rotatea. globalAlpha = moonFade pätee myös kuvaan,
+            //    joten päivänvaihdon häivytys säilyy. Jos kuva ei ole vielä
+            //    ladattu (tai headless-validointi), piirretään entinen
+            //    proseduraalinen kuu (fallback).
+            if (moonPicReady) {
+                ctx.imageSmoothingEnabled = true; // kuva → pehmennetty skaalaus
+                const d = moonR * 2;
+                ctx.drawImage(moonPic, moonX - d / 2, moonY - d / 2, d, d);
+            } else {
+                // 2b) Valoisa kiekko (dayT = 0 → MOON_LIT_RGB; aamunkoitolla lämpenee)
+                ctx.fillStyle = 'rgb(' + mixCh(MOON_LIT_RGB[0], MOON_DAWN_RGB[0]) + ',' +
+                                         mixCh(MOON_LIT_RGB[1], MOON_DAWN_RGB[1]) + ',' +
+                                         mixCh(MOON_LIT_RGB[2], MOON_DAWN_RGB[2]) + ')';
                 ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
+
+                // 3) Kraatterit ja maret (terävinä valoisalla sirpillä, himmeinä tummalla)
+                if (MOON_CRATERS.length) {
+                    ctx.save();
+                    ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.clip();
+                    for (const c of MOON_CRATERS) {
+                        ctx.fillStyle = 'rgba(' + MOON_CRATER_RGB[0] + ',' + MOON_CRATER_RGB[1] + ',' +
+                                        MOON_CRATER_RGB[2] + ',' + c.a.toFixed(3) + ')';
+                        ctx.beginPath();
+                        ctx.arc(moonX + c.x * moonR, moonY + c.y * moonR, c.r * moonR, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+
+                // 4) Maavalo + pehmeä terminaattori (klipattu kuun kiekkoon)
+                if (earthFade > 0.004) {
+                    const esRGB = MOON_EARTHSHINE_RGB[0] + ',' + MOON_EARTHSHINE_RGB[1] + ',' + MOON_EARTHSHINE_RGB[2];
+                    const steps = Math.max(1, MOON_TERMINATOR_SOFT);
+                    const stepA = MOON_EARTHSHINE_A * 0.4;   // 3 porrasta → ydin ≈ MOON_EARTHSHINE_A
+                    ctx.save();
+                    ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.clip();
+                    for (let i = steps - 1; i >= 0; i--) {
+                        const k = 1 + (steps > 1 ? i / (steps - 1) : 0) * MOON_TERMINATOR_SPREAD;
+                        ctx.fillStyle = 'rgba(' + esRGB + ',' + (stepA * earthFade).toFixed(3) + ')';
+                        ctx.beginPath();
+                        ctx.arc(moonX + shadowOff, moonY + moonR * MOON_SHADOW_Y,
+                                moonR * MOON_SHADOW_R * k, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+
+                // 5) Pallomaisuus: reuna tummenee hiukan (limb darkening)
+                if (MOON_LIMB_DARK > 0) {
+                    const limb = ctx.createRadialGradient(moonX, moonY, moonR * 0.55, moonX, moonY, moonR);
+                    limb.addColorStop(0, 'rgba(0,0,0,0)');
+                    limb.addColorStop(1, 'rgba(0,0,0,' + MOON_LIMB_DARK.toFixed(3) + ')');
+                    ctx.fillStyle = limb;
+                    ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
+                }
             }
             ctx.restore();
         }
@@ -3554,6 +3601,7 @@ const Street = (() => {
         drawBackdrop(camX * (1 - BACKDROP_PARALLAX));
         drawBuildings();
         drawGround();
+        drawMoonBuildingShadows();   // kuunvarjot taloilta kadulle (v4.80)
 
         // Sähkökaapit (talojen kyljissä)
         drawElectricCabinet();
@@ -3785,6 +3833,22 @@ const Street = (() => {
         return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
     }
 
+    // Interpoloi kahden hex-värin välillä (t 0 = a, 1 = b) – päivä/yö-siirtymät
+    function mixHex(a, b, t) {
+        if (t <= 0) return a;
+        if (t >= 1) return b;
+        const ca = parseInt(a.slice(1), 16), cb = parseInt(b.slice(1), 16);
+        const ch = v => (v & 255).toString(16).padStart(2, '0');
+        const r  = Math.round(((ca >> 16) & 255) + (((cb >> 16) & 255) - ((ca >> 16) & 255)) * t);
+        const g  = Math.round(((ca >> 8) & 255) + (((cb >> 8) & 255) - ((ca >> 8) & 255)) * t);
+        const bl = Math.round((ca & 255) + ((cb & 255) - (ca & 255)) * t);
+        return '#' + ch(r) + ch(g) + ch(bl);
+    }
+    // Päivällä tumma ikkunalasi vaalenee taivaan heijastukseksi: tavalliset talot
+    // #151716, 3-riviset (kauempana) hiukan tummempaa syvyyden takia (v4.82).
+    const WIN_DAY_FILL      = '#151716';
+    const WIN_DAY_FILL_FLAT = '#101110';
+
     // Siluetin todennäköisyys keltaisessa ikkunassa (0.50 = testaus, myöhemmin 0.05)
     const SILHOUETTE_CHANCE = 0.50;
 
@@ -3928,7 +3992,10 @@ const Street = (() => {
                         } else {
                             // 3 rivin talot (flatWindows): ei kehystä → ikkuna erottuu syvennyksenä.
                             // Tummempi täyttö + 1 px tumma ylävarjo + 1 px vaalea alaparre = upotus seinässä.
-                            ctx.fillStyle = flatWindows ? '#05050d' : '#0a0a15';
+                            // Päivällä täyttö vaalenee taivaan heijastukseksi (WIN_DAY_FILL*, v4.81);
+                            // valaistut ikkunat ja kaikki toiminta ennallaan.
+                            ctx.fillStyle = mixHex(flatWindows ? '#05050d' : '#0a0a15',
+                                                   flatWindows ? WIN_DAY_FILL_FLAT : WIN_DAY_FILL, dayT);
                             ctx.fillRect(wx, wy, 10, 14);
                             if (flatWindows) {
                                 ctx.fillStyle = 'rgba(0,0,0,0.35)';
@@ -4338,13 +4405,43 @@ const Street = (() => {
 
         // Viemärinkannet
         if (foreground) { drawManholes(); }
-
         // Sanomalehti
         if (foreground && foreground.newspaper) { drawNewspaper(); }
 
         // Kuoriainen
         if (foreground && foreground.beetle) { drawBeetle(); }
 
+    }
+
+    /* ── Talojen kuusta tulevat varjot (v4.80) ──
+       Jokaisen 9 talon pohjan alle piirretään puolisuunnikas GROUND_Y:stä
+       alaspäin; kauempi reuna siirtyy kuusta poispäin ((x − moonX)·k). Kun
+       kuu liikkuu vasemmalta oikealle, varjo kääntyy oikealta vasemmalle.
+       Täyttö on pystygradientti (tumma pohjassa → pois kauempaa) ja alpha
+       seuraa kuun näkyvyyttä (1 − dayT). Piirretään drawGround():n JÄLKEEN,
+       joten kaikki kadun objektit jäävät varjon sisään. */
+    function drawMoonBuildingShadows() {
+        if (dayT >= 1 || MOON_BLD_SHADOW_ALPHA <= 0) return;
+        const fade = 1 - dayT;                            // kuun näkyvyys
+        for (const b of buildings) {
+            const x0 = b.x, x1 = b.x + b.w;
+            const L = b.h * MOON_BLD_SHADOW_LEN;          // varjon pituus
+            const k = MOON_BLD_SHADOW_SKEW * (b.h / 100);
+            const s0 = (x0 - moonX) * k;                  // kauemman reunan siirto
+            const s1 = (x1 - moonX) * k;
+            const grad = ctx.createLinearGradient(0, GROUND_Y, 0, GROUND_Y + L);
+            grad.addColorStop(0,    'rgba(0,0,0,' + (MOON_BLD_SHADOW_ALPHA * fade).toFixed(3) + ')');
+            grad.addColorStop(0.55, 'rgba(0,0,0,' + (MOON_BLD_SHADOW_ALPHA * fade * 0.5).toFixed(3) + ')');
+            grad.addColorStop(1,    'rgba(0,0,0,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(x0, GROUND_Y);
+            ctx.lineTo(x1, GROUND_Y);
+            ctx.lineTo(x1 + s1, GROUND_Y + L);
+            ctx.lineTo(x0 + s0, GROUND_Y + L);
+            ctx.closePath();
+            ctx.fill();
+        }
     }
 
     /* Katkaisee vaakaviivan oviaukkojen kohdalta (laskettu reunakivi) */
@@ -6458,8 +6555,11 @@ const Street = (() => {
             ctx.fillRect(dx - 12, dy - 19, DOOR_W + 24, 16);
             ctx.fillStyle = '#3d1846';
             ctx.fillRect(dx - 10, dy - 17, DOOR_W + 20, 12);
+            // Päivällä kyltti sammutettu (jukebox auki vain öisin, v4.34):
+            // neoni ei pala eikä hehku – laatta jää näkyviin sammuneena.
+            const dayClosed = nightOnlyClosed();
             const jkBlink = Math.sin(Date.now() / 420);
-            const jkLight = (jukeboxOpen ? 62 : 46) + jkBlink * 14;
+            const jkLight = dayClosed ? 16 : ((jukeboxOpen ? 62 : 46) + jkBlink * 14);
             ctx.font = 'bold 9px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.lineJoin = 'round';
@@ -6468,7 +6568,7 @@ const Street = (() => {
             ctx.strokeText('♪JUKEBOX', dc.x, dy - 7);
             ctx.fillStyle = 'hsl(318, 100%, ' + jkLight + '%)';
             ctx.shadowColor = ctx.fillStyle;
-            ctx.shadowBlur = 3 + Math.abs(jkBlink) * 5;
+            ctx.shadowBlur = dayClosed ? 0 : (3 + Math.abs(jkBlink) * 5);
             ctx.fillText('♪JUKEBOX', dc.x, dy - 7);
             ctx.shadowBlur = 0;
             ctx.lineWidth = 1;
