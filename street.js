@@ -77,6 +77,8 @@ const Street = (() => {
     ];
 
     const LAMP_POST_H = 75;
+    const LAMP_BASE_Y = GROUND_Y + 15;   // tolpan juuri = syvyysviiva (325): pelaaja on
+                                         // pylvään TAKANA, kun jalkapiste on tämän yläpuolella
     const DOOR_W = 26;
     const DOOR_H = 32;
     const DOOR_RADIUS = 19;
@@ -331,7 +333,9 @@ const Street = (() => {
        loiki kadun toiselle puolelle (↓) pois kaistalta → rosvo ei seuraa sinne. */
     const ROBBER_W       = 20;
     const ROBBER_H       = 30;
-    const ROBBER_SPEED   = 1.05;      // kävelynopeus – hitaampi kuin pelaaja (1.225) → ehtii väistää
+    const ROBBER_SPEED   = 1.05;      // peruskävelynopeus – arvotaan spawnissa (liukumaväli alla)
+    const ROBBER_SPEED_MIN_MULT = 0.80;   // alaraja −20 % → 0,84
+    const ROBBER_SPEED_MAX_MULT = 1.50;   // yläraja +50 % → 1,575
     const ROBBER_HIT_R   = 16;        // kiinnioton säde (px)
     const ROBBER_TURN    = 40;        // ~0,7 s reunapysähdys käännöksessä (väistöikkuna)
     // Jalkakäytäväkaista (talojen puoli): jalat GROUND_Y … GROUND_Y+16
@@ -401,18 +405,58 @@ const Street = (() => {
     /* KUUN RATA (v4.65): kuu alkaa aina vasemmasta laidasta (MOON_X_MIN) ja
        liukuu yön kuluessa oikealle, kunnes laskeutuu kokonaan pois näkyvistä
        (MOON_SET_X, oikean reunan yli). Laskeutuessaan se pimentää maisemaa
-       hiukan (MOON_SET_DARK_ALPHA). Paikkaa EI tallenneta – kuu alkaa alusta
-       joka yö (spawn/init) ja jokaisessa uudessa yössä (Nuku). */
+       hiukan (MOON_SET_DARK_ALPHA).
+       Kuun paikka TALLENNETAAN (v4.74, state.moonClock): F5/reload ei enää
+       palauta kuuta lähtöasemaan, vaan se jatkaa siitä mihin jäi. Kuu alkaa
+       alusta vain kun uusi yö alkaa (Nuku) tai kun koko tallennus nollataan
+       (kuolema / ✕ "aloita alusta" → GameState.reset / removeItem). */
     const SUN_X = 140, SUN_Y = 62, SUN_R = 26;    // auringon päiväpaikka (vasen, kiinteä)
-    const MOON_Y = 60, MOON_R = 28;               // kuun korkeus ja koko
+    const MOON_Y = 60, MOON_R = 30;               // kuun korkeus ja koko (28 → 30, v4.72)
     const MOON_X_MIN = SUN_X;                     // kuun alku = sama paikka kuin auringolla (vasen laita)
-    const MOON_SET_X = WORLD_W + MOON_R * 3;      // laskeuma ≈ 884 → kokonaan pois
+    const MOON_SET_X = WORLD_W + MOON_R * 3;      // laskeuma ≈ 890 → kokonaan pois
     const MOON_NIGHT_FRAMES = 57600;              // ~16 min: kuu kulkee vas.→laskeumaan (hidastettu, nopeusnuppi)
     const MOON_SET_START = 0.60;                  // tästä p:stä alkaen kuu häipyy → maisema pimenee
     const MOON_SET_DARK_ALPHA = 0.15;             // "hiukan": max pimeneminen (0 = ei)
+    const MOON_SAVE_FRAMES = 120;                 // tallenna kuun paikka ~2 s välein (v4.74)
+    /* ── Kuun ulkoasu (v4.72) ──
+       Kuu piirretään tähtien JÄLKEEN (mutta pilvien eteen), jotta tähdet eivät
+       enää tuiki kuun läpi – ennen kuu näytti "leikatulta reijältä". Pimeä puoli
+       ei ole pikimusta vaan maavalon (earthshine) siniharmaa: kuu näyttää
+       pyöreältä kappaleelta, joka peittää tähdet. Varjokerrokset on klipattu kuun
+       kiekkoon, joten mikään ei karkaa reunan ulkopuolelle. Kaikki alla olevat
+       arvot ovat ulkoasunuppeja – ne EIVÄT vaikuta kuun rataan
+       (MOON_NIGHT_FRAMES) eivätkä talouteen. */
+    const MOON_LIT_RGB        = [238, 242, 245];  // valoisa sirppi: hopeinen kylmä valkoinen (#eef2f5)
+    const MOON_DAWN_RGB       = [255, 214, 150];  // aamunkoiton lämmin sävy sirpissä
+    const MOON_DAWN_TINT      = 0.55;             // paljonko sirppi lämpenee dayT:llä (0 = ei)
+    const MOON_EARTHSHINE_RGB = [64, 74, 98];     // maavalon sävy (viileä harmaansininen #404a62)
+    const MOON_EARTHSHINE_A   = 0.55;             // maavalon peittävyys (0 = vanha musta varjo)
+    const MOON_EARTHSHINE_FADE = 0.85;            // maavalo häipyy tämän verran nopeammin kuin sirppi
+    const MOON_SHADOW_R       = 0.78;             // varjokiekon säde (× MOON_R) – entinen geometria
+    const MOON_SHADOW_OFF     = 0.40;             // varjokiekon siirto (× MOON_R) – sirppi aukeaa oikealle
+    const MOON_SHADOW_Y       = -0.08;            // varjokiekon pysty siirto (× MOON_R)
+    const MOON_TERMINATOR_SOFT = 3;               // terminaattorin pehmeys (1 = kova reuna)
+    const MOON_TERMINATOR_SPREAD = 0.12;          // uloimman pehmennyskiekon lisäsäde (× varjokiekko)
+    const MOON_LIMB_DARK      = 0.10;             // pallomaisuus: reunan tummennus (0 = ei)
+    const MOON_GLOW_A         = 0.26;             // hehkun kirkkaus (ennen 0.18)
+    const MOON_GLOW_RGB       = [226, 236, 255];  // hehkun sävy (kylmä hopeansininen #e2ecff)
+    const MOON_CRATER_RGB     = [70, 78, 96];     // kraatterien sävy (viileä tummanharmaa #464e60)
+    /* Kraatterit ja maret – kiinteä lista (ei satunnaisuutta): x/y/r kuun säteen
+       suhteina, a = tummuus. Piirretään ennen maavaloa → terävinä valoisalla
+       sirpillä ja himmeinä tummalla puolella (maavalo kuultaa läpi).
+       Tyhjä lista = ei yksityiskohtia. */
+    const MOON_CRATERS = [
+        { x: -0.55, y: -0.25, r: 0.16, a: 0.13 },   // valoisa sirppi
+        { x: -0.45, y:  0.30, r: 0.13, a: 0.12 },
+        { x: -0.30, y:  0.05, r: 0.10, a: 0.10 },
+        { x:  0.30, y: -0.20, r: 0.24, a: 0.10 },   // tumma puoli (mare)
+        { x:  0.45, y:  0.32, r: 0.16, a: 0.09 },
+        { x:  0.12, y:  0.55, r: 0.12, a: 0.08 },
+    ];
     let moonX = MOON_X_MIN;                       // kuun nykyinen x (ks. update)
     let moonNightClock = 0;                       // yön kulku (framet) kuun rataa varten
     let moonDark = 0;                             // kuun laskusta johtuva pimeneminen
+    let moonSaveTimer = 0;                        // tallennusvälin laskuri (v4.74)
     const DAY_LIGHT_RGB   = [70, 58, 40];  // additive-päivänvalon sävy
     const DAY_LIGHT_ALPHA = 0.30;          // 0 = ei valoa … ~0.35 = kirkas päivä
     const LAMP_DAY_DIM    = 0.15;          // paljonko lampun hehkusta jää päivällä
@@ -503,14 +547,41 @@ const Street = (() => {
         return isDay ? 1 : 0;
     }
 
-    /* ── Kuun nollaus (v4.65) ──
-       Kuu alkaa aina vasemmasta laidasta (MOON_X_MIN) ja pimeneminen
-       nollataan. Kutsutaan spawnissa/initissä sekä jokaisessa uudessa yössä
-       (makuuhuoneen Nuku). */
+    /* ── Kuun kello (v4.74) ──
+       Yksi lähde kuun paikalle: kellosta (framet) lasketaan x ja pimeneminen.
+       Samaa funktiota käyttävät init (tallennettu kello), resetMoon (0) ja
+       update (kello + dt), joten kaava ei voi livahtaa eri versioiksi.
+       moonX säilyy murto-osaisena (EI Math.round) → kuu liukuu pehmeästi
+       kuten pilvet, eikä hyppää pikselistä toiseen, vaikka vauhti on hidas. */
+    function applyMoonClock(clock) {
+        moonNightClock = clock;
+        const p = Math.min(1, moonNightClock / MOON_NIGHT_FRAMES);
+        moonX = MOON_X_MIN + p * (MOON_SET_X - MOON_X_MIN);   // float → nykimätön liuku
+        moonDark = Math.min(1, Math.max(0, (p - MOON_SET_START) / (1 - MOON_SET_START)))
+                   * MOON_SET_DARK_ALPHA;
+    }
+
+    /* Kuun paikka tallennetaan portin omaan tallennukseen (state.moonClock),
+       jotta F5/reload jatkaa samasta kohdasta. Sama linja kuin isDay:llä:
+       testityökalut (?day=0/1) eivät tallenna mitään.
+       HUOM: tallennusta EI tehdä sivun sulkeutuessa (pagehide/beforeunload):
+       kuolema ja ✕-resetti poistavat tallennuksen ennen reloadia, joten
+       sulkeutumishetken kirjoitus herättäisi nollatun tallennuksen henkiin.
+       2 s väli riittää – pahin F5-virhe on ~1,5 px kuun radalla. */
+    function saveMoonClock() {
+        if (DAY_FORCE) return;
+        state.moonClock = Math.round(moonNightClock);
+        GameState.save(state);
+    }
+
+    /* ── Kuun nollaus (v4.65 / v4.74) ──
+       Kuu alkaa vasemmasta laidasta (MOON_X_MIN) ja pimeneminen nollataan.
+       Kutsutaan jokaisessa uudessa yössä (makuuhuoneen Nuku) → nollatila
+       tallennetaan heti, ettei reload palauta edellisen yön paikkaa. */
     function resetMoon() {
-        moonNightClock = 0;
-        moonX = MOON_X_MIN;
-        moonDark = 0;
+        applyMoonClock(0);
+        moonSaveTimer = 0;
+        saveMoonClock();
     }
 
     // Kaksisuuntainen liikenne: kaksi ajorataa (kaistaa)
@@ -637,6 +708,14 @@ const Street = (() => {
        Ilmestyy satunnaiseen kohtaan vähintään ROBBER_MIN_DIST päähän pelaajasta
        ja kävelee kohti tätä, kunnes nappaa kiinni (katoaa) tai elinikä (ttl) loppuu.
        Tila vain muistissa (ei tallenneta localStorageen). */
+    /* Rosvon nopeus arvotetaan jokaisella ilmestymisellä: perusarvo (1.05)
+       ± liukumaväli −20 % … +50 % (lo = 0,84 … hi = 1,575). */
+    function randomRobberSpeed() {
+        const lo = ROBBER_SPEED * ROBBER_SPEED_MIN_MULT;
+        const hi = ROBBER_SPEED * ROBBER_SPEED_MAX_MULT;
+        return lo + Math.random() * (hi - lo);
+    }
+
     function spawnRobber() {
         const pcx = player.x + player.w / 2;
         const side = Math.random() < 0.5 ? -1 : 1;   // kumpi puoli pelaajasta
@@ -647,7 +726,7 @@ const Street = (() => {
             x: x, y: ROBBER_FOOT_Y - ROBBER_H,
             w: ROBBER_W, h: ROBBER_H,
             facing: dir, dir: dir,
-            speed: ROBBER_SPEED,
+            speed: randomRobberSpeed(),
             pause: ROBBER_TURN,          // hetki ennen liikettä (pelaajalla aikaa reagoida)
             walkTimer: 0, ttl: ROBBER_TTL
         };
@@ -1232,9 +1311,12 @@ const Street = (() => {
         ctx.imageSmoothingEnabled = false;
         randomizeBuildingColors();  // arvo taloille uudet sävyt joka kerta
         state = GameState.load();
-        /* Onko kyseessä aivan uusi peli (0-tila)? Lasketaan ENNEN kuun paikan
-           kirjoitusta, jotta ohjepopupin tarkistus initin lopussa toimii. */
-        const freshGame = (JSON.stringify(state) === JSON.stringify(GameState.defaultState));
+        /* Onko kyseessä aivan uusi peli (0-tila)? Kuun kello (moonClock)
+           jätetään vertailusta pois: se tallentuu itsestään heti yön alettua,
+           eikä sen kuulu sammuttaa aloitusohjetta. */
+        const progressState = Object.assign({}, state);
+        delete progressState.moonClock;
+        const freshGame = (JSON.stringify(progressState) === JSON.stringify(GameState.defaultState));
         for (let i = 0; i < lamps.length; i++) {
             lamps[i].lit = state.litLamps[i];
             lamps[i].kickCount = lamps[i].kickCount || 0;
@@ -1268,9 +1350,11 @@ const Street = (() => {
         }
         isDay = (state.isDay === true);
         dayT = dayTarget();
-        /* Kuu alkaa aina vasemmasta laidasta (v4.65): ei tallennettua paikkaa,
-           vaan rata lasketaan yön kuluessa (update). */
-        resetMoon();
+        /* Kuun paikka palautetaan tallennuksesta (v4.74): F5/reload ei palauta
+           kuuta lähtöasemaan. Nollatila syntyy vain kun tallennus on tyhjä
+           (kuolema / ✕ "aloita alusta") tai kun uusi yö alkaa Nukusta.
+           Testityökalut ?day=0/1 näyttävät kuun lähtöasemasta kuten ennen. */
+        applyMoonClock(DAY_FORCE ? 0 : (Number(state.moonClock) || 0));
         stars = [];
         for (let i = 0; i < 80; i++) {
             stars.push({
@@ -1612,13 +1696,16 @@ const Street = (() => {
         // ── Kuu: liukuu vasemmalta oikealle yön aikana (v4.65) ──
         // Yöllä kuu etenee ajan mukaan, myös huoneissa ja alapeleissä (aika
         // kuluu), kunnes laskeutuu kokonaan pois oikealta (MOON_SET_X).
-        // Laskeutuessaan se pimentää maisemaa hiukan. Ei tallennettua paikkaa.
+        // Laskeutuessaan se pimentää maisemaa hiukan. Paikka tallennetaan
+        // harvakseltaan (MOON_SAVE_FRAMES ≈ 2 s) – F5 jatkaa samasta kohdasta
+        // eikä localStorage-kirjoituksia tule joka framella (v4.74).
         if (!isDay) {
-            moonNightClock += dt;
-            const p = Math.min(1, moonNightClock / MOON_NIGHT_FRAMES);
-            moonX = Math.round(MOON_X_MIN + p * (MOON_SET_X - MOON_X_MIN));
-            moonDark = Math.min(1, Math.max(0, (p - MOON_SET_START) / (1 - MOON_SET_START)))
-                       * MOON_SET_DARK_ALPHA;
+            applyMoonClock(moonNightClock + dt);
+            moonSaveTimer += dt;
+            if (moonSaveTimer >= MOON_SAVE_FRAMES) {
+                moonSaveTimer = 0;
+                saveMoonClock();
+            }
         } else {
             moonDark = 0;
         }
@@ -3306,27 +3393,6 @@ const Street = (() => {
             ctx.restore();
         }
 
-        // Sirppikuu (häipyy päivän tullessa; liukuu yön aikana vasemmalta oikealle
-        // ja laskeutuu pois – v4.65, X päivittyy moonNightClockin mukaan)
-        if (dayT < 1) {
-            ctx.save();
-            ctx.globalAlpha = 1 - dayT;
-            const moonY = MOON_Y, moonR = MOON_R;
-            const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 2.8);
-            moonGlow.addColorStop(0, 'rgba(255,250,210,0.18)');
-            moonGlow.addColorStop(0.4, 'rgba(255,250,210,0.06)');
-            moonGlow.addColorStop(1, 'rgba(255,250,210,0)');
-            ctx.fillStyle = moonGlow;
-            ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.8, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#fff8cc';   // keltaisempi kuu
-            ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
-            const crescentRight = true;  // sirppi aukeaa oikealle
-            const shadowOff = crescentRight ? moonR * 0.4 : -moonR * 0.4;
-            ctx.fillStyle = '#0a0a1e';
-            ctx.beginPath(); ctx.arc(moonX + shadowOff, moonY - moonR * 0.08, moonR * 0.78, 0, Math.PI*2); ctx.fill();
-            ctx.restore();
-        }
-
         // Aurinko (päivä) – ilmestyy paikalleen vasemmalle (SUN_X), ristihäivytys
         if (dayT > 0) {
             ctx.save();
@@ -3357,9 +3423,6 @@ const Street = (() => {
             ctx.restore();
         }
 
-        // Pilvet (kapea cirrus/hazy-kaistale)
-        drawClouds();
-
         // Tähdet (jokaisella oma random twinkle) – himmenevät päivän tullessa
         if (dayT < 1) {
             const starFade = 1 - dayT;
@@ -3376,6 +3439,84 @@ const Street = (() => {
                 }
             }
         }
+
+        /* ── Sirppikuu (v4.72) ──
+           Piirretään tähtien jälkeen (kuu peittää tähdet) mutta ennen pilviä
+           (pilvi kuun edessä on oikein). Kuu liukuu yön aikana vasemmalta
+           oikealle ja laskeutuu pois (v4.65, X päivittyy moonNightClockin
+           mukaan). Rakenne: hehku → valoisa kiekko → kraatterit → maavalo
+           (pehmeä terminaattori) → pallomaisuus. Varjokerrokset on klipattu
+           kuun kiekkoon → mikään ei karkaa reunan ulkopuolelle. */
+        if (dayT < 1) {
+            ctx.save();
+            const moonY = MOON_Y, moonR = MOON_R;
+            const moonFade  = 1 - dayT;                                             // sirpin häipyminen päivällä
+            const earthFade = Math.max(0, moonFade - MOON_EARTHSHINE_FADE * dayT);  // maavalo häipyy ensin
+            const shadowOff = moonR * MOON_SHADOW_OFF;
+            const tint = dayT * MOON_DAWN_TINT;                                     // aamunkoitto lämmittää sirpin
+            const mixCh = (a, b) => Math.round(a + (b - a) * tint);
+
+            // 1) Hehku
+            ctx.globalAlpha = moonFade;
+            const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 2.8);
+            const glowRGB = MOON_GLOW_RGB[0] + ',' + MOON_GLOW_RGB[1] + ',' + MOON_GLOW_RGB[2];
+            moonGlow.addColorStop(0, 'rgba(' + glowRGB + ',' + MOON_GLOW_A.toFixed(3) + ')');
+            moonGlow.addColorStop(0.4, 'rgba(' + glowRGB + ',' + (MOON_GLOW_A * 0.33).toFixed(3) + ')');
+            moonGlow.addColorStop(1, 'rgba(' + glowRGB + ',0)');
+            ctx.fillStyle = moonGlow;
+            ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.8, 0, Math.PI*2); ctx.fill();
+
+            // 2) Valoisa kiekko (dayT = 0 → MOON_LIT_RGB; aamunkoitolla lämpenee)
+            ctx.fillStyle = 'rgb(' + mixCh(MOON_LIT_RGB[0], MOON_DAWN_RGB[0]) + ',' +
+                                     mixCh(MOON_LIT_RGB[1], MOON_DAWN_RGB[1]) + ',' +
+                                     mixCh(MOON_LIT_RGB[2], MOON_DAWN_RGB[2]) + ')';
+            ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
+
+            // 3) Kraatterit ja maret (terävinä valoisalla sirpillä, himmeinä tummalla)
+            if (MOON_CRATERS.length) {
+                ctx.save();
+                ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.clip();
+                for (const c of MOON_CRATERS) {
+                    ctx.fillStyle = 'rgba(' + MOON_CRATER_RGB[0] + ',' + MOON_CRATER_RGB[1] + ',' +
+                                    MOON_CRATER_RGB[2] + ',' + c.a.toFixed(3) + ')';
+                    ctx.beginPath();
+                    ctx.arc(moonX + c.x * moonR, moonY + c.y * moonR, c.r * moonR, 0, Math.PI*2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            // 4) Maavalo + pehmeä terminaattori (klipattu kuun kiekkoon)
+            if (earthFade > 0.004) {
+                const esRGB = MOON_EARTHSHINE_RGB[0] + ',' + MOON_EARTHSHINE_RGB[1] + ',' + MOON_EARTHSHINE_RGB[2];
+                const steps = Math.max(1, MOON_TERMINATOR_SOFT);
+                const stepA = MOON_EARTHSHINE_A * 0.4;   // 3 porrasta → ydin ≈ MOON_EARTHSHINE_A
+                ctx.save();
+                ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.clip();
+                for (let i = steps - 1; i >= 0; i--) {
+                    const k = 1 + (steps > 1 ? i / (steps - 1) : 0) * MOON_TERMINATOR_SPREAD;
+                    ctx.fillStyle = 'rgba(' + esRGB + ',' + (stepA * earthFade).toFixed(3) + ')';
+                    ctx.beginPath();
+                    ctx.arc(moonX + shadowOff, moonY + moonR * MOON_SHADOW_Y,
+                            moonR * MOON_SHADOW_R * k, 0, Math.PI*2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            // 5) Pallomaisuus: reuna tummenee hiukan (limb darkening)
+            if (MOON_LIMB_DARK > 0) {
+                const limb = ctx.createRadialGradient(moonX, moonY, moonR * 0.55, moonX, moonY, moonR);
+                limb.addColorStop(0, 'rgba(0,0,0,0)');
+                limb.addColorStop(1, 'rgba(0,0,0,' + MOON_LIMB_DARK.toFixed(3) + ')');
+                ctx.fillStyle = limb;
+                ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // Pilvet (kapea cirrus/hazy-kaistale) – kuun edessä (oikein)
+        drawClouds();
 
         // Tähdenlento (vain yöllä)
         if (dayT <= 0 && shootingStar && shootingStar.active) {
@@ -3418,8 +3559,14 @@ const Street = (() => {
         // BAR-viittakyltti (puunraossa, osoittaa oikealle)
         drawBarSign();
 
-        // Lamput
-        for (const lamp of lamps) drawLampPost(lamp);
+        // Lamput – valo AINA hahmojen alla (valo ei peitä ketään). Pylväs sen
+        // sijaan syvyysjärjestyksessä (v4.73): pylvään juuri seisoo syvyysviivalla
+        // LAMP_BASE_Y, joten jalkapiste viivan yläpuolella = hahmo on pylvään
+        // TAKANA → pylväs piirretään vasta hahmon jälkeen. Rosvon jalkapiste on
+        // kiinteä (ROBBER_FOOT_Y 314 < LAMP_BASE_Y 325) → rosvo on AINA pylvään
+        // takana ja piirretään aina ennen kaikkia pylväitä (v4.76).
+        const lampFeetY = Math.round(player.y) + player.h - 1;
+        for (const lamp of lamps) drawLampGlow(lamp);
 
         // Ovet – kaikkiin taloihin
         for (const bldg of buildings) drawDoor(bldg);
@@ -3433,14 +3580,24 @@ const Street = (() => {
         // Potkusta pudonnut kolikko
         if (kickCoin) drawKickCoin();
 
-        // Katueläin
-        if (groundAnimal) drawAnimal();
+        // Katueläin – syvyysjako lamppupylvään suhteen (v4.77): takana-juokseva
+        // (jalkapiste < LAMP_BASE_Y) piirretään kuten ennen pylväiden alle,
+        // edellä-juokseva (jalkapiste >= LAMP_BASE_Y) vasta kaikkien pylväiden
+        // jälkeen (ks. alla) – sama periaate kuin pelaajalla (v4.73).
+        const aFeetY = groundAnimal ? animalDepthFeet() : 0;
+        if (groundAnimal && aFeetY < LAMP_BASE_Y) drawAnimal();
 
         // Oviukko (Avenger) – piirretään pelaajan alle
         if (avenger) drawAvenger();
 
-        // Rosvo – partioi jalkakäytävällä, piirretään pelaajan alle (v4.66)
+        // Rosvo – partioi jalkakäytävällä (v4.66). Jalat 314 < LAMP_BASE_Y 325
+        // → aina pylvään TAKANA: piirretään ennen kaikkia pylväitä, jotta pylväs
+        // peittää rosvon riippumatta pelaajan syvyydestä (v4.76).
         if (robber) drawRobber();
+
+        // Pelaajan EDESSÄ olevat pylväät (pelaajan jalkapiste >= LAMP_BASE_Y):
+        // pylväs pelaajan alle – mutta rosvon PÄÄLLE (rosvo on aina takana).
+        for (const lamp of lamps) if (lampFeetY >= LAMP_BASE_Y) drawLampPost(lamp);
 
         // Pelaaja – avoimessa kaivossa vajoaa/kiipeää (v4.51)
         if (mhAction) { drawPlayerManhole(); } else { drawPlayer(); }
@@ -3450,6 +3607,15 @@ const Street = (() => {
 
         // Sanomalehden poimintavihje pelaajan yläpuolelle (v4.53)
         drawNewspaperHint();
+
+        // Pelaajan TAKANA olevat lamppupylväät – piirretään vasta nyt, jotta
+        // pylväs peittää pelaajan (v4.73) ja rosvon (aina takana, v4.76).
+        // Ennen ajoneuvoja, jotta autot pysyvät pylvään edessä kuten ennenkin.
+        for (const lamp of lamps) if (lampFeetY < LAMP_BASE_Y) drawLampPost(lamp);
+
+        // Katueläin pylvään edestä (jalkapiste >= LAMP_BASE_Y): piirretään
+        // kaikkien pylväiden päälle (v4.77).
+        if (groundAnimal && aFeetY >= LAMP_BASE_Y) drawAnimal();
 
         // Ajoneuvot – ylempi kaista (kauempana) ensin, alempi (lähempänä) päälle
         if (vehicles[1]) drawVehicle(vehicles[1]);
@@ -5936,11 +6102,22 @@ const Street = (() => {
     }
 
 /* ── Lampputolppa ─────────────────────────────── */
-    function drawLampPost(lamp) {
-        const bx = lamp.x;                    // tolpan juuri (x)
-        const by = GROUND_Y + 15;              // tolpan juuri (y = maanpinta + 15px alempana)
+    /* Geometria yhdestä paikasta: tolpan juuri (syvyysviiva LAMP_BASE_Y),
+       yläpää ja kuvun keskikohta. */
+    function lampGeom(lamp) {
+        const bx = lamp.x;                     // tolpan juuri (x)
+        const by = LAMP_BASE_Y;                // tolpan juuri (y = maanpinta + 15px alempana)
         const poleTop = by - LAMP_POST_H + 15; // tolpan yläpää
         const bulbY = poleTop - 8;             // lampun kupu (lähempänä tolppaa)
+        return { bx: bx, by: by, poleTop: poleTop, bulbY: bulbY };
+    }
+
+    /* Valo: ylikuumentumisen hehku, savu ja valokeila. Piirretään AINA ennen
+       pylvästä ja pelaajaa → valo ei koskaan peitä pelaajaa, vain pylväs peittää
+       (ks. render: pylväs piirretään joko ennen tai jälkeen pelaajan, v4.73). */
+    function drawLampGlow(lamp) {
+        const geom = lampGeom(lamp);
+        const bx = geom.bx, bulbY = geom.bulbY;
         // Päivällä hehku himmenee (LAMP_DAY_DIM) ja moskiitot häipyvät
         // (MOSQUITO_DAY_DIM, v4.38). HUOM: lamp.lit ei muutu mihinkään →
         // yöllä ovet aukeavat potkaistusta lampusta täsmälleen kuten ennenkin.
@@ -5974,6 +6151,15 @@ const Street = (() => {
             ctx.fillStyle = g;
             ctx.beginPath(); ctx.arc(bx, bulbY + 10, 90, 0, Math.PI*2); ctx.fill();
         }
+    }
+
+    /* Pylväsrakenne: varsi, jalusta, poikkipalkki, kupu, hattu, hehkulamppu,
+       moskiitot ja ylikuumentumisen piste. Kutsutaan render()istä joko ennen
+       pelaajaa (pelaaja pylvään edessä) tai pelaajan jälkeen (pelaaja takana). */
+    function drawLampPost(lamp) {
+        const geom = lampGeom(lamp);
+        const bx = geom.bx, by = geom.by, poleTop = geom.poleTop, bulbY = geom.bulbY;
+        const dayDim = 1 - LAMP_DAY_DIM * dayT;   // hehkulampun piste + moskiitot
 
         // Tolpan varsi (puinen/rautainen) – keskeltä vaalea, reunoilta tumma = pyöreä sylinteriefekti
         const poleGrad = ctx.createLinearGradient(bx - 3, 0, bx + 3, 0);
@@ -6347,6 +6533,14 @@ const Street = (() => {
     }
 
     /* ── Katueläin ───────────────────────────────── */
+    /* Jalkapiste (syvyys) samalla logiikalla kuin drawAnimal laskee sprite-y:n:
+       ay = a.y + a.hopY + (rabbit-lisä) → jalat ≈ ay + a.h. Verrataan
+       LAMP_BASE_Y:hin, jotta eläin piirtyy pylvään eteen tai taakse (v4.77). */
+    function animalDepthFeet() {
+        const a = groundAnimal; if (!a) return 0;
+        return Math.round(a.y + a.hopY + (a.type === 'rabbit' ? 25 : 0)) + a.h;
+    }
+
     function drawAnimal() {
         const a = groundAnimal; if (!a) return;
         const ax = Math.round(a.x), ay = Math.round(a.y + a.hopY + (a.type === 'rabbit' ? 25 : 0)), dir = a.direction;

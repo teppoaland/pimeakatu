@@ -1,6 +1,7 @@
 # 🧩 Järjestelmän arkkitehtuuri
 
-> **Tarkoitus:** Cline:n referenssi projektin rakenteesta ja siitä, mitä ei saa rikkoa. Kompaktoitu 20.9.2026.
+> **Tarkoitus:** Cline:n referenssi projektin rakenteesta ja siitä, mitä ei saa rikkoa.
+> **Kompaktoitu 23.9.2026 (v4.71).**
 
 ## ⭐ Yleisarkkitehtuuri
 
@@ -8,12 +9,13 @@
 - **Iframet (4 alipeliä):** `digGame1/` ⛏️ Dig Game · `digGame2/` 💎 Dig Däsh · `bm/` ✈️ Blue Mäx ·
   `fruitgame/` 🍒 Hedelmäpeli (talo 7, **auki vain öisin** v4.34).
 - **Kadun canvas-huoneet (ei iframe):** **makuuhuone** (ex-palkintohuone, `buildings[7]`, **ovi aina auki**
-  v4.43 – ei avaimia eikä lamppua, valinnat Nuku/Poistu) · BAR (talo 9, 🍔) · jukebox (talo 5, `buildings[4]`,
-  ovi x 410, 1 kolikko = koko kappale, **auki vain öisin** v4.34).
+  v4.43 – ei avaimia eikä lamppua, valinnat Nuku/Poistu) · BAR (talo 9, 🍔) · jukebox (talo 5,
+  `buildings[4]`, ovi x 410, 1 kolikko = koko kappale, **auki vain öisin** v4.34) · **sanomalehti**
+  (`newsRoom`, v4.53 – kadun lehti poimitaan, liikenne ei pysähdy v4.54).
 - **Kommunikaatio:** `window.parent.postMessage()` molempiin suuntiin.
 - **LocalStorage-avaimet:** `pimeakatu_gamestate` (portaali; sisältää myös **`isDay`** = päivä/yö-tila),
-  `digKeyCollected`, `boulderKeyCollected`,
-  `bmKeyCollected`, `pimeakatu_fruit_free` (hedelmäpelin oma).
+  `digKeyCollected`, `boulderKeyCollected`, `bmKeyCollected`, `pimeakatu_fruit_free` (hedelmäpelin oma).
+  Rosvo, kaivo, kuun rata, tankki ym. uudet tilat ovat **vain muistissa**.
 
 **Salaiset cheatit kadulla (testityökalut, eivät tallennu):** vitoslamppu (x 720) 5 potkua putkeen →
 kaikki avaimet + koko valorivi; jatkona 20 potkua → **+20 kolikkoa** (hiljainen: ei popuppia/ääntä).
@@ -26,74 +28,57 @@ sovitetaan näkyvään ikkunaan keskitettynä x = 400 (jukebox v4.22, BAR v4.25:
 `fitFs()`, paneeli ≤ `winW − 24`, `ctx.save()/restore()`-pari ettei tila vuoda kadulle).
 
 **Äänet:** taustamusiikki = proseduraalinen syntikka (`MUSIC_SOURCE 'synth'`, ei tiedostoa) tai `'mp3'`-varatie
-`knived_unafraid.mp3`; `jukebox/` (3 × 128 kbps mp3) soi vain jukebox-huoneesta; masterit repon ulkopuolella
-`D:\AI\Knived` (`.gitignore` estää `*.mpeg`/`*.mp4`).
+`knived_unafraid.mp3`; `jukebox/` soi vain jukebox-huoneesta – **6 raitaa**: 3 × Knived + raidat 4–6
+(kolmannen osapuolen heavy metal, kansikuvat `jukebox/covers/{4,5,6}.png`). Masterit repon ulkopuolella
+`D:\AI\Knived` / `D:\AI\free_music` (`.gitignore` estää `*.mpeg`/`*.mp4`).
 
 **Kuvat:** `assets/justiina.png` (315×261) = BAR-huoneen seinätaulu (`BAR_PIC_SRC`, `barPicReady`,
 varapinta jos ei lataudu) · `fruitgame/assets/dude_mv.jpg` (672×400, MV) = hedelmäpelin huoneen seinäkuva
 HTML-elementtinä `#wall-pic` (ei canvasin piirrossa; koko/asemointi `renderer.wallPicSize()`, piiloon
-mobiilin vaakatasossa). Muu grafiikka on proseduraalista.
+mobiilin vaakatasossa) · `jukebox/covers/{4,5,6}.png` = soivan kappaleen kansikuva. Muu grafiikka on
+proseduraalista.
 
 **Syvyysskaalaus (syvyysvaikutelma):** talot `buildingScale()` 100 / 95 / 90 % ankkuroituna `GROUND_Y`:hin ·
 pelaaja `playerDepthScale()` ±10 % (0,90 kauas … 1,10 lähelle, 1,00 keskikohdalla `player.y = 315`)
 ankkuroituna jalkojen kosketuspisteeseen (`px + pw/2, py + ph − 1`). **Skaalaus on visuaalinen** –
 hitboxit (`player.w/h`, törmäykset, keräyssäteet) eivät skaalaudu, joten pelimekaniikat pysyvät ennallaan.
 
-**Päivä/yö (v4.33):** tila on **tallennettu** (`state.isDay`, `pimeakatu_gamestate`issa): `null` =
-ratkaisematon, `true` = päivä, `false` = yö. Kun kaikki 3 avainta on kerätty (`allKeysCollected()`),
-kadulle nousee päivä **kerran** (v4.32-käytös) ja tila tallennetaan → sen jälkeen **makuuhuoneen
-Nuku-valinta** vaihtaa tilaa (päivä → yö TAI yö → päivä), Poistu ei muuta mitään. Koska huoneen ovi
-on aina auki (v4.43), **Nuku voi ratkaista tilan jo ennen avaimia** – sen jälkeen auringonnousu ei
-enää laukea. `dayT` liukuu
-molempiin suuntiin (`DAY_FADE_FRAMES` nousu, `NIGHT_FADE_FRAMES` lasku) ja on pysähdyksissä kun
-alapeli on auki (`iframeOpen`) tai ollaan canvas-huoneessa → muutos näkyy kadulle palatessa.
-Testityökalut `?day=1` / `?day=0` pakottavat tilan eivätkä tallenna.
-**Visuaalinen vain:** ei muutoksia hitboxeihin, törmäyksiin eikä talouteen; yö piirtyy täsmälleen kuten
-ennen, koska kaikki päivähaarat ovat ehtoja `dayT > 0`.
+**Päivä/yö (v4.33):** tila on **tallennettu** (`state.isDay`: `null` = ratkaisematon, `true` = päivä,
+`false` = yö). Kaikki 3 avainta nostaa päivän **kerran** (v4.32) ja tallentaa `true`; sen jälkeen
+**makuuhuoneen Nuku** vaihtaa tilaa (Poistu ei muuta mitään). Koska ovi on aina auki (v4.43), **Nuku voi
+ratkaista tilan jo ennen avaimia** → auringonnousu ei enää laukea. `dayT` liukuu molempiin suuntiin
+(`DAY_FADE_FRAMES` / `NIGHT_FADE_FRAMES`) ja on pysähdyksissä alapeleissä ja canvas-huoneissa → muutos
+näkyy kadulle palatessa (`?day=1` / `?day=0` pakottavat tilan, eivät tallenna). **Visuaalinen vain** –
+kaikki päivähaarat ovat ehtoja `dayT > 0`, joten `dayT = 0` piirtää bitilleen entisen yökuvan.
 
-**Aukiolo (v4.34):** jukebox (talo 5) ja hedelmäpeli (talo 7) ovat auki **vain öisin**: päivällä
-(`dayT >= 0.5`, nuppi `CLOSED_AT_DAYT`) kummankin oven action näyttää saman teksti-popupin kuin
-lukitusta ovesta (`CLOSED_SIGN = 'Avoinna\nKlo 20 - 06'`, `nightOnlyClosed()`) eikä huonetta/peliä
-avata; jukeboxin ovea ei päivällä potkita eikä valoja sytytetä. `#notification` rivittyy nyt
-(`white-space: pre-line`). Yölogiikka ja kaikki talousarvot ovat täysin ennallaan.
+**Aukiolo (v4.34):** jukebox (talo 5) ja hedelmäpeli (talo 7) auki **vain öisin**; päivällä
+(`dayT >= 0.5`, `CLOSED_AT_DAYT`) ovesta sama popup kuin lukitusta ovesta
+(`CLOSED_SIGN 'Avoinna\nKlo 20 - 06'`, `nightOnlyClosed()`) eikä huonetta/peliä avata. Yölogiikka ja
+talousarvot ennallaan.
 
-**Ajovalot (v4.35):** ajoneuvojen etuvalot ja valokeila himmenevät `dayT`:n myötä
-(`VEHICLE_HEADLIGHT_DIM 1` → pois päältä päivällä, `headlightDim`/`headlightOn` `drawVehicle()`issa);
-takavalot ja ambulanssin kattovilkku eivät muutu. Puhtaasti visuaalinen – ei pelimekaniikkaa.
+**Nälkä (v4.41 / v4.49 / v4.50):** `hungerOnHold()` (`sleepRoom || sleepPhase > 0`) pitää
+`hamburgerTimer`in jäissä nukkuessa; herätessä `HUNGER_WAKE_GRACE 600` (väh. 10 s). **Kaikkialla muualla**
+(katu, BAR, jukebox, iframe-pelit, sanomalehti) kulutus jatkuu. **🍔 = 0 → kuolema myös huoneessa/pelissä:**
+`leaveHiddenStateForDeath()` sulkee ensin alapelin (`closeGame()`) tai canvas-huoneen (`closeRoom()`),
+jotta kuolinsekvenssi näkyy kadulla. Ks. sääntö 04.
 
-**Päivällä ovet ilman lamppua (v4.38):** kun `dayT >= 0.5` (`lampFreeOpen()`, nuppi
-`DOOR_NO_LAMP_AT_DAY`), lamppuovet aukeavat **ilman potkaistua katuvaloa** ja sama ehto ohjaa oven
-ulkoasua (`drawDoor()`in `isActive`, kynnysvalo) – ettei ovi näytä lukitulta mutta aukea. Avainportit
-(Dig Däsh `digKeyCollected`, Blue Mäx `boulderKeyCollected`) pysyvät; makuuhuone (talo 7) on
-**aina auki ilman avaimia ja lamppua** (v4.43); yöllä muiden lamppuovien lamppu pitää yhä potkaista
-("💡 Sytytä lamppu ensin!"). Täydellä päivällä (`dayT === 1`)
-`update()` sammuttaa **kaikki katuvalot kerran** (`dayLampsOff`-lippu, nollautuu `dayT === 0`) –
-valot voi silti potkaista päälle myös päivällä, ja moskiitot (`MOSQUITO_DAY_DIM`) ovat poissa päivältä.
+**Päivän visuaaliset muutokset (v4.35–v4.42, kaikki `dayT`-sidonnaisia):** ajovalot ja valokeila pois
+(`VEHICLE_HEADLIGHT_DIM 1`) · liikenne ×2 (`TRAFFIC_DAY_MULT 2`) · lamppuovet aukeavat ilman potkaistua
+katuvaloa (`lampFreeOpen()`, `DOOR_NO_LAMP_AT_DAY`) · moskiitot pois (`MOSQUITO_DAY_DIM 1`) · täysi päivä
+sammuttaa katuvalot kerran (`dayLampsOff`, nollautuu `dayT === 0`) · pilvet tummenevat (`CLOUD_NIGHT_*`
+→ `CLOUD_DAY_*`, `CLOUD_DAY_ALPHA 5`; muoto/määrä/tuuli ennallaan) · HUD:n 🍔-varoitus vilkkuu kun
+`hamburgerCount <= HUNGER_WARN 3`. `dayT = 0` antaa bitilleen entisen yökuvan; nupit `activeContext.md`:ssä.
 
-**Pilvet (v4.40):** yksi `clouds[]`-joukko (18 kpl, kaistale y 40–80, tyypit cirrus/hazy,
-`initClouds()`) jonka **väri ja peittävyys liukuvat `dayT`:n mukaan**: yön `CLOUD_NIGHT_CIRRUS/HAZY`
-→ päivän tummemmat `CLOUD_DAY_CIRRUS/HAZY`, alpha `CLOUD_DAY_ALPHA 5×` (`drawClouds()`).
-`dayT = 0` antaa bitilleen entisen yökuvan; muoto, määrä, kaistale ja tuuli (`windDir`/`windSpeed`,
-joka ohjaa myös puiden huojuntaa) eivät muutu. HUD:ssa 🍔-varoitus vilkkuu, kun hampurilaisia on
-≤ `HUNGER_WARN 3` (v4.39).
+**Kuu ja aurinko (v4.41 / v4.65):** päivällä aurinko `SUN_X 140`, yöllä kuu – vaihdossa **ei liukua**,
+vain alpha-ristihäivytys (`1 − dayT` / `dayT`). Kuu **liukuu** vasemmalta (`MOON_X_MIN = SUN_X`) oikealle
+myös huoneissa/alapeleissä ja laskeutuu ulos (`MOON_SET_X ≈ 884`, `MOON_NIGHT_FRAMES 57600` ≈ 16 min);
+laskeutuessaan maisema pimenee hiukan (`moonDark` → 0.15). `resetMoon()` nollaa kuun spawnissa ja
+uudessa yössä. Makuuhuoneen ikkunan oma aurinko/kuu säilyy ennallaan.
 
-**Kuu ja aurinko (v4.41):** kumpikin piirretään **kiinteästä paikastaan** – kuu
-`MOON_X 680 / MOON_Y 60 / MOON_R 28` (yö, oikea) ja aurinko `SUN_X 140 / SUN_Y 62 / SUN_R 26`
-(päivä, vasen). Vaihdossa **ei liukua**: vain alpha-ristihäivytys (`1 − dayT` / `dayT`) piirtää kuun
-pois ja auringon näkyviin (päivä → yö toisinpäin) → `dayT = 0` on bitilleen entinen yökuva ja
-`dayT = 1` jättää auringon vasemmalle. Makuuhuoneen ikkunan oma aurinko/kuu säilyy ennallaan.
-
-**Nälkä jäissä vain nukkuessa (v4.41 / v4.49 / v4.50):** `hungerOnHold()` (`sleepRoom || sleepPhase > 0`)
-portittaa `hamburgerTimer`in (`street.js`) → pelaaja ei voi kuolla nukkuessaan; herätessä
-`HUNGER_WAKE_GRACE 600` (väh. 10 s). **Kaikkialla muualla** (katu, BAR, jukebox, iframe-pelit)
-kulutus jatkuu kuten kadulla – pelaaja huolehtii itse, että 🍔 riittää. Nälkäblokki on `update()`in
-alussa (kuolemasekvenssin jälkeen) eikä `closeGame()` nollaa ajastinta. **🍔 = 0 → kuolema myös
-huoneessa/pelissä (v4.50):** `leaveHiddenStateForDeath()` sulkee ensin alapelin (`closeGame()`) tai
-canvas-huoneen (`closeRoom()`), jotta kuolinsekvenssi näkyy kadulla. Ks. sääntö 04.
-
-**Liikenne (v4.37):** ajoneuvojen spawn-väli puolittuu päivällä (`TRAFFIC_DAY_MULT 2`, kerroin
-`1 + (MULT − 1) · dayT`) → yö 20–40 s/kaista, täysi päivä 10–20 s/kaista. Kaistat (`LANE_DEFS`),
-ajoneuvotyypit, nopeudet ja törmäyslogiikka ovat ennallaan (edelleen 1 ajoneuvo/kaista).
+**Liikenne (v4.37 / v4.56–v4.63):** 1 ajoneuvo/kaista; tyypit auto, mopo, ambulanssi ja **panssarivaunu**
+(`type 'tank'`, 86×36, nopeus 0,4–0,8, ei ajovaloa, moottorisaundi 28 Hz + särö, 75 px tykkiputki +
+telat). Ajoneuvolohko on eristetty `updateTraffic(dt)`iin → se pyörii myös sanomalehteä lukiessa (v4.54)
+ja jukebox-huoneessa (v4.61).
 
 ## 🎮 Pelien yhteinen arkkitehtuurimalli
 
@@ -109,15 +94,12 @@ peli/
 
 ## 🔧 Komponenttien vastuut
 
-- **`constants.js` – ÄLÄ riko:** TILE-tyypit, DIR-suunnat, nopeudet (`FRAME_DELAY`, `ENEMY_DELAY`),
-  pistemäärät, maailman mitat.
-- **`physics.js` – ÄLÄ riko:** painovoima, keikahdusviive, liukuminen, työntö/veto, ketjureaktiot.
-- **`enemies.js` – ÄLÄ riko:** vihollisten liike ja käännökset, törmäykset pelaajaan/putoviin objekteihin.
-- **`game.js`:** pääsilmukka (rAF), tilat (intro → peli → kuolema → game over → onnistuminen), HUD,
-  iframe-`postMessage`.
-- **`renderer.js`:** canvas-piirto, kamera, animaatiot ja hiukkaset.
-- **`input.js`:** näppäimistö ja kosketus.
-- **`audio.js`:** Web Audio -efektit.
+- **ÄLÄ riko:** `constants.js` (TILE/DIR/nopeudet/pisteet/maailman mitat) · `physics.js` (painovoima,
+  keikahdus, liukuminen, ketjureaktiot) · `enemies.js` (vihollisten liike ja käännökset) ·
+  `levels.js` (kenttäparseri).
+- **Vapaammin:** `game.js` (rAF-pääsilmukka, tilat intro → peli → kuolema → game over → onnistuminen,
+  HUD, iframe-`postMessage`) · `renderer.js` (canvas-piirto, kamera, animaatiot, hiukkaset) ·
+  `input.js` (näppäimistö + kosketus) · `audio.js` (Web Audio -efektit).
 
 ## 🚫 Mitä EI saa rikkoa
 
@@ -125,24 +107,20 @@ peli/
 |------|------------|---------|
 | Pääportaalin rakenne | 🔴 KRIITTINEN | `index.html`, `gameState.js`, `street.js` – vain erikseen pyydettäessä |
 | Pelien välinen API | 🔴 KRIITTINEN | `postMessage`-kommunikaatio, localStorage-avaimet |
-| Fysiikkamoottori | 🟠 KORKEA | `physics.js` – putoamis-/törmäyslogiikka |
-| Vihollis-AI | 🟠 KORKEA | `enemies.js` – liikkumislogiikka |
-| Kenttäformaatit | 🟠 KORKEA | `levels.js` – parseri |
-| Pisteytys/vakiot | 🟡 NORMAALI | `constants.js` – arvoja voi säätää, avaimia ei poistaa |
-| Renderöinti | 🟡 NORMAALI | `renderer.js` – visuaaliset muutokset ok |
-| Äänet | 🟢 MATALA | `audio.js` – turvallinen muokata |
-| Ohjaus | 🟢 MATALA | `input.js` – voi lisätä näppäimiä, ei poistaa |
+| Fysiikka / vihollis-AI / kenttäformaatit | 🟠 KORKEA | `physics.js`, `enemies.js`, `levels.js` |
+| Pisteytys/vakiot + renderöinti | 🟡 NORMAALI | `constants.js` (arvoja voi säätää, avaimia ei poistaa), `renderer.js` (visuaaliset muutokset ok) |
+| Äänet / ohjaus | 🟢 MATALA | `audio.js`, `input.js` (voi lisätä näppäimiä, ei poistaa) |
 
 ## 💾 Tiedon tallennus
 
 - **`pimeakatu_gamestate`:** portaalin pelitila (`GameState`); `GameState.load()` mergaa tallennetun tilan
   `defaultState`in päälle (`deepMerge`) → **tallennettu saldo voittaa aina** (0 kolikkoa pysyy 0:na).
-- **`defaultState.inventory`:** 2 kolikkoa + 5 🍔 (kolikot v4.22). `street.js` lukee `coinCount || 0`,
-  `hamburgerCount || 5`.
+- **`defaultState`:** `coinCount 2` + `hamburgerCount 5` + **`isDay: null`** (päivä/yö-tila).
 - **Alipelien sisäinen tila:** ei tallenneta (jokainen pelikerta alusta); hedelmäpelin ilmaispyöräytyksen
   jäädytys on pelin omassa avaimessa `pimeakatu_fruit_free`.
-- **Avaimet:** `digKeyCollected` → `boulderKeyCollected` → `bmKeyCollected`; kaikki avaimet (tai 3 kolikkoa)
-  avaavat palkintohuoneen.
+- **Avaimet:** `digKeyCollected` → `boulderKeyCollected` → `bmKeyCollected`; ne avaavat **alapelit**
+  (Dig Däsh, Blue Mäx). Makuuhuone (talo 7) on **aina auki ilman avaimia** (v4.43).
+- **Kadun uudet tilat (rosvo, kaivo, kuu, tankki, sanomalehti):** vain muistissa – ei uusia avaimia.
 
 ## 🔒 Talousbalanssi (LUKITTU 20.9.2026)
 
@@ -151,15 +129,15 @@ peli/
 > sekä säännön 02 kohta "Talous ja palkkiotase".
 
 - **Hedelmäpeli:** panos 1, painot 🍒7 🍋5 🔔4 🍔2 💎2, maksut 💎35 🍔20 🔔12 🍋7 🍒4 + pari = panos takaisin
-  → **RTP ≈ 78,5 %** (kolmikko 6,85 %, pari 35,3 %); ilmainen pyöräytys 1 / 120 s (max +0,785 kolikkoa / 2 min).
+  → **RTP ≈ 78,5 %**; ilmainen pyöräytys 1 / 120 s.
 - **Katu:** kolikko 1 kpl / 120 s · potkukolikko 1/5 + 30 s · 🍔 5 alussa, +1 / 40 s · BAR 1 kolikko = 1 🍔
-  (katto 10) · jukebox 1 kolikko / kappale · palkintohuone avaimet tai 3 kolikkoa · osuma = −1 🍔 ·
-  syntymäpaketti 2 kolikkoa + 5 🍔.
+  (katto 10) · jukebox 1 kolikko / kappale · osuma = −1 🍔 · **rosvo = −1 🍔 + kaikki kolikot (v4.68)** ·
+  **kaivo = enintään −2 🪙 / 1/6 +3 🪙 (v4.52/v4.69)** · Nuku = +1 🍔 · syntymäpaketti 2 kolikkoa + 5 🍔.
 - **Hyväksytty mittapuu (käyttäjän pelitestit):** 1 kolikko on pakko jättää ja käydä katsomassa, onko pakko
   syödä; hedelmäpeli palauttaa yleensä 1–2 kolikkoa; iso voitto (20 kolikkoa) ~kerran 30 pelikerrasta.
   **Tasapaino on empiirisesti löydetty → siksi lukossa.**
-- **Testityökalut eivät ole balanssia:** `COIN_CHEAT_*`, `?coins=N` / `?debug`, `?day=1` (päivä heti),
-  `bm`-debug, `MUSIC_SOURCE` – vapaasti säädettävissä (ei lupaa, ei versionostoa).
+- **Testityökalut eivät ole balanssia:** `COIN_CHEAT_*`, `?coins=N` / `?debug`, `?day=0/1`, `?hole=0/1/2`,
+  `?burgers=N`, `bm`-debug, `MUSIC_SOURCE` – vapaasti säädettävissä (ei lupaa, ei versionostoa).
 
 ## 🏷️ Nimeämiskäytännöt
 
@@ -167,4 +145,3 @@ peli/
   Luokat: PascalCase · **kommentit: suomi, koodi: englanti**.
 - Näkyvät pelinimet: **Dig Däsh**, **Blue Mäx**. Sisäiset tunnisteet (`boulder*`, `const BlueMax`, `bm/`)
   säilyvät ennallaan – ne ovat rajapintaa (sääntö 02).
-
