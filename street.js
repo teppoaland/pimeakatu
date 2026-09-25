@@ -126,11 +126,31 @@ const Street = (() => {
     // puolella olevan talon (buildings[2], x 200–250) vasen seinä on x 200.
     // 2. kaappi: talo 7 (buildings[6], x 560–610, matala h 145) – sama ilmentymä
     // kopiona, vasen seinä x 560 (2px rako oveen, ikkunat kaapin yläpuolella).
-    // Kaappi on ikkunan kokoinen (8×14), harmaa, yläosassa vilkkuva keltainen valo.
-    // Osuminen antaa sähköiskun: tajunta pois + hampurilaisen menetys (kuten kukkaruukku/auto).
+    // Kaappi on ikkunan kokoinen (8×14), harmaa. Tila on elävä: alussa arvotaan
+    // ~50 % päälle, ja sen jälkeen jokainen kaappi sammuu/käynnistyy itsestään
+    // omaan satunnaiseen tahtiinsa (CAB_REROLL_MIN..MAX frameä → tila arvotaan
+    // uudelleen). Vain päällä oleva kaappi antaa sähköiskun (tajunta pois +
+    // hampurilaisen menetys, kuten kukkaruukku/auto). Päällä olevan kaapin
+    // keltainen varoitusvalo vilkkuu jokaisella kaapilla OMAAN tahtiin ja
+    // vaiheeseensa (ei tasatahtiin); sammuksissa olevan kaapin valo on tumma
+    // eikä kaappi iske. Testityökalu (ei tallenna): ?cabs=1 = molemmat päällä,
+    // ?cabs=0 = molemmat sammuksissa (jäädyttää tilakellon).
+    const ELECTRIC_CABINET_ON = 0.5;      // todennäköisyys, että kaappi on päällä
+    const CAB_BLINK_MIN = 420, CAB_BLINK_MAX = 700;   // oma vilkunta ms / kaappi
+    const CAB_REROLL_MIN = 900, CAB_REROLL_MAX = 2100;  // uusi arpa 15–35 s välein / kaappi
+    const CAB_FORCE = (typeof location !== 'undefined' && typeof URLSearchParams !== 'undefined')
+        ? new URLSearchParams(location.search).get('cabs') : null;
+    const cabOn = () => CAB_FORCE === '1' ? true : (CAB_FORCE === '0' ? false : Math.random() < ELECTRIC_CABINET_ON);
+    const cabRerollTimer = () => CAB_REROLL_MIN + Math.random() * (CAB_REROLL_MAX - CAB_REROLL_MIN);
     const electricCabinets = [
-        { x: 200, w: 8, h: 14, y: GROUND_Y - 16 },   // talo 3 – vasen seinä (pohja GROUND_Y-2)
-        { x: 560, w: 8, h: 14, y: GROUND_Y - 16 }    // talo 7 – vasen seinä (matala talo)
+        { x: 200, w: 8, h: 14, y: GROUND_Y - 16,
+          on: cabOn(), phase: Math.random() * Math.PI * 2,
+          period: CAB_BLINK_MIN + Math.random() * (CAB_BLINK_MAX - CAB_BLINK_MIN),
+          timer: cabRerollTimer() },   // talo 3 – vasen seinä
+        { x: 560, w: 8, h: 14, y: GROUND_Y - 16,
+          on: cabOn(), phase: Math.random() * Math.PI * 2,
+          period: CAB_BLINK_MIN + Math.random() * (CAB_BLINK_MAX - CAB_BLINK_MIN),
+          timer: cabRerollTimer() }    // talo 7 – vasen seinä
     ];
 
     /* ── Avain (Dig Gamesta) ───────────────────────── */
@@ -2148,8 +2168,23 @@ const Street = (() => {
             mhInside[manholeOpen] = inside;
         }
 
+        // ── Sähkökaapit: tilakello (v4.85) ────────────────
+        // Kaappi voi sammua tai käynnistyä itsestään: jokaisella on oma
+        // satunnainen väli (CAB_REROLL_MIN..MAX frameä), jonka jälkeen tila
+        // arvotaan uudelleen (~50 % päällä). Vilkkuva valo kertoo tilan.
+        // Testityökalu ?cabs=0/1 jäädyttää tilan.
+        if (CAB_FORCE === null) {
+            for (const cab of electricCabinets) {
+                cab.timer -= dt;
+                if (cab.timer > 0) continue;
+                cab.on = Math.random() < ELECTRIC_CABINET_ON;
+                cab.timer = cabRerollTimer();
+            }
+        }
+
         // ── Sähkökaapit: sähköisku ─────────────────
         for (const cab of electricCabinets) {
+            if (!cab.on) continue;           // sammuksissa oleva kaappi ei iske
             if (player.knockedDown) break;   // isku jo saatu – ei toista kaappia samalla kertaa
             // Vaakasuunnassa laatikon sisällä, pystysuunnassa pää kaapin
             // yläreunan yläpuolella (seinää vasten) → ei osumaa alhaalta.
@@ -3654,6 +3689,15 @@ const Street = (() => {
         // pylväs pelaajan alle – mutta rosvon PÄÄLLE (rosvo on aina takana).
         for (const lamp of lamps) if (lampFeetY >= LAMP_BASE_Y) drawLampPost(lamp);
 
+        // Ajoneuvot, jotka ovat pelaajaa KAUEMPANA (ajoneuvon keskipiste Y <
+        // pelaajan jalkapiste): piirretään ENNEN pelaajaa, jotta pelaaja
+        // piirtyy niiden PÄÄLLE (v4.84). Sama syvyysperiaate kuin lamppu-
+        // pylväillä (v4.73). Tässä kohtaa takapylväitä ei voi olla (ne
+        // vaatisivat pelaajan jalkapisteen < LAMP_BASE_Y 325), joten autot
+        // pysyvät yhä pylväiden edessä kuten ennenkin.
+        if (vehicles[1] && vehicles[1].y + vehicles[1].h / 2 < lampFeetY) drawVehicle(vehicles[1]);
+        if (vehicles[0] && vehicles[0].y + vehicles[0].h / 2 < lampFeetY) drawVehicle(vehicles[0]);
+
         // Pelaaja – avoimessa kaivossa vajoaa/kiipeää (v4.51)
         if (mhAction) { drawPlayerManhole(); } else { drawPlayer(); }
         // Avoin kaivo: musta aukko pelaajan PÄÄLLE pudotuksen aikana,
@@ -3672,9 +3716,11 @@ const Street = (() => {
         // kaikkien pylväiden päälle (v4.77).
         if (groundAnimal && aFeetY >= LAMP_BASE_Y) drawAnimal();
 
-        // Ajoneuvot – ylempi kaista (kauempana) ensin, alempi (lähempänä) päälle
-        if (vehicles[1]) drawVehicle(vehicles[1]);
-        if (vehicles[0]) drawVehicle(vehicles[0]);
+        // Ajoneuvot, jotka ovat pelaajaa LÄHEMPÄNÄ (keskipiste Y >= pelaajan
+        // jalkapiste): piirretään pelaajan jälkeen kuten ennenkin.
+        // Ylempi kaista (1, kauempana) ensin, alempi (0, lähempänä) päälle.
+        if (vehicles[1] && vehicles[1].y + vehicles[1].h / 2 >= lampFeetY) drawVehicle(vehicles[1]);
+        if (vehicles[0] && vehicles[0].y + vehicles[0].h / 2 >= lampFeetY) drawVehicle(vehicles[0]);
 
         // Rauta-aita (etualalla, pelaajan takana → piirretään pelaajan päälle)
         if (foreground && foreground.ironFence) { drawIronFence(); }
@@ -4127,8 +4173,9 @@ const Street = (() => {
             ctx.fillStyle = '#3d3d43';
             ctx.fillRect(cx + 2, cy + 5, cw - 4, 1);
 
-            // Vilkkuva keltainen varoitusvalo yläosassa
-            const on = Math.sin(Date.now() / 520) > 0;
+            // Vilkkuva keltainen varoitusvalo yläosassa – vain jos kaappi on päällä;
+            // jokaisella kaapilla oma vaihe ja tahti → valot vilkkuvat itsenäisesti.
+            const on = c.on && Math.sin(Date.now() / c.period + c.phase) > 0;
             if (on) {
                 ctx.fillStyle = '#ffd700';
                 ctx.beginPath();

@@ -17,13 +17,36 @@
 
 ## 📍 Nyt (23.9.2026)
 
-- **Versio:** `v4.78` (`index.html` → `#version-tag`) · **Git:** HEAD = `b678f37` (v4.77).
+- **Versio:** `v4.85` (`index.html` → `#version-tag`).
+- **🚢 Laivanupotus (`sinkship/`, uusi alipeli, v0.1 erillisenä):** käyttäjän pyyntö 25.9.2026
+  – peli ensin itsenäisenä, liitetään taloon vasta kun peli on hyväksytty. 10×10-laivanupotus
+  (laivat 5/4/3/3/2), asetusvaihe + älykäs tekoäly (osumien metsästys), viihtyisä päivähuone
+  (lämmin tapetti, ikkuna auringolla, kirjahylly, puinen pöytä), CRT-retro-sivu (musta tausta +
+  scanlinet), ohjaus PC (nuolet/WASD + Enter/Space + R + A, hiiriklikkaus) ja mobiili (D-pad +
+  ⚡/⟳/🎲 + suora kosketus ruutuun, tuplalaukauksen esto). Canvas sopeutuu kokoon (vaaka:
+  rinnakkain / pysty: päällekkäin). Proseduraaliset äänet. Savutesti `%TEMP%\sinkship-smoke.cjs`
+  (voitto+häviö läpi). **Ei versionostoa portaaliin ennen taloon liittämistä.**
+- **⚡ Sähkökaapit arvalla päällä (v4.85):** kaappien tila on **elävä** – alussa
+  arvotaan ~50 % päälle, ja sen jälkeen jokainen kaappi **sammuu/käynnistyy
+  itsestään** omaan satunnaiseen tahtiinsa (uusi arpa `CAB_REROLL_MIN/MAX`
+  900–2100 frameä = 15–35 s; `?cabs=1` / `?cabs=0` pakottaa ja jäädyttää, ei
+  tallennu). Vain päällä oleva kaappi antaa sähköiskun, ja sen keltainen
+  varoitusvalo vilkkuu kaapin OMAAN tahtiin (`CAB_BLINK_MIN/MAX` 420–700 ms) ja
+  vaiheeseensa → valot eivät vilku tasatahtiin; sammuksissa olevan kaapin valo
+  on tumma eikä kaappi iske. Osuman hinta (tainnutus + −1 🍔) ennallaan
+  (sääntö 04). Työpuussa, ei committia.
 - **🚗 Auton osuma kaataa 10 px ylös osumakohdasta (v4.78):** `player.knockFallY` = osumahetken
   jalkapiste **− 10 px** (`updateTraffic`) → tainnutushaaran klamppaus käyttää sitä `GROUND_Y + 10`:n
   sijaan ("lentäminen kadun varteen" pois) – mutta ei jätä pelaajaa makaamaan keskelle tietä limboon
   (kolarijatkuva). Muut tainnutuslähteet (oviukko, rosvo, kukkaruukku, sähkökaappi, kuolema) ennallaan –
   `knockFallY` nollautuu ylösnoustessa. **Talous ennallaan** (−1 🍔, 600 f, sääntö 04).
   Työpuussa, ei committia.
+- **🚗 Ajoneuvojen syvyysjärjestys (v4.84):** ajoneuvot piirretään suhteessa pelaajan
+  syvyyteen – kauemmat (keskipiste `v.y + v.h/2` < pelaajan jalkapiste `lampFeetY`)
+  ENNEN pelaajaa (pelaaja päälle), lähemmät pelaajan jälkeen (kuten ennen). Ennen
+  kaikki autot piirtyivät AINA pelaajan päälle, mikä näkyi rauta-aidan vierellä:
+  autot "ylempänä" mutta pelaaja autojen TAKANA. Sama periaate kuin lamppupylväillä
+  (v4.73); takapylväs/autot -järjestys ja katueläimen asema säilyvät.
 - **Tila:** pääportaali + 4 alipeliä valmiit ja pelattavat (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️,
   `fruitgame` 🍒); julkaisu GitHub Pages `https://teppoaland.github.io/pimeakatu/`.
 - **Kadun canvas-huoneet (ei iframe):** makuuhuone (talo 7) · BAR (talo 9) · jukebox (`buildings[4]`,
