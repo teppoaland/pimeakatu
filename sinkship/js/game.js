@@ -219,32 +219,32 @@ function g(id) { return document.getElementById(id); }
 
 /* ═══ Layout-koordinaatit (riippuvat canvasin W/H:stä) ═══ */
 function layout() {
-    const hudH = Math.max(38, Math.min(62, Math.round(H * 0.115)));
+    const hudH = Math.max(44, Math.min(80, Math.round(H * 0.14)));
     const portrait = H > W * 1.35;
-    const labelH = 19, gapB = portrait ? 10 : 14;
+    const gapB = portrait ? 10 : 14;
     let cell;
     if (portrait) {
-        cell = Math.floor((H - hudH - labelH - gapB - 18) / (2 * N));
+        cell = Math.floor((H - hudH - gapB - 18) / (2 * N));
         cell = Math.min(cell, Math.floor((W - 18) / N));
     } else {
-        cell = Math.min(Math.floor((W - 220 - gapB) / (2 * N)), Math.floor((H - hudH - 64) / N));
+        cell = Math.min(Math.floor((W - 220 - gapB) / (2 * N)), Math.floor((H - hudH - 10) / (N + 1)));
     }
     cell = Math.max(15, Math.min(46, cell));
     const board = cell * N;
     let ex, ey, px, py;
     if (portrait) {
         const x = Math.floor((W - board) / 2);
-        ey = hudH + 20;
+        ey = hudH + 12;
         ex = px = x;
-        py = ey + board + labelH + gapB + 6;
+        py = ey + board + gapB + 6;
     } else {
         const total = board * 2 + gapB;
         const x0 = Math.floor((W - total) / 2);
-        ey = py = hudH + labelH + 8;
+        ey = py = hudH + 2;          // laudat alkavat heti katon alapuolelta
         ex = x0;
         px = x0 + board + gapB;
     }
-    return { hudH, portrait, cell, board, ex, ey, px, py, labelH, gapB };
+    return { hudH, portrait, cell, board, ex, ey, px, py, gapB };
 }
 
 function cellCx(bx, c) { return Math.round(bx + (c + 0.5) * layout().cell); }
@@ -709,8 +709,8 @@ function drawTable(L) {
     ctx.stroke();
 }
 
-/* ── Merikartta (ruudukko + kehys + nimilappu) ── */
-function drawBoardFrame(L, x, y, label, accent) {
+/* ── Merikartta (ruudukko + kehys) ── */
+function drawBoardFrame(L, x, y) {
     const b = L.board, cell = L.cell;
     // Kehys (tumma messinki)
     ctx.fillStyle = '#171b30';
@@ -718,19 +718,7 @@ function drawBoardFrame(L, x, y, label, accent) {
     ctx.strokeStyle = '#c9a84e';
     ctx.lineWidth = 2;
     ctx.strokeRect(x - 6.5, y - 6.5, b + 13, b + 13);
-    // Nimilappu (yläkulmassa ripustettuna)
-    ctx.fillStyle = '#c9a84e';
-    rr(x - 6, y - 26, b * 0.42 + 14, 20, 4);
-    ctx.fill();
-    ctx.strokeStyle = '#8a6a2a';
-    ctx.stroke();
-    font(fitFs(label, b * 0.42 + 6, 8, 12), true);
-    ctx.fillStyle = '#241a05';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, x + (b * 0.42 + 14) / 2, y - 16);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
+    
 }
 
 /* Meri: ruudut + aaltoilevat välkkeet */
@@ -1059,8 +1047,8 @@ function render() {
     drawTable(L);
 
     // Merikartat
-    drawBoardFrame(L, L.ex, L.ey, 'VIHOLLINEN');
-    drawBoardFrame(L, L.px, L.py, 'SINÄ');
+    drawBoardFrame(L, L.ex, L.ey);
+    drawBoardFrame(L, L.px, L.py);
     drawSea(L, L.ex, L.ey);
     drawSea(L, L.px, L.py);
 
@@ -1121,20 +1109,39 @@ function frame(now) {
 function rs() {
     if (!cnv) return;
     const wrap = cnv.parentElement;
+    const cw = wrap ? wrap.clientWidth : 800;
+    const ch = wrap ? wrap.clientHeight : 600;
+
     let vw = 800, vh = 600;
-    try { vw = window.innerWidth; vh = window.innerHeight; } catch (e) {}
+    try { vw = window.innerWidth || 800; vh = window.innerHeight || 600; } catch (e) {}
     const portrait = vh > vw * 1.2;
-    let w = wrap ? Math.round(wrap.clientWidth) : 800;
-    w = Math.max(300, Math.min(w, 860));
-    if (!portrait) {
-        W = w;
-        H = Math.round(w * 0.62);
-    } else {
-        W = w;                              // pysty: korkea canvas, kaksi karttaa päällekkäin
-        H = Math.round(W * 1.7);
+
+    // Jos layout ei ole vielä valmis, yritetään uudestaan
+    if (cw <= 100 || ch <= 100) {
+        requestAnimationFrame(() => rs());
+        return;
     }
+
+    let newW, newH;
+    if (!portrait) {
+        // Landscape: kuvasuhde W:H ≈ 2:1. Sovita wrapperin sisään.
+        const maxByWidth = Math.min(cw, 700);
+        const maxByHeight = Math.floor(ch / 0.48);
+        newW = Math.max(300, Math.min(maxByWidth, maxByHeight));
+        newH = Math.round(newW * 0.48);
+    } else {
+        // Portrait: kuvasuhde W:H = 1:1.7. Sovita wrapperin sisään.
+        const maxByWidth = Math.min(cw, 800);
+        const maxByHeight = Math.floor(ch / 1.7);
+        newW = Math.max(300, Math.min(maxByWidth, maxByHeight));
+        newH = Math.round(newW * 1.7);
+    }
+    W = newW;
+    H = newH;
     cnv.width = W;
     cnv.height = H;
+    // CSS-koko: canvas vie wrapperista sen minkä tarvitsee (intrinsic size),
+    // wrapperin flex-keskitys hoitaa loput. Ei style.width/height yliajoa.
 }
 
 /* ═══ Alustus ═══ */

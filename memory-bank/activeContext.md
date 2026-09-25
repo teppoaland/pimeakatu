@@ -2,7 +2,7 @@
 
 > **Kevyt:** Vain tämä tiedosto luetaan session alussa.
 > **Kompaktoitu 23.9.2026 (v4.71):** versiokohtainen yksityiskohtaselostus (v3.9x–v4.49) on git-historiassa
-> (viimeisin täysi versio commitissa `ffb1dd9`; HEAD `d21b0c7`). v4.50+ tiivistetty alla.
+> (viimeisin täysi versio commitissa `ffb1dd9`; HEAD `cc7046b`). v4.50+ tiivistetty alla.
 
 ---
 
@@ -15,10 +15,10 @@
 
 ---
 
-## 📍 Nyt (23.9.2026)
+## 📍 Nyt (25.9.2026)
 
 - **Versio:** `v4.85` (`index.html` → `#version-tag`).
-- **🚢 Laivanupotus (`sinkship/`, uusi alipeli, v0.1 erillisenä):** käyttäjän pyyntö 25.9.2026
+- **🚢 Laivanupotus (`sinkship/`, uusi alipeli, v0.11 erillisenä):** käyttäjän pyyntö 25.9.2026
   – peli ensin itsenäisenä, liitetään taloon vasta kun peli on hyväksytty. 10×10-laivanupotus
   (laivat 5/4/3/3/2), asetusvaihe + älykäs tekoäly (osumien metsästys), viihtyisä päivähuone
   (lämmin tapetti, ikkuna auringolla, kirjahylly, puinen pöytä), CRT-retro-sivu (musta tausta +
@@ -26,6 +26,11 @@
   ⚡/⟳/🎲 + suora kosketus ruutuun, tuplalaukauksen esto). Canvas sopeutuu kokoon (vaaka:
   rinnakkain / pysty: päällekkäin). Proseduraaliset äänet. Savutesti `%TEMP%\sinkship-smoke.cjs`
   (voitto+häviö läpi). **Ei versionostoa portaaliin ennen taloon liittämistä.**
+- **🚢 Laivanupotus UI (v0.11, 25.9.2026):** "VIHOLLINEN" ja "SINÄ" -labelit poistettu
+  merikartoista (`drawBoardFrame`) – pelaaja näkee pelilaudalta kummin päin pelaa.
+  HUD-korkeus (`hudH`) tuplattu 38–62 → 76–124, jotta HUD-teksteille on tilaa.
+  HUD-tekstit keskitetty (`justify-content: center`) myös mobiilissa (oli `flex-start`).
+  Työpuussa, ei committia.
 - **⚡ Sähkökaapit arvalla päällä (v4.85):** kaappien tila on **elävä** – alussa
   arvotaan ~50 % päälle, ja sen jälkeen jokainen kaappi **sammuu/käynnistyy
   itsestään** omaan satunnaiseen tahtiinsa (uusi arpa `CAB_REROLL_MIN/MAX`
@@ -34,13 +39,13 @@
   varoitusvalo vilkkuu kaapin OMAAN tahtiin (`CAB_BLINK_MIN/MAX` 420–700 ms) ja
   vaiheeseensa → valot eivät vilku tasatahtiin; sammuksissa olevan kaapin valo
   on tumma eikä kaappi iske. Osuman hinta (tainnutus + −1 🍔) ennallaan
-  (sääntö 04). Työpuussa, ei committia.
+  (sääntö 04). Committoitu cc7046b.
 - **🚗 Auton osuma kaataa 10 px ylös osumakohdasta (v4.78):** `player.knockFallY` = osumahetken
   jalkapiste **− 10 px** (`updateTraffic`) → tainnutushaaran klamppaus käyttää sitä `GROUND_Y + 10`:n
   sijaan ("lentäminen kadun varteen" pois) – mutta ei jätä pelaajaa makaamaan keskelle tietä limboon
   (kolarijatkuva). Muut tainnutuslähteet (oviukko, rosvo, kukkaruukku, sähkökaappi, kuolema) ennallaan –
   `knockFallY` nollautuu ylösnoustessa. **Talous ennallaan** (−1 🍔, 600 f, sääntö 04).
-  Työpuussa, ei committia.
+  Committoitu cc7046b.
 - **🚗 Ajoneuvojen syvyysjärjestys (v4.84):** ajoneuvot piirretään suhteessa pelaajan
   syvyyteen – kauemmat (keskipiste `v.y + v.h/2` < pelaajan jalkapiste `lampFeetY`)
   ENNEN pelaajaa (pelaaja päälle), lähemmät pelaajan jälkeen (kuten ennen). Ennen
