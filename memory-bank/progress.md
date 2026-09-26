@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> **v4.99 – 1.10.2026** · Kompaktoitu 23.9.2026 (täysi historia git-historiassa: viimeisin täysi versio
+> **v5.00 – 1.10.2026** · Kompaktoitu 23.9.2026 (täysi historia git-historiassa: viimeisin täysi versio
 > `ffb1dd9`, HEAD `44db9e7`)
 
 ## 🏮 Pääportaali – Pimeä Katu

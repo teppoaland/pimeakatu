@@ -560,6 +560,17 @@ const Street = (() => {
     const BAT_LIFE_MAX    = 3600;            // maksimi elinikä
     const BAT_COLORS      = ['#000000', '#080808', '#0a0a0a', '#050510', '#000005'];
 
+    /* ── Päivälinnut (v5.00) ─────────────────────── */
+    const BIRD_COUNT_MIN  = 10;
+    const BIRD_COUNT_MAX  = 15;
+    const BIRD_WING_MIN   = 2;
+    const BIRD_WING_MAX   = 5;
+    const BIRD_SPEED_MIN  = 0.2;
+    const BIRD_SPEED_MAX  = 0.6;
+    const BIRD_LIFE_MIN   = 1800;
+    const BIRD_LIFE_MAX   = 4800;
+    const BIRD_COLORS     = ['#000000', '#080808'];
+
     /* Päivä sammuttaa katuvalot kerran (v4.38): kun aurinko on noussut
        täyteen (dayT === 1), kaikki lamput sammutetaan kertaalleen. Ne voi
        silti potkaista uudelleen päälle myös päivällä. Lippu nollautuu vasta
@@ -1124,6 +1135,9 @@ const Street = (() => {
     let satellite = null;      // Satelliitti
     let bats = [];             // Yölepakot
     let batSpawnTimer;         // lepakoiden spawn-väli
+    let birds = [];            // Päivälinnut
+    let birdSpawnTimer;        // lintujen spawn-väli
+    let birdTargetCount;       // lintujen tavoiteltu määrä
     let clouds = [];            // Pilvet (cirrus + hazy)
     let lastCloudTime = 0;     // Pilvien dt-laskenta
     let windDir = Math.random() < 0.5 ? 1 : -1;
@@ -2632,7 +2646,92 @@ const Street = (() => {
             // Päivällä lepakot poistetaan
             if (bats.length) bats = [];
         }
+
+        // ── Päivälinnut (v5.00) ────────────
+        if (isDay) {
+            // Alusta tavoitemäärä jos ei ole asetettu tai kaikki linnut ovat kuolleet
+            if (birdTargetCount === undefined || (birds.length === 0 && birdTargetCount > 0 && birdSpawnTimer === undefined)) {
+                birdTargetCount = BIRD_COUNT_MIN + Math.floor(Math.random() * (BIRD_COUNT_MAX - BIRD_COUNT_MIN + 1));
+                birdSpawnTimer = 60 + Math.random() * 120;
+            }
+
+            // Spawnaa lintuja yksi kerrallaan, kunnes tavoite saavutetaan
+            if (birds.length < birdTargetCount) {
+                birdSpawnTimer -= dt;
+                if (birdSpawnTimer <= 0) {
+                    const ti = Math.floor(Math.random() * trees.length);
+                    const tr = trees[ti];
+                    const spread = tr.h * 0.6;
+                    const baseY = GROUND_Y - 5;
+                    const x0 = tr.x + (Math.random() - 0.5) * spread * 2;
+                    const y0 = baseY - tr.h * (0.9 + Math.random() * 0.3);
+                    birds.push({
+                        x: x0, y: y0, targetX: x0, targetY: y0,
+                        perched: true,
+                        perchTimer: 180 + Math.random() * 540,
+                        wingSize: BIRD_WING_MIN + Math.random() * (BIRD_WING_MAX - BIRD_WING_MIN),
+                        color: BIRD_COLORS[Math.floor(Math.random() * BIRD_COLORS.length)],
+                        flapPhase: Math.random() * Math.PI * 2,
+                        life: BIRD_LIFE_MIN + Math.random() * (BIRD_LIFE_MAX - BIRD_LIFE_MIN),
+                        fadeTimer: 0, fadeDuration: 0, treeIdx: ti
+                    });
+                    birdSpawnTimer = 30 + Math.random() * 90;
+                }
+            }
+
+            // Päivitä kaikki olemassa olevat linnut
+            for (let i = birds.length - 1; i >= 0; i--) {
+                const b = birds[i];
+
+                // Fade
+                if (b.fadeTimer > 0) {
+                    b.fadeTimer -= dt;
+                    b.x += (b.targetX - b.x) * 0.02 * dt;
+                    b.y += (b.targetY - b.y) * 0.02 * dt;
+                    if (b.fadeTimer <= 0) { birds.splice(i, 1); }
+                    continue;
+                }
+
+                b.life -= dt;
+                if (b.life <= 0) {
+                    b.fadeTimer = 90 + Math.random() * 150;
+                    b.fadeDuration = b.fadeTimer;
+                    continue;
+                }
+
+                if (b.perched) {
+                    b.perchTimer -= dt;
+                    if (b.perchTimer <= 0) {
+                        const tr = trees[b.treeIdx];
+                        const spread = tr.h * 0.6;
+                        const baseY = GROUND_Y - 5;
+                        b.targetX = tr.x + (Math.random() - 0.5) * spread * 2;
+                        b.targetY = baseY - tr.h * (0.6 + Math.random() * 0.4);
+                        b.perched = false;
+                        b.flapPhase = Math.random() * Math.PI * 2;
+                    }
+                } else {
+                    const dx = b.targetX - b.x;
+                    const dy = b.targetY - b.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 1.5) {
+                        b.x = b.targetX;
+                        b.y = b.targetY;
+                        b.perched = true;
+                        b.perchTimer = 180 + Math.random() * 540;
+                    } else {
+                        const step = (0.6 + Math.random() * 0.4) * dt;
+                        b.x += (dx / dist) * step;
+                        b.y += (dy / dist) * step;
+                    }
+                }
+            }
+        } else {
+            // Yöllä linnut poistetaan
+            if (birds.length) { birds = []; birdTargetCount = 0; }
+        }
     }
+
 /* ── Toimintopainikkeen käsittely ──────────────── */
     function handleAction() {
         const px = player.x + player.w / 2;
@@ -3921,6 +4020,8 @@ const Street = (() => {
 
         // Mustat lehdettömät puut (raoissa)
         drawTrees();
+        // Päivälinnut puiden ympärillä (v5.00)
+        if (birds.length) { drawBirds(); }
         // Pienet ruohotupsut puiden juurella
         if (foreground) { drawTreeGrassTufts(); }
 
@@ -4540,6 +4641,63 @@ const Street = (() => {
     /* ── Musta lehdetön puu (siluetti taivasta vasten) ── */
     // swayX = latvan vaakasiirto tuulen mukana (px). Tyvi pysyy maassa kiinni,
     // siirto kasvaa korkeuden mukaan → puu taipuu, ei kaadu jäykkänä.
+    /* ── Päivälinnut (ruskea siluetti puiden ympärillä) ── */
+    function drawBirds() {
+        for (const b of birds) {
+            let curSize = b.wingSize;
+            if (b.fadeTimer > 0 && b.fadeDuration > 0) {
+                curSize = b.wingSize * Math.max(0, b.fadeTimer / b.fadeDuration);
+            }
+            if (curSize < 0.5) continue;
+            const s = curSize;
+            const bodyR = Math.max(1.5, s * 0.28);
+            ctx.fillStyle = b.color;
+
+            if (b.perched) {
+                // Istuu: pieni ruumis + pää
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, bodyR * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(b.x + 1.5, b.y - bodyR * 0.3, bodyR * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Lentää: siivenisku kuten lepakoilla
+                const t = Date.now() * 0.005 + b.flapPhase;
+                const flap = Math.sin(t);
+                const spread = Math.abs(flap);
+                const span = s * (0.25 + spread * 0.75);
+                const rise = s * 0.45 * spread;
+
+                ctx.beginPath();
+                ctx.moveTo(b.x - bodyR * 0.3, b.y - bodyR * 0.5);
+                ctx.quadraticCurveTo(
+                    b.x - span * 0.6, b.y - bodyR - rise * 0.5,
+                    b.x - span, b.y - bodyR - rise
+                );
+                ctx.lineTo(b.x - span * 0.7, b.y + bodyR * 0.3);
+                ctx.lineTo(b.x - bodyR * 0.2, b.y + bodyR * 0.8);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(b.x + bodyR * 0.3, b.y - bodyR * 0.5);
+                ctx.quadraticCurveTo(
+                    b.x + span * 0.6, b.y - bodyR - rise * 0.5,
+                    b.x + span, b.y - bodyR - rise
+                );
+                ctx.lineTo(b.x + span * 0.7, b.y + bodyR * 0.3);
+                ctx.lineTo(b.x + bodyR * 0.2, b.y + bodyR * 0.8);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, bodyR, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
     function drawBareTree(cx, baseY, h, swayX) {
         if (!swayX) swayX = 0;
         // Korkeuden mukaan kasvava taipuma (0 tyvessä, täysi latvassa)
