@@ -538,6 +538,19 @@ const Street = (() => {
         ? new URLSearchParams(location.search).get('day') : null;
     const DAY_FORCE = (DAY_PARAM === '1') ? 'day' : (DAY_PARAM === '0' ? 'night' : null);
     const DAY_DEBUG = DAY_FORCE !== null;   // pakotettu → liuku heti perille
+
+    /* ── Yölepakot (v4.93) ──────────────────────── */
+    const BAT_COUNT_MAX   = 5;               // 0–5 lepakkoa, random
+    const BAT_Y_MIN       = 90;              // maksimi: korkein talo (210 px) + 10 px
+    const BAT_Y_MAX       = 245;             // minimi: lampun kupujen yläpuolella (bulbY = 257)
+    const BAT_SPEED_MIN   = 0.25;            // hitain vauhti
+    const BAT_SPEED_MAX   = 0.7;             // nopein vauhti
+    const BAT_WING_MIN    = 2;               // pienin siipiväli (≈ moskiitto)
+    const BAT_WING_MAX    = 9;               // isoin siipiväli (puolitettu)
+    const BAT_LIFE_MIN    = 900;             // minimi elinikä (15 s @60fps)
+    const BAT_LIFE_MAX    = 3600;            // maksimi elinikä
+    const BAT_COLORS      = ['#000000', '#080808', '#0a0a0a', '#050510', '#000005'];
+
     /* Päivä sammuttaa katuvalot kerran (v4.38): kun aurinko on noussut
        täyteen (dayT === 1), kaikki lamput sammutetaan kertaalleen. Ne voi
        silti potkaista uudelleen päälle myös päivällä. Lippu nollautuu vasta
@@ -1100,6 +1113,8 @@ const Street = (() => {
     let stars = [];
     let shootingStar = null;   // Tähdenlento
     let satellite = null;      // Satelliitti
+    let bats = [];             // Yölepakot
+    let batSpawnTimer;         // lepakoiden spawn-väli
     let clouds = [];            // Pilvet (cirrus + hazy)
     let lastCloudTime = 0;     // Pilvien dt-laskenta
     let windDir = Math.random() < 0.5 ? 1 : -1;
@@ -2520,6 +2535,92 @@ const Street = (() => {
                     satellite.active = false;
                 }
             }
+
+            // ── Lepakot (vain yöllä) ────────────
+            if (!bats.length) {
+                // Spawnaa 0–5 lepakkoa satunnaisella viiveellä
+                if (batSpawnTimer === undefined) batSpawnTimer = 1800 + Math.random() * 3600;
+                batSpawnTimer -= dt;
+                if (batSpawnTimer <= 0) {
+                    const count = Math.floor(Math.random() * (BAT_COUNT_MAX + 1)); // 0–5
+                    for (let i = 0; i < count; i++) {
+                        const dir = Math.random() < 0.5 ? 1 : -1;
+                        const speed = BAT_SPEED_MIN + Math.random() * (BAT_SPEED_MAX - BAT_SPEED_MIN);
+                        const baseY = BAT_Y_MIN + Math.random() * (BAT_Y_MAX - BAT_Y_MIN);
+                        bats.push({
+                            x: dir > 0 ? -20 : WORLD_W + 20,
+                            y: baseY,
+                            vx: dir * speed,
+                            vy: (Math.random() - 0.5) * speed * 0.3,
+                            wingSize: BAT_WING_MIN + Math.random() * (BAT_WING_MAX - BAT_WING_MIN),
+                            color: BAT_COLORS[Math.floor(Math.random() * BAT_COLORS.length)],
+                            flapPhase: Math.random() * Math.PI * 2,
+                            life: BAT_LIFE_MIN + Math.random() * (BAT_LIFE_MAX - BAT_LIFE_MIN),
+                            dirTimer: 120 + Math.random() * 300,
+                            fadeTimer: 0,
+                            fadeDuration: 0
+                        });
+                    }
+                    batSpawnTimer = 1800 + Math.random() * 3600;
+                }
+            } else {
+                for (let i = bats.length - 1; i >= 0; i--) {
+                    const b = bats[i];
+
+                    // Häivytys: kutistuu ja hidastuu → horisonttiefekti
+                    if (b.fadeTimer > 0) {
+                        b.fadeTimer -= dt;
+                        b.x += b.vx * dt * 0.4;
+                        b.y += b.vy * dt * 0.4;
+                        if (b.fadeTimer <= 0 || b.x < -40 || b.x > WORLD_W + 40) {
+                            bats.splice(i, 1);
+                        }
+                        continue;
+                    }
+
+                    // Normaali liike
+                    b.x += b.vx * dt;
+                    b.y += b.vy * dt;
+                    b.life -= dt;
+
+                    // Elinikä loppui → aloita fade-out (1–5 s)
+                    if (b.life <= 0) {
+                        b.fadeTimer = 60 + Math.random() * 240;
+                        b.fadeDuration = b.fadeTimer;
+                        b.vx *= 0.3;
+                        b.vy *= 0.3;
+                        continue;
+                    }
+
+                    // Reunan yli → poista heti
+                    if (b.x < -40 || b.x > WORLD_W + 40) {
+                        bats.splice(i, 1);
+                        continue;
+                    }
+
+                    // 90 asteen satunnaiskäännös
+                    b.dirTimer -= dt;
+                    if (b.dirTimer <= 0) {
+                        if (Math.random() < 0.3) {
+                            const temp = b.vx;
+                            if (Math.random() < 0.5) {
+                                b.vx = -b.vy;
+                                b.vy = temp;
+                            } else {
+                                b.vx = b.vy;
+                                b.vy = -temp;
+                            }
+                        }
+                        b.dirTimer = 120 + Math.random() * 300;
+                    }
+
+                    // Pysytään Y-rajojen sisällä
+                    b.y = Math.max(BAT_Y_MIN, Math.min(BAT_Y_MAX, b.y));
+                }
+            }
+        } else {
+            // Päivällä lepakot poistetaan
+            if (bats.length) bats = [];
         }
     }
 /* ── Toimintopainikkeen käsittely ──────────────── */
@@ -3756,6 +3857,8 @@ const Street = (() => {
         // Kaukainen kaupunkisiluetti (parallaksi 0.4×) – tähtien/taivaan päällä, talojen takana
         drawBackdrop(camX * (1 - BACKDROP_PARALLAX));
         drawBuildings();
+        // Lepakot talojen EDELLÄ (v4.93)
+        if (bats.length) { drawBats(); }
         drawGround();
         drawMoonBuildingShadows();   // kuunvarjot taloilta kadulle (v4.80)
 
@@ -4460,6 +4563,57 @@ const Street = (() => {
         }
     }
 
+    /* ── Lepakot (musta siluetti yötaivaalla) ───── */
+    function drawBats() {
+        for (const bat of bats) {
+            // Fade: pienennä koko suhteessa fadeTimer / fadeDuration
+            let curSize = bat.wingSize;
+            if (bat.fadeTimer > 0 && bat.fadeDuration > 0) {
+                curSize = bat.wingSize * Math.max(0, bat.fadeTimer / bat.fadeDuration);
+            }
+            if (curSize < 0.5) continue;     // liian pieni → ohita
+
+            const t = Date.now() * 0.005 + bat.flapPhase;
+            const flap = Math.sin(t);                      // -1..1 = siipien asento
+            const spread = Math.abs(flap);                 // 0..1
+            const s = curSize;
+            const bodyR = Math.max(1.5, s * 0.28);
+            const span = s * (0.25 + spread * 0.75);       // siipien puoliväli
+            const rise = s * 0.45 * spread;                // siipien nousu
+
+            ctx.fillStyle = bat.color;
+
+            // Vasen siipi
+            ctx.beginPath();
+            ctx.moveTo(bat.x - bodyR * 0.3, bat.y - bodyR * 0.5);
+            ctx.quadraticCurveTo(
+                bat.x - span * 0.6, bat.y - bodyR - rise * 0.5,
+                bat.x - span, bat.y - bodyR - rise
+            );
+            ctx.lineTo(bat.x - span * 0.7, bat.y + bodyR * 0.3);
+            ctx.lineTo(bat.x - bodyR * 0.2, bat.y + bodyR * 0.8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Oikea siipi (peilikuva)
+            ctx.beginPath();
+            ctx.moveTo(bat.x + bodyR * 0.3, bat.y - bodyR * 0.5);
+            ctx.quadraticCurveTo(
+                bat.x + span * 0.6, bat.y - bodyR - rise * 0.5,
+                bat.x + span, bat.y - bodyR - rise
+            );
+            ctx.lineTo(bat.x + span * 0.7, bat.y + bodyR * 0.3);
+            ctx.lineTo(bat.x + bodyR * 0.2, bat.y + bodyR * 0.8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Ruumis
+            ctx.beginPath();
+            ctx.arc(bat.x, bat.y, bodyR, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
     /* Terävä pikselifontti (3x5 glyphit) – ei anti-aliasointia, pysyy terävänä skaalauksessa */
     function drawPixelText(text, cx, cy, scale, color) {
         const G = {
@@ -4987,6 +5141,22 @@ const Street = (() => {
             title: 'MANUAALI',
             art: NEWS_MANUAL_WIDE,
             artNarrow: NEWS_MANUAL_NARROW
+        },
+        {
+            /* 6. sivu – vinkkejä (30.9.2026, käyttäjän teksti) */
+            title: 'VINKKEJÄ',
+            lines: [
+                'Muutamia vinkkejä pelaamiseen',
+                '',
+                'Työllä voi ansaita rahaa: peleissä pelaa alku aina uudelleen ja nappaa vain kolikko.',
+                'Nukkuminen antaa 1 hampurilaisen.',
+                'Hedelmäpeliä voi pelata 1 kierroksen ilmaiseksi joka 120s.',
+                '',
+                '💡 6. lampun 5 potkua putkeen:',
+                '   kaikki lamput syttyvät + kaikki avaimet.',
+                '   Jos jatkat 20 potkuun = +20 🪙. Putki katkeaa',
+                '   jos potkaiset toista lamppua tai odotat yli 2 s.'
+            ]
         }
     ];
 

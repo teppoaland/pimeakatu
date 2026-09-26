@@ -88,4 +88,7 @@
 canvas/document-stub, rAF käsin ohjattuna.
 Apuryhmät (eivät testejä): `newspaper-art` (generoi sanomalehden manuaalisivun ASCII-piirroksen –
 laatikot tarkalleen kohdakkain) ja `np-verify` (tarkistaa piirroksen rivipituudet: 64 / 46).
-
+| AURINKO/AUTOCYCLE | **v4.89** - kuu ja aurinko vaeltavat taivaan yli ~3 min.
+| | SPAWN-LAMPUSHOW | **v4.90/91** - 4 s viive, vain freshGame + !isDay.
+| | JUKEBOX F5 | **v4.92** - jukeQueue ja jukePos talteen, soitto jatkuu.
+| Kuun ulkoasu
