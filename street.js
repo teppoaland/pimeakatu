@@ -4434,7 +4434,7 @@ const Street = (() => {
     /* ── Sähkökaapit (talojen kyljissä, kerrostalon vas. seinä) ── */
     function drawElectricCabinet() {
         for (const c of electricCabinets) {
-            const cx = c.x, cy = c.y, cw = c.w, ch = c.h;
+            const cx = c.x, cy = c.y + 5, cw = c.w, ch = c.h;
             const centerX = cx + cw / 2;
 
             // Runko (harmaa metalli) – pelkkä laatikko
