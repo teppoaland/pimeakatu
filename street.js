@@ -4757,6 +4757,16 @@ const Street = (() => {
         branch(cx, topY, -Math.PI / 2 - 0.85, h * 0.42, trunkW * 0.28, 0);
         branch(cx, topY, -Math.PI / 2 + 0.7, h * 0.46, trunkW * 0.26, 0);
 
+        // Lisähaara: oikean alaoksan puolesta välistä +45° (vain puut 1 ja 2)
+        // Lasketaan oikean haaran (indeksi 3) keskipiste ja piirretään lisähaara.
+        // cx on aina sama kutsussa (tr.x), joten tämä koskee molempia puita.
+        const rAng = -Math.PI / 2 + 0.7;
+        const rLen = h * 0.46;
+        const rW = trunkW * 0.26;
+        const rMidX = cx + Math.cos(rAng) * rLen * 0.5;
+        const rMidY = topY + Math.sin(rAng) * rLen * 0.5;
+        branch(rMidX, rMidY, rAng + Math.PI / 4, rLen * 0.75, rW * 0.55, 2);
+
         // Palauta oletus, ettei pyöreä viivapää vuoda muihin piirroksiin
         ctx.lineCap = 'butt';
     }
