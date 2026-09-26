@@ -1,9 +1,11 @@
 # 🎵 Jukebox – memo (talo 5)
 
-> Päivitetty 21.9.2026 – versio **v4.46**. Talo 5 (`buildings[4]`) on jukebox-huone,
+> Päivitetty 1.10.2026 – versio **v4.97**. Talo 5 (`buildings[4]`) on jukebox-huone,
 > josta voi valita **useamman kappaleen** (1 🪙 / kappale) ja valitut soitetaan
 > poistuttaessa yksi kerrallaan (1 → 3). Kappaleet ovat `jukebox/`-kansiossa.
 > **Aukiolo (v4.34): auki vain öisin (klo 20–06)** – päivällä ovesta tulee teksti-popup.
+> **Raidat 7–9 lisätty v4.97:** uusi nimeämiskäytäntö `7_tiedostonimi.mp3` = `covers/7_tiedostonimi.png`.
+> Kansikuvat `covers/`-kansiossa, sama etuliite ja nimi pitää parin synkassa.
 
 ---
 

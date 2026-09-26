@@ -208,8 +208,9 @@ const Street = (() => {
        `our_song.mp3` ja `unafraid.mp3` olivat ristissä keskenään → raita 1 ja 2
        soivat valitun nimen vastaisesti. Älä "korjaa" nimiä takaisin ristiin.
        Rivit 4–6 lisätty 22.9.2026 (v4.60): D:\AI\free_music -kansion kolme
-       ilmaista heavy metal -raitaa entisten jatkoksi (1 → 6). Hinta ja
-       veloitus ennallaan: 1 🪙 / kappale (sääntö 04). */
+       ilmaista heavy metal -raitaa entisten jatkoksi (1 → 6). v4.97: raidat 7–9
+       lisätty (Alex Morgan + 2× NickPanek). Hinta ja veloitus ennallaan:
+       1 🪙 / kappale (sääntö 04). */
     const JUKEBOX_TRACKS = [
         { url: 'jukebox/Knived_Our_song.mp3',              title: 'Knived - Our Song' },
         { url: 'jukebox/Knived_Unafraid.mp3',              title: 'Knived - Unafraid' },
@@ -219,7 +220,13 @@ const Street = (() => {
         { url: 'jukebox/alec_koff-in-heavy-metal-492175.mp3',        title: 'Alec Koff - In Heavy Metal',
           cover: 'jukebox/covers/5.png' },
         { url: 'jukebox/mrclaps-this-heavy-metal-492569.mp3',        title: 'MrClaps - This Heavy Metal',
-          cover: 'jukebox/covers/6.png' }
+          cover: 'jukebox/covers/6.png' },
+        { url: 'jukebox/7_alex-morgan-thrash-metal-591343.mp3',                     title: 'Alex Morgan - Thrash Metal',
+          cover: 'jukebox/covers/7_alex-morgan-thrash-metal-591343.png' },
+        { url: 'jukebox/8_nickpanek-coffee-first-heavy-grunge-metal-instrumental-391308.mp3', title: 'NickPanek - Coffee First Heavy Grunge Metal (inst.)',
+          cover: 'jukebox/covers/8_nickpanek-coffee-first-heavy-grunge-metal-instrumental-391308.png' },
+        { url: 'jukebox/9_nickpanek-heavy-doom-metal-instrumental-288971.mp3',                title: 'NickPanek - Heavy Doom Metal (inst.)',
+          cover: 'jukebox/covers/9_nickpanek-heavy-doom-metal-instrumental-288971.png' }
     ];
     /* Kansikuvat (22.9.2026): raidoilla 4–6 on kansikuva, joka näytetään
        jukebox-kaapin levykuvan paikalla **kappaleen soidessa**. Raidoilla 1–3
