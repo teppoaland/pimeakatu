@@ -16,9 +16,9 @@
 
 ## 📍 Nyt (30.9.2026)
 
-- **Versio:** `v4.94` (`index.html` → `#version-tag`).
+- **Versio:** `v4.95` (`index.html` → `#version-tag`).
 - **🎵 Syntikkatempo 🍔-vauhtiin (v4.94):** `audio.js` `startSynth()` valitsee BPM:n nyt `hungerTempo`-muuttujan mukaan (asetetaan `street.js`:stä `update()`-funktiossa). ≤3 🍔 → **110** (BPM_MIN) · 4–7 🍔 → **126** (keskiväli) · 8–10 🍔 → **142** (BPM_MAX). Jukebox-musiikkiin ei vaikutusta. API: `StreetAudio.setHungerTempo(mult)`.
-- **🦇 Yölepakot (v4.93):** `street.js` – yöllä 0–5 mustaa lepakkoa lenskelee lampun kupujen yläpuolella (Y 90–245). 90 asteen satunnaiskäännöksiä, fade-out 1–5 s ennen poistoa (kutistuu horisonttiin). Puolitettu koko (`BAT_WING_MAX 18→9`). Piirretään talojen edessä.
+- **🦇 Yölepakot (v4.93/v4.95):** `street.js` – yöllä 0–5 mustaa lepakkoa lenskelee korkealla (Y 45–245, nyt kuun korkeudella asti). Spawn 30s välein (vakio, ei enää random 30–90 s). 90 asteen satunnaiskäännöksiä, fade-out 1–5 s ennen poistoa. Piirretään talojen edessä.
 - **💡 Lampun potku Y-akseli (v4.88):** `street.js` potkun osumatarkistus laski aiemmin
   pelaajan **keskipisteestä** (`player.y + player.h/2`), joka oli 20 px lampun jalasta → osuma
   ei toteutunut oikealla korkeudella. Korjattu käyttämään **jalan tasoa**
