@@ -74,8 +74,7 @@ const Street = (() => {
         { x: 255, bldgIdx: 3, lit: false, label: 'DIG\nDÄSH', gameUrl: 'digGame2/game_main.html' },
         { x: 445, bldgIdx: 5, lit: false, label: 'BLUE\nMÄX',     gameUrl: 'bm/game_main.html' },
         { x: 625, bldgIdx: 7, lit: false, label: 'COM-\nMANDO',   gameUrl: null },
-        { x: 720, bldgIdx: 8, lit: false, label: 'BAR',   gameUrl: null },
-        { x: 193, bldgIdx: 2, lit: false, label: 'LAIVA\nUPOTUS', gameUrl: 'sinkship/game_main.html' }
+        { x: 720, bldgIdx: 8, lit: false, label: 'BAR',   gameUrl: null }
     ];
 
     const LAMP_POST_H = 75;
@@ -202,6 +201,9 @@ const Street = (() => {
     /* Makuuhuone (ex-palkintohuone, talo 7, ovi x 675, lamps[3]):
        ovi aina auki, ei lukkoa eikä kolikoita (v4.43) */
     const SLEEP_BLDG_IDX = 7;
+    /* Laivanupotus (talo 2, buildings[2]) – ei omaa lamppua,
+       1. potku sytyttää ikkunat, 2. potku avaa oven. Aina auki yöllä ja päivällä. */
+    const SINKSHIP_BLDG_IDX = 2;
     /* Tiedostonimet vastaavat sisältöä (korjattu 20.9.2026, v4.27): aiemmin
        `our_song.mp3` ja `unafraid.mp3` olivat ristissä keskenään → raita 1 ja 2
        soivat valitun nimen vastaisesti. Älä "korjaa" nimiä takaisin ristiin.
@@ -1439,6 +1441,11 @@ const Street = (() => {
                 lamps[i].hatShade  = 'hsl(0,0%,' + (g - 8) + '%)';
             }
         }
+        // Siivoa vanha 6 lampun tila localStorageen jääneestä tallennuksesta (v4.96)
+        if (state.litLamps.length > lamps.length) {
+            state.litLamps.length = lamps.length;
+            GameState.save(state);
+        }
         coin.collected = state.inventory.coin;
         coinCount = state.inventory.coinCount || 0;
         coinRespawnTimer = coin.collected ? 1 : 0;
@@ -2663,6 +2670,18 @@ const Street = (() => {
             jukePick = [];
             for (let i = 0; i < JUKEBOX_TRACKS.length; i++) jukePick.push(false);
             if (!StreetAudio.isJukeboxPlaying()) jukeQueue = [];  // ei vanhaa "♪ SOI" -riviä
+            return;
+        }
+
+        // 0.6 LAIVANUPOTUS (talo 2, buildings[2]) – aina auki yöllä ja päivällä;
+        //     1. painallus ovella = potku → valot syttyvät 20 s
+        //     2. painallus valaistulla ovella = Laivanupotus aukeaa
+        const ssDoor = doorCenter(buildings[SINKSHIP_BLDG_IDX]);
+        const ssLights = smallHouseLights[SINKSHIP_BLDG_IDX];
+        const ssdx = px - ssDoor.x, ssdy = py - ssDoor.y;
+        const ssInReach = Math.sqrt(ssdx * ssdx + ssdy * ssdy) < DOOR_RADIUS;
+        if (ssLights && ssLights.lit && ssInReach) {
+            enterGame('sinkship/game_main.html');
             return;
         }
 
@@ -4863,7 +4882,9 @@ const Street = (() => {
                                !!(smallHouseLights[t.bldgIdx] && smallHouseLights[t.bldgIdx].lit);
             // Makuuhuone (talo 7): ovi aina auki (v4.43) → valo palaa kynnyksellä
             const sleepOpen = (t.bldgIdx === SLEEP_BLDG_IDX);
-            const active = isBar || jukeboxLit || sleepOpen ||
+            const sinkshipLit = t.bldgIdx === SINKSHIP_BLDG_IDX &&
+                                !!(smallHouseLights[t.bldgIdx] && smallHouseLights[t.bldgIdx].lit);
+            const active = isBar || jukeboxLit || sleepOpen || sinkshipLit ||
                            !!(ownerLamp && (ownerLamp.lit || lampFreeOpen()));
             if (THRESH_LIGHT && active) {
                 ctx.save();
@@ -6789,9 +6810,12 @@ const Street = (() => {
         // Jukebox-talo (5): ovi näkyy auki vasta kun ikkunat on potkaistu valaistuiksi
         const isJukebox = (bldgIdx === JUKEBOX_BLDG_IDX);
         const jukeboxOpen = isJukebox && !!(smallHouseLights[bldgIdx] && smallHouseLights[bldgIdx].lit);
+        // Laivanupotus (talo 2): sama mekanismi, aina auki yöllä ja päivällä
+        const isSinkship = (bldgIdx === SINKSHIP_BLDG_IDX);
+        const sinkshipOpen = isSinkship && !!(smallHouseLights[bldgIdx] && smallHouseLights[bldgIdx].lit);
         // Makuuhuone (talo 7): ovi on aina auki (v4.43, kuten BAR)
         const sleepOpen = (bldgIdx === SLEEP_BLDG_IDX);
-        const isActive = (isBar || jukeboxOpen || sleepOpen) ? true
+        const isActive = (isBar || jukeboxOpen || sinkshipOpen || sleepOpen) ? true
                        : (ownerLamp && (ownerLamp.lit || lampFreeOpen()));
         const doorType = bldg.doorType || 0;
 
