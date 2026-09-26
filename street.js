@@ -1451,7 +1451,7 @@ const Street = (() => {
            Testityökalut ?day=0/1 näyttävät kuun lähtöasemasta kuten ennen. */
         applyMoonClock(DAY_FORCE ? 0 : (Number(state.moonClock) || 0));
         applySunClock(DAY_FORCE ? 0 : (Number(state.sunClock) || 0));
-        spawnLampTimer = SPAWN_LAMP_DELAY;              // 4 s → lamppushow (v4.90)
+        spawnLampTimer = freshGame ? SPAWN_LAMP_DELAY : 0;  // 4 s → lamppushow vain uudessa pelissa (v4.90)
         stars = [];
         for (let i = 0; i < 80; i++) {
             stars.push({
@@ -1795,7 +1795,7 @@ const Street = (() => {
 
         // ── Spawn-lamppushow (v4.90): pelin alussa/kuoleman jälkeen 4 s → lamput syttyvät ──
         // Käyttää samaa startNightLampShow()-mekaniikkaa kuin yön tullessa.
-        if (spawnLampTimer > 0 && !playerDead && !iframeOpen && !sleepRoom && !barRoom && !jukeboxRoom) {
+        if (spawnLampTimer > 0 && !isDay && !playerDead && !iframeOpen && !sleepRoom && !barRoom && !jukeboxRoom) {
             spawnLampTimer -= dt;
             if (spawnLampTimer <= 0) {
                 startNightLampShow();                    // sytytä lamput yksi kerrallaan
