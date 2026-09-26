@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> **v4.88 – 27.9.2026** · Kompaktoitu 23.9.2026 (täysi historia git-historiassa: viimeisin täysi versio
+> **v4.92 – 30.9.2026** · Kompaktoitu 23.9.2026 (täysi historia git-historiassa: viimeisin täysi versio
 > `ffb1dd9`, HEAD `44db9e7`)
 
 ## 🏮 Pääportaali – Pimeä Katu
@@ -34,6 +34,9 @@
 | Päivän yksityiskohdat | ✅ v4.35–v4.42 – ajovalot pois päivällä, liikenne ×2 (`TRAFFIC_DAY_MULT`), ovet auki ilman lamppua (`lampFreeOpen`), moskiitot pois, valot sammuvat kerran (`dayLampsOff`), HUD 🍔-varoitus ≤3 (`HUNGER_WARN`), päiväpilvet tummenevat, kuu ⇄ aurinko -ristihäivytys ilman liukua, yö sytyttää katuvalot yksi kerrallaan (`NIGHT_LAMP_*` + `playLampOn()`) |
 | 🌙 Kuun rata | ✅ v4.65 – kuu liukuu vasemmalta oikealle (~16 min, `MOON_NIGHT_FRAMES 57600`) myös huoneissa/alapeleissä ja laskeutuu ulos (`MOON_SET_X ≈ 890`); laskeutuessa `moonDark` → 0.15 |
 | 🌙 Kuun paikka muistiin | ✅ **v4.74** – `state.moonClock` (yön kulku) tallennetaan portin omaan `pimeakatu_gamestate`-tallennukseen → **F5/reload jatkaa siitä mihin kuu jäi**. `applyMoonClock()` = ainoa paikan laskija (init / `resetMoon` / update); tallennus ~2 s välein (`MOON_SAVE_FRAMES 120`, ei sulkeutumistallennusta – kuoleman/✕-resetin nollaus ei saa herätä henkiin). Kuu alkaa alusta vain: **kuolema, ✕-resetti** (tallennus tyhjenee), **Nuku** (uusi yö) ja **päivä→yö** (sama Nuku-polku); `?day=0/1` ei tallenna. `freshGame`-vertailusta `moonClock` pois. Ei uutta localStorage-avainta, `gameState.js` ennallaan |
+| 🌙☀️ Automaattinen yö/päivä -kierto | ✅ **v4.89** – kuu ja aurinko vaeltavat taivaan yli ~3 min (DAY_CYCLE_FRAMES 10800). Kuu laskee → 15 s → päivä, aurinko laskee → 15 s → yö. Molemmat alkavat ulos vasemmalta (SUN_X -78, MOON_X_MIN -90). Auringolla oma kello + tallennus (state.sunClock). Nukkuminen ja lampun potku toimivat erillisinä. |
+| | 💡 Spawn-lamppushow | ✅ **v4.90/91** – 4 s viive → lamput syttyvät yksi kerrallaan samalla efektillä kuin yön tullessa. Vain reshGame + !isDay, ei F5:llä. |
+| | 🎵 Jukebox-soitto F5:n yli | ✅ **v4.92** – jukeQueue (biisi-indeksit) ja jukePos tallennetaan state-objektiin. F5:n jälkeen soitto jatkuu samasta kohdasta. |
 | 🌙 Kuun ulkoasu | ✅ v4.72 – kuu piirretään tähtien jälkeen (peittää tähdet), kraatterit/maret + maavalo (`MOON_EARTHSHINE_*`), pehmeä terminaattori, `MOON_R 28 → 30`; ulkoasunuppeja – rata ja talous ennallaan |
 | 🏮 Lamppupylväs & pelaaja | ✅ **v4.73** – syvyysjärjestys: valo (`drawLampGlow`) aina pelaajan alla, pylväs (`drawLampPost`) joko pelaajan eteen tai taakse jalkapisteen mukaan (`LAMP_BASE_Y = GROUND_Y + 15 = 325`, `lampFeetY`); yläreitillä (`y ≤ 286`) pelaaja katoaa pylvään taakse. Geometria `lampGeom()`; ajoneuvot/aita/ovet/valaistus ennallaan |
 | Popupit | ✅ v3.99 / v4.00 – ohjeet pois HUD:sta; `showNotification(2500 ms)`, aloitusohje 4500 ms |

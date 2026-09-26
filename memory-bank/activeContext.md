@@ -14,7 +14,7 @@
 
 ---
 
-## 📍 Nyt (27.9.2026)
+## 📍 Nyt (30.9.2026)
 
 - **Versio:** `v4.88` (`index.html` → `#version-tag`).
 - **💡 Lampun potku Y-akseli (v4.88):** `street.js` potkun osumatarkistus laski aiemmin
