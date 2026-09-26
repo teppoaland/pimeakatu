@@ -6,8 +6,8 @@
 ## ⭐ Yleisarkkitehtuuri
 
 - **Pääportaali (juuri):** `index.html`, `style.css`, `street.js`, `gameState.js`, `audio.js` – ei `js/`-kansiota.
-- **Iframet (4 alipeliä):** `digGame1/` ⛏️ Dig Game · `digGame2/` 💎 Dig Däsh · `bm/` ✈️ Blue Mäx ·
-  `fruitgame/` 🍒 Hedelmäpeli (talo 7, **auki vain öisin** v4.34).
+- **Iframet (5 alipeliä):** `digGame1/` ⛏️ Dig Game · `digGame2/` 💎 Dig Däsh · `bm/` ✈️ Blue Mäx ·
+  `fruitgame/` 🍒 Hedelmäpeli (talo 7, **auki vain öisin** v4.34) · `sinkship/` 🚢 Laivanupotus (`buildings[2]`, lamppu x=193, v4.86).
 - **Kadun canvas-huoneet (ei iframe):** **makuuhuone** (ex-palkintohuone, `buildings[7]`, **ovi aina auki**
   v4.43 – ei avaimia eikä lamppua, valinnat Nuku/Poistu) · BAR (talo 9, 🍔) · jukebox (talo 5,
   `buildings[4]`, ovi x 410, 1 kolikko = koko kappale, **auki vain öisin** v4.34) · **sanomalehti**

@@ -9,28 +9,26 @@
 ## 📌 Kommunikaatiosääntö (KÄYTTÄJÄN PYYNTÖ)
 
 > **"Lue membank"** → lue muistipankki hiljaa itseäsi varten. **ÄLÄ anna yhteenvetoa.**
-> **🚫 Älä committaa automaattisesti** (20.9.2026) → muutokset jäävät työpuuhun, jotta käyttäjä näkee ne
-> VS Coden GIT-ikkunassa ja voi katsoa diffin. Commit vain pyynnöstä (esim. "commit"), push vain erikseen.
+> **Kun käyttäjä sanoo "commit" (tai "push" tms.)** → `git add -A && git commit && git push` yhdellä komennolla.
 > **✂️ Ei pitkiä yhteenvetoja** → raportti 2–5 riviä: mitä muuttui + lopputulos.
 
 ---
 
-## 📍 Nyt (25.9.2026)
+## 📍 Nyt (27.9.2026)
 
-- **Versio:** `v4.85` (`index.html` → `#version-tag`).
-- **🚢 Laivanupotus (`sinkship/`, uusi alipeli, v0.11 erillisenä):** käyttäjän pyyntö 25.9.2026
-  – peli ensin itsenäisenä, liitetään taloon vasta kun peli on hyväksytty. 10×10-laivanupotus
-  (laivat 5/4/3/3/2), asetusvaihe + älykäs tekoäly (osumien metsästys), viihtyisä päivähuone
-  (lämmin tapetti, ikkuna auringolla, kirjahylly, puinen pöytä), CRT-retro-sivu (musta tausta +
-  scanlinet), ohjaus PC (nuolet/WASD + Enter/Space + R + A, hiiriklikkaus) ja mobiili (D-pad +
-  ⚡/⟳/🎲 + suora kosketus ruutuun, tuplalaukauksen esto). Canvas sopeutuu kokoon (vaaka:
-  rinnakkain / pysty: päällekkäin). Proseduraaliset äänet. Savutesti `%TEMP%\sinkship-smoke.cjs`
-  (voitto+häviö läpi). **Ei versionostoa portaaliin ennen taloon liittämistä.**
+- **Versio:** `v4.88` (`index.html` → `#version-tag`).
+- **💡 Lampun potku Y-akseli (v4.88):** `street.js` potkun osumatarkistus laski aiemmin
+  pelaajan **keskipisteestä** (`player.y + player.h/2`), joka oli 20 px lampun jalasta → osuma
+  ei toteutunut oikealla korkeudella. Korjattu käyttämään **jalan tasoa**
+  (`player.y + player.h`), dy vain 5 px → potku osuu luonnollisesti kävelykorkeudella.
+- **🚢 Laivanupotus (`sinkship/`) palkinto (v4.87):** voitosta +1 💰 (`postMessage('COIN_COLLECTED')`).
+  Voittodialogissa teksti "Ansaitsit yhden 💰!". Tekstikorjaus: "sinkittyjä" → "upotettuja".
+  Äänet puolitettu → vielä −20 % (nyt 40 % alkuperäisestä). Vuorodialogi ("◀ AMMU" / "▶ ODOTA"):
+  tausta 56×26 → 80×38, läpinäkyvyys 0,62–0,92 → 0,35–0,55.
 - **🚢 Laivanupotus UI (v0.11, 25.9.2026):** "VIHOLLINEN" ja "SINÄ" -labelit poistettu
   merikartoista (`drawBoardFrame`) – pelaaja näkee pelilaudalta kummin päin pelaa.
   HUD-korkeus (`hudH`) tuplattu 38–62 → 76–124, jotta HUD-teksteille on tilaa.
   HUD-tekstit keskitetty (`justify-content: center`) myös mobiilissa (oli `flex-start`).
-  Työpuussa, ei committia.
 - **⚡ Sähkökaapit arvalla päällä (v4.85):** kaappien tila on **elävä** – alussa
   arvotaan ~50 % päälle, ja sen jälkeen jokainen kaappi **sammuu/käynnistyy
   itsestään** omaan satunnaiseen tahtiinsa (uusi arpa `CAB_REROLL_MIN/MAX`
@@ -52,7 +50,7 @@
   kaikki autot piirtyivät AINA pelaajan päälle, mikä näkyi rauta-aidan vierellä:
   autot "ylempänä" mutta pelaaja autojen TAKANA. Sama periaate kuin lamppupylväillä
   (v4.73); takapylväs/autot -järjestys ja katueläimen asema säilyvät.
-- **Tila:** pääportaali + 4 alipeliä valmiit ja pelattavat (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️,
+- **Tila:** pääportaali + 5 alipeliä valmiit ja pelattavat (`digGame1` ⛏️, `digGame2` 💎, `bm` ✈️,
   `fruitgame` 🍒); julkaisu GitHub Pages `https://teppoaland.github.io/pimeakatu/`.
 - **Kadun canvas-huoneet (ei iframe):** makuuhuone (talo 7) · BAR (talo 9) · jukebox (`buildings[4]`,
   ovi x 410) · sanomalehti (`newsRoom`) · hedelmäpelitalo (`buildings[6]`, iframe).

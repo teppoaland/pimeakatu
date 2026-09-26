@@ -206,15 +206,22 @@ function endGame(won) {
     st = 'over';
     g('overlay').classList.remove('hidden');
     g('overlay-title').textContent = won ? '🏆 Voitit!' : '💀 Hävisit';
+    const stats = '<br>Iskujasi: <b>' + state.shots + '</b> – ' +
+        'upotettuja: <b>' + state.enemy.sunk + ' / 5</b>.';
+    const reward = won ? '<br>Ansaitsit yhden 💰!' : '';
     g('overlay-message').innerHTML =
         (won ? 'Koko vihollisen laivasto on pohjassa!' : 'Vihollinen upotti koko laivastosi.') +
-        '<br>Iskujasi: <b>' + state.shots + '</b> – ' +
-        'sinkittyjä: <b>' + state.enemy.sunk + ' / 5</b>.' +
+        stats + reward +
         '<br><br>Pelaatko uudelleen?';
     g('overlay-action-btn').textContent = 'Pelaa';
     g('overlay-exit-btn').textContent = 'Poistu';
     g('overlay-exit-btn').style.display = '';
-    if (won) SoundFX.playWin(); else SoundFX.playLose();
+    if (won) {
+        SoundFX.playWin();
+        try { window.parent.postMessage('COIN_COLLECTED', '*'); } catch(e) {}
+    } else {
+        SoundFX.playLose();
+    }
 }
 
 function g(id) { return document.getElementById(id); }
@@ -1018,17 +1025,17 @@ function drawTurnArrow(L) {
         ch = S.turn === 'player' ? '▲' : '▼';
         tw = 'AMMU';
     } else {
-        px2 = Math.round(((L.ex + L.board) + L.px) / 2) - 26;
+        px2 = Math.round(((L.ex + L.board) + L.px) / 2) - 40;
         py2 = L.ey + Math.round(L.board / 2);
         ch = S.turn === 'player' ? '◀' : '▶';
         tw = S.turn === 'player' ? 'AMMU' : 'ODOTA';
     }
-    const bw2 = 56, bh2 = 26;
+    const bw2 = 80, bh2 = 38;
     const blink = 0.55 + 0.45 * Math.sin(t * 0.14);
-    ctx.fillStyle = 'rgba(10,16,32,' + (0.62 + 0.3 * blink).toFixed(2) + ')';
+    ctx.fillStyle = 'rgba(10,16,32,' + (0.35 + 0.20 * blink).toFixed(2) + ')';
     rr(px2, py2 - bh2 / 2, bw2, bh2, 8);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,215,0,' + (0.5 + 0.45 * blink).toFixed(2) + ')';
+    ctx.strokeStyle = 'rgba(255,215,0,' + (0.30 + 0.30 * blink).toFixed(2) + ')';
     ctx.lineWidth = 1.5;
     rr(px2 + 0.5, py2 - bh2 / 2 + 0.5, bw2 - 1, bh2 - 1, 8);
     ctx.stroke();

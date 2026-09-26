@@ -424,10 +424,10 @@ const Street = (() => {
     const DAY_SKY_TOP     = '#3f7fc0';     // päivätaivaan yläosa
     const DAY_SKY_MID     = '#78b4e0';     // keskikohta
     const DAY_SKY_HORIZON = '#ffd9a0';     // lämmin horisontti
-    /* Kuu ja aurinko (v4.41): kumpikin **pysyy paikallaan** omalla puolellaan ja
-       vain häivytetään ristikkäin (alpha = dayT / 1 − dayT) – ei liukua.
-       Päivällä aurinko on vasemmalla (SUN_X 140); yöllä kuu **liukuu vasemmalta
-       oikealle** yön aikana (v4.65) – ei arvota satunnaista paikkaa. */
+    /* YÖ/PÄIVÄ -KIERTO (v4.89): kuu ja aurinko vaeltavat taivaan yli ja
+       vuorokausi vaihtuu automaattisesti. Kun kuu laskee → 15 s → päivä,
+       aurinko laskee → 15 s → yö. Nukkuminen ja lampun potku toimivat
+       edelleen erillisinä tapoina vaihtaa vuorokaudenaikaa. */
     /* KUUN RATA (v4.65): kuu alkaa aina vasemmasta laidasta (MOON_X_MIN) ja
        liukuu yön kuluessa oikealle, kunnes laskeutuu kokonaan pois näkyvistä
        (MOON_SET_X, oikean reunan yli). Laskeutuessaan se pimentää maisemaa
@@ -436,14 +436,23 @@ const Street = (() => {
        palauta kuuta lähtöasemaan, vaan se jatkaa siitä mihin jäi. Kuu alkaa
        alusta vain kun uusi yö alkaa (Nuku) tai kun koko tallennus nollataan
        (kuolema / ✕ "aloita alusta" → GameState.reset / removeItem). */
-    const SUN_X = 140, SUN_Y = 62, SUN_R = 26;    // auringon päiväpaikka (vasen, kiinteä)
-    const MOON_Y = 60, MOON_R = 30;               // kuun korkeus ja koko (28 → 30, v4.72)
-    const MOON_X_MIN = SUN_X;                     // kuun alku = sama paikka kuin auringolla (vasen laita)
+    const SUN_Y = 62, SUN_R = 26;       // auringon korkeus ja koko
+    const SUN_X = -SUN_R * 3;              // auringon alku = ulos vasemmalta (v4.89), laskeutuu oikealle
+    const MOON_Y = 60, MOON_R = 30;               // kuun korkeus ja koko
+    const DAY_CYCLE_FRAMES = 7200;                // ~2 min: testi (tuotanto 57600 = 16 min)
+    const MOON_X_MIN = -MOON_R * 3;               // kuun alku = ulos vasemmalta (v4.89), laskeutuu oikealle
     const MOON_SET_X = WORLD_W + MOON_R * 3;      // laskeuma ≈ 890 → kokonaan pois
-    const MOON_NIGHT_FRAMES = 57600;              // ~16 min: kuu kulkee vas.→laskeumaan (hidastettu, nopeusnuppi)
+    const MOON_NIGHT_FRAMES = DAY_CYCLE_FRAMES;   // kuun liukuaika (sama kuin sykli)
     const MOON_SET_START = 0.60;                  // tästä p:stä alkaen kuu häipyy → maisema pimenee
     const MOON_SET_DARK_ALPHA = 0.15;             // "hiukan": max pimeneminen (0 = ei)
     const MOON_SAVE_FRAMES = 120;                 // tallenna kuun paikka ~2 s välein (v4.74)
+    /* Auringon liuku päivällä (v4.89): sama mekaniikka kuin kuulla yöllä.
+       Aurinko alkaa vasemmalta (SUN_X) ja liukuu oikealle DAY_CYCLE_FRAMES
+       aikana, kunnes laskeutuu pois (SUN_SET_X). Paikka tallennetaan. */
+    const SUN_SET_X = WORLD_W + SUN_R * 3;        // laskeuma ≈ 878 → kokonaan pois
+    const SUN_DAY_FRAMES = DAY_CYCLE_FRAMES;      // auringon liukuaika (sama kuin sykli)
+    const SUN_SAVE_FRAMES = 120;                  // tallenna auringon paikka ~2 s välein
+    const CYCLE_CHANGE_DELAY_FRAMES = 900;        // 15 s viive ennen automaattista vaihtoa (v4.89)
     /* ── Kuun ulkoasu (v4.72) ──
        Kuu piirretään tähtien JÄLKEEN (mutta pilvien eteen), jotta tähdet eivät
        enää tuiki kuun läpi – ennen kuu näytti "leikatulta reijältä". Pimeä puoli
@@ -491,6 +500,10 @@ const Street = (() => {
     let moonNightClock = 0;                       // yön kulku (framet) kuun rataa varten
     let moonDark = 0;                             // kuun laskusta johtuva pimeneminen
     let moonSaveTimer = 0;                        // tallennusvälin laskuri (v4.74)
+    let sunX = SUN_X;                             // auringon nykyinen x (päivällä liukuu, v4.89)
+    let sunDayClock = 0;                          // päivän kulku (framet) auringon rataa varten
+    let sunSaveTimer = 0;                         // tallennusvälin laskuri (v4.89)
+    let cycleChangeTimer = CYCLE_CHANGE_DELAY_FRAMES + 1;  // > DELAY = "ei käynnissä" (v4.89)
 /* Kuun kuva (v4.79): assets/moon.png (alpha-PNG) – korvaa proseduraalisen
        sirpin kun kuva on ladattu. Jos kuva ei lataudu (tai headless-testi),
        piirretään entinen proseduraalinen kuu (fallback). Käännös on tehty jo
@@ -628,6 +641,28 @@ const Street = (() => {
         applyMoonClock(0);
         moonSaveTimer = 0;
         saveMoonClock();
+    }
+
+    /* ── Auringon kello (v4.89) ──
+       Sama lähdeperiaate kuin kuulla: kellosta (framet) lasketaan x.
+       Samaa funktiota käyttävät init (tallennettu kello), resetSun (0) ja
+       update (kello + dt). sunX säilyy murto-osaisena (EI Math.round). */
+    function applySunClock(clock) {
+        sunDayClock = clock;
+        const p = Math.min(1, sunDayClock / SUN_DAY_FRAMES);
+        sunX = SUN_X + p * (SUN_SET_X - SUN_X);          // float → nykimätön liuku
+    }
+
+    function saveSunClock() {
+        if (DAY_FORCE) return;
+        state.sunClock = Math.round(sunDayClock);
+        GameState.save(state);
+    }
+
+    function resetSun() {
+        applySunClock(0);
+        sunSaveTimer = 0;
+        saveSunClock();
     }
 
     // Kaksisuuntainen liikenne: kaksi ajorataa (kaistaa)
@@ -1370,9 +1405,10 @@ const Street = (() => {
         state = GameState.load();
         /* Onko kyseessä aivan uusi peli (0-tila)? Kuun kello (moonClock)
            jätetään vertailusta pois: se tallentuu itsestään heti yön alettua,
-           eikä sen kuulu sammuttaa aloitusohjetta. */
+           eikä sen kuulu sammuttaa aloitusohjetta. Sama auringon kellolle. */
         const progressState = Object.assign({}, state);
         delete progressState.moonClock;
+        delete progressState.sunClock;
         const freshGame = (JSON.stringify(progressState) === JSON.stringify(GameState.defaultState));
         for (let i = 0; i < lamps.length; i++) {
             lamps[i].lit = state.litLamps[i];
@@ -1412,6 +1448,7 @@ const Street = (() => {
            (kuolema / ✕ "aloita alusta") tai kun uusi yö alkaa Nukusta.
            Testityökalut ?day=0/1 näyttävät kuun lähtöasemasta kuten ennen. */
         applyMoonClock(DAY_FORCE ? 0 : (Number(state.moonClock) || 0));
+        applySunClock(DAY_FORCE ? 0 : (Number(state.sunClock) || 0));
         stars = [];
         for (let i = 0; i < 80; i++) {
             stars.push({
@@ -1753,14 +1790,27 @@ const Street = (() => {
             }
         }
 
-        // ── Kuu: liukuu vasemmalta oikealle yön aikana (v4.65) ──
-        // Yöllä kuu etenee ajan mukaan, myös huoneissa ja alapeleissä (aika
-        // kuluu), kunnes laskeutuu kokonaan pois oikealta (MOON_SET_X).
-        // Laskeutuessaan se pimentää maisemaa hiukan. Paikka tallennetaan
-        // harvakseltaan (MOON_SAVE_FRAMES ≈ 2 s) – F5 jatkaa samasta kohdasta
-        // eikä localStorage-kirjoituksia tule joka framella (v4.74).
+        // ── Yö/päivä -kierto (v4.89): kuu liukuu yöllä, aurinko päivällä ──
+        // Kun kuu/aurinko on kadonnut, odotetaan CYCLE_CHANGE_DELAY_FRAMES
+        // (15 s) ja vaihdetaan automaattisesti seuraavaan vuorokaudenaikaan.
+        // Kellot tallennetaan ~2 s välein, jotta F5 jatkaa samasta kohdasta.
         if (!isDay) {
-            applyMoonClock(moonNightClock + dt);
+            if (moonNightClock < MOON_NIGHT_FRAMES) {
+                applyMoonClock(moonNightClock + dt);
+                if (moonNightClock >= MOON_NIGHT_FRAMES) {
+                    cycleChangeTimer = CYCLE_CHANGE_DELAY_FRAMES;  // aloita 15 s viive
+                }
+            } else {
+                applyMoonClock(MOON_NIGHT_FRAMES);      // pysyy päätepisteessä
+                cycleChangeTimer = Math.max(0, cycleChangeTimer - dt);
+                if (cycleChangeTimer <= 0) {
+                    isDay = true;
+                    state.isDay = true;
+                    GameState.save(state);
+                    resetSun();
+                    cycleChangeTimer = CYCLE_CHANGE_DELAY_FRAMES + 1;  // nollaa tila
+                }
+            }
             moonSaveTimer += dt;
             if (moonSaveTimer >= MOON_SAVE_FRAMES) {
                 moonSaveTimer = 0;
@@ -1768,6 +1818,28 @@ const Street = (() => {
             }
         } else {
             moonDark = 0;
+            if (sunDayClock < SUN_DAY_FRAMES) {
+                applySunClock(sunDayClock + dt);
+                if (sunDayClock >= SUN_DAY_FRAMES) {
+                    cycleChangeTimer = CYCLE_CHANGE_DELAY_FRAMES;  // aloita 15 s viive
+                }
+            } else {
+                applySunClock(SUN_DAY_FRAMES);          // pysyy päätepisteessä
+                cycleChangeTimer = Math.max(0, cycleChangeTimer - dt);
+                if (cycleChangeTimer <= 0) {
+                    isDay = false;
+                    state.isDay = false;
+                    GameState.save(state);
+                    resetMoon();
+                    resetSun();
+                    cycleChangeTimer = CYCLE_CHANGE_DELAY_FRAMES + 1;  // nollaa tila
+                }
+            }
+            sunSaveTimer += dt;
+            if (sunSaveTimer >= SUN_SAVE_FRAMES) {
+                sunSaveTimer = 0;
+                saveSunClock();
+            }
         }
 
         // ── Kuolemasekvenssi ─────────────────────────
@@ -1832,7 +1904,9 @@ const Street = (() => {
                     // (toimii myös keskellä hämärtymistä ja ?day-testityökalulla)
                     isDay = !(dayT >= 0.5);        // päivä → yö  TAI  yö → päivä
                     // Uusi yö → kuu nousee uudelleen vasemmalta (v4.65), ei arvota.
+                    cycleChangeTimer = CYCLE_CHANGE_DELAY_FRAMES + 1;  // uusi jakso alkaa (v4.89)
                     if (!isDay) resetMoon();
+                    if (isDay) resetSun();              // aurinko alkuun (v4.89)
                     if (!DAY_FORCE) {              // testityökalut eivät tallenna
                         state.isDay = isDay;
                         GameState.save(state);
@@ -2540,7 +2614,7 @@ const Street = (() => {
         // Tarkista osuuko potku lamppuun
         for (let i = 0; i < lamps.length; i++) {
             const lamp = lamps[i];
-            const dx = px - lamp.x, dy = py - (GROUND_Y + 15);
+            const dx = px - lamp.x, dy = (player.y + player.h) - (GROUND_Y + 15);
             if (Math.sqrt(dx*dx + dy*dy) < (LAMP_RADIUS + 10) / 2) {   // potkurange puolitettu: 40 → 20 px
                 // Jos lamppu on ylikuumentunut, älä tee mitään
                 if (lamp.overheat) {
@@ -3471,17 +3545,17 @@ const Street = (() => {
             ctx.restore();
         }
 
-        // Aurinko (päivä) – ilmestyy paikalleen vasemmalle (SUN_X), ristihäivytys
+        // Aurinko (päivä) – liukuu vasemmalta oikealle päivän aikana (v4.89)
         if (dayT > 0) {
             ctx.save();
             ctx.globalAlpha = dayT;
             // Hehku
-            const sunGlow = ctx.createRadialGradient(SUN_X, SUN_Y, SUN_R * 0.4, SUN_X, SUN_Y, SUN_R * 3.4);
+            const sunGlow = ctx.createRadialGradient(sunX, SUN_Y, SUN_R * 0.4, sunX, SUN_Y, SUN_R * 3.4);
             sunGlow.addColorStop(0, 'rgba(255,224,120,0.55)');
             sunGlow.addColorStop(0.4, 'rgba(255,210,100,0.20)');
             sunGlow.addColorStop(1, 'rgba(255,200,80,0)');
             ctx.fillStyle = sunGlow;
-            ctx.beginPath(); ctx.arc(SUN_X, SUN_Y, SUN_R * 3.4, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(sunX, SUN_Y, SUN_R * 3.4, 0, Math.PI*2); ctx.fill();
             // Hitaasti pyörivä sädekehä
             const spin = Date.now() * 0.00012;
             ctx.strokeStyle = 'rgba(255,238,160,0.35)';
@@ -3491,13 +3565,13 @@ const Street = (() => {
                 const r0 = SUN_R + 5;
                 const r1 = r0 + (i % 2 === 0 ? 9 : 5);
                 ctx.beginPath();
-                ctx.moveTo(SUN_X + Math.cos(ang) * r0, SUN_Y + Math.sin(ang) * r0);
-                ctx.lineTo(SUN_X + Math.cos(ang) * r1, SUN_Y + Math.sin(ang) * r1);
+                ctx.moveTo(sunX + Math.cos(ang) * r0, SUN_Y + Math.sin(ang) * r0);
+                ctx.lineTo(sunX + Math.cos(ang) * r1, SUN_Y + Math.sin(ang) * r1);
                 ctx.stroke();
             }
             // Kiekko: tasainen lämmin keltainen (ei valkoista palloa keskellä)
             ctx.fillStyle = '#ffe066';
-            ctx.beginPath(); ctx.arc(SUN_X, SUN_Y, SUN_R, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(sunX, SUN_Y, SUN_R, 0, Math.PI*2); ctx.fill();
             ctx.restore();
         }
 

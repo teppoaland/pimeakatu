@@ -76,20 +76,20 @@ const SoundFX = (() => {
     return {
         init,
         /* Laukaisu: terävä napaus */
-        playShot()  { noise(0.07, 0.5, 'highpass', 1200); },
+        playShot()  { noise(0.07, 0.20, 'highpass', 1200); },
         /* Räiskähdys veteen: laskeva liuku + roiske */
-        playSplash(){ tone(520, 0.28, 0.35, 'triangle', 110); noise(0.14, 0.28, 'bandpass', 900); },
+        playSplash(){ tone(520, 0.28, 0.14, 'triangle', 110); noise(0.14, 0.11, 'bandpass', 900); },
         /* Osuma: matala tömähdys + paukahdus */
-        playHit()   { noise(0.18, 0.55, 'lowpass', 900); tone(130, 0.22, 0.4, 'square', 60); },
+        playHit()   { noise(0.18, 0.22, 'lowpass', 900); tone(130, 0.22, 0.16, 'square', 60); },
         /* Upotus: pitkä matala mörinä */
-        playSink()  { noise(0.6, 0.5, 'lowpass', 500); tone(110, 0.7, 0.5, 'sawtooth', 40); tone(55, 0.8, 0.4, 'sine', 30); },
+        playSink()  { noise(0.6, 0.20, 'lowpass', 500); tone(110, 0.7, 0.20, 'sawtooth', 40); tone(55, 0.8, 0.16, 'sine', 30); },
         /* Asetus: naksu */
-        playPlace() { tone(660, 0.06, 0.3, 'square'); },
+        playPlace() { tone(660, 0.06, 0.12, 'square'); },
         /* Käännä: piippaus */
-        playRotate(){ tone(880, 0.06, 0.25, 'square', 1180); },
+        playRotate(){ tone(880, 0.06, 0.10, 'square', 1180); },
         /* Win: nouseva fanfaari */
-        playWin()   { arpeggio([523, 659, 784, 1047], 0.18, 0.35); },
+        playWin()   { arpeggio([523, 659, 784, 1047], 0.18, 0.14); },
         /* Lose: laskeva surusävel */
-        playLose()  { arpeggio([392, 311, 262, 196], 0.22, 0.35); },
+        playLose()  { arpeggio([392, 311, 262, 196], 0.22, 0.14); },
     };
 })();

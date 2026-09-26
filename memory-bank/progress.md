@@ -1,7 +1,7 @@
 # 📊 Projektin edistyminen
 
-> **v4.78 – 25.9.2026** · Kompaktoitu 23.9.2026 (täysi historia git-historiassa: viimeisin täysi versio
-> `ffb1dd9`, HEAD `cc7046b`)
+> **v4.88 – 27.9.2026** · Kompaktoitu 23.9.2026 (täysi historia git-historiassa: viimeisin täysi versio
+> `ffb1dd9`, HEAD `44db9e7`)
 
 ## 🏮 Pääportaali – Pimeä Katu
 
@@ -20,8 +20,9 @@
 | 🛞 Panssarivaunu | ✅ v4.56–v4.63 – liikenteessä `type 'tank'` (86×36, nopeus 0,4–0,8, ei ajovaloa), moottorisaundi (28 Hz + särö), 75 px tykkiputki + telaketjut/telapyörät |
 | 🚗 Auton osuma kaataa 10 px ylös osumakohdasta | ✅ **v4.78** – `player.knockFallY` = osumahetken jalkapiste **−10 px** (`updateTraffic`) → tainnutushaaran klamppi käyttää sitä `GROUND_Y+10`:n sijaan → ei enää "lentoa kadun varteen", mutta ei myöskään limboa keskellä tietä (kolarijatkuva). Muut tainnutuslähteet ennallaan (`knockFallY` nollautuu ylösnoustessa). **Talous ennallaan** (−1 🍔, 600 f, sääntö 04) |
 | 🚗 Ajoneuvojen syvyysjärjestys | ✅ **v4.84** – autot, joiden keskipiste on pelaajan jalkapisteen yläpuolella (kauempana), piirretään ENNEN pelaajaa (pelaaja päälle); lähemmät pelaajan jälkeen. Korjaa virheen, jossa pelaaja rauta-aidan vierellä piirtyi autojen taakse, vaikka autot ajoivat Y-akselilla hänen yläpuolellaan |
-| 🚢 Laivanupotus (`sinkship/`) | 🚧 v0.11 erillisenä – toimiva 10×10-laivanupotus: asetusvaihe (kursori/R-käännä/A-auto), älykäs tekoäly (osumien metsästys), huti/osumia/upotus-efektit + proseduraaliset äänet, viihtyisä päivähuone (canvas, dynaaminen koko, pysty/vaaka), ohjaus PC (nuolet/WASD/Enter/R/A + hiiri) ja mobiili (D-pad + ⚡/⟳/🎲 + kosketus ruutuun). **Ei vielä liitetty taloon/portaaliin** – liitetään erikseen kun peli on käyttäjän hyväksymä. Savutesti `%TEMP%\sinkship-smoke.cjs` (voitto+häviö). **v0.11 (25.9.2026):** "VIHOLLINEN"/"SINÄ"-labelit poistettu, HUD-korkeus 2×, HUD-tekstit keskitetty mobiilissa |
+| 🚢 Laivanupotus (`sinkship/`) | ✅ **v4.87** – liitetty katupeliin: lamppu `lamps[5]` (bldgIdx:2, x=193), potkaise lamppuun/toinen potku ovelle = sisään. Overlay: Pelaa/Poistu. Enter/title = aloita, Esc/over = poistu. drawMsg-laatikon dynaaminen korkeus, automaatti-viesti 4 s. **v4.87:** voitosta +1 💰 + dialogi. Äänet −60 %. Vuorodialogi isompi + läpinäkyvä. Tekstikorjaus: sinkittyjä → upotettuja. |
 | ⚡ Sähkökaapit arvalla päällä | ✅ **v4.85** – kaappien tila on **elävä**: alussa arvotaan ~50 % päälle (`ELECTRIC_CABINET_ON 0.5`) ja sen jälkeen jokainen kaappi **sammuu/käynnistyy itsestään** omaan satunnaiseen tahtiinsa (uusi arpa `CAB_REROLL_MIN/MAX` 900–2100 frameä = 15–35 s). Vain päällä oleva iskee (tainnutus + −1 🍔, sääntö 04) ja sen keltainen varoitusvalo vilkkuu omaan tahtiin (`CAB_BLINK_MIN/MAX`, oma `phase`) → valot eivät vilku tasatahtiin; sammuksissa olevan kaapin valo tumma. Testityökalu `?cabs=1` / `?cabs=0` (pakottaa ja jäädyttää, ei tallenna) |
+| 💡 Lampun potku Y-korjaus | ✅ **v4.88** – osumatarkistus vaihdettu keskipisteestä (`player.y+player.h/2`) jalan tasoon (`player.y+player.h`): ennen dy=−20 px / osumasäde 20 → ei osunut; nyt dy=−5 px → osuu kävelykorkeudella |
 | Kolikko potkusta / oviukko | ✅ v3.93 / v4.14–v4.15 / 23.9.2026 – 1/5 kolikko (30 s cooldown); oviukko 1/8 + 30 s, **½-nopeus (`AVENGER_SPEED 1.0`)**: avoimella kadulla se ei saa kiinni, mutta laidalla nappaa (nälkäisenä ≤3 🍔 heti), 3 s jäädytys + −1 🍔; huoneet/lehti jäädyttävät sen |
 | 🔪 Rosvo jalkakäytävällä | ✅ v4.66–v4.68 – yllätysesiintyminen vain paluussa kadulle (trackHiddenStreet → maybeSpawnRobber; appearence 0.4, cooldown 1500, min. etäisyys 130 px, ttl 900 ~15 s); mustat vaatteet + puukko, nopeus 1.05 < pelaaja. Kiinniotto = tainnutus + **−1 🍔 + kaikki kolikot** (v4.68, ei ilmoitusta – sääntö 06), rosvo katoaa nappauksen jälkeen → väistö onnistuu. Ei localStorage-avainta |
 | 🕳️ Avoin kaivo (viemärinkansi) | ✅ v4.51 / v4.52 / v4.69 – kansi voi puuttua (1/6 alussa, 1/10 joka paluulla; voi palata) → musta reikä; putoaa alas ja köpii ylös (~0,6 s + ~3,5 s). Menetys **enintään −2 🪙** (3 → 1, 2 → 0, 1 → 0, 0 → ei mitään) · **1/6 putoamisista +3 🪙** (pling + kultahiukkaset). Ei 🍔-menetystä, ei kuolemaa, ei tainnutusta; reiän voi kiertää. `?hole=0/1/2` |
