@@ -2664,7 +2664,7 @@ const Street = (() => {
                     const spread = tr.h * 0.6;
                     const baseY = GROUND_Y - 5;
                     const x0 = tr.x + (Math.random() - 0.5) * spread * 2;
-                    const y0 = baseY - tr.h * (0.9 + Math.random() * 0.3);
+                    const y0 = baseY - tr.h * (0.75 + Math.random() * 0.2);
                     birds.push({
                         x: x0, y: y0, targetX: x0, targetY: y0,
                         perched: true,
@@ -2706,7 +2706,7 @@ const Street = (() => {
                         const spread = tr.h * 0.6;
                         const baseY = GROUND_Y - 5;
                         b.targetX = tr.x + (Math.random() - 0.5) * spread * 2;
-                        b.targetY = baseY - tr.h * (0.6 + Math.random() * 0.4);
+                        b.targetY = baseY - tr.h * (0.65 + Math.random() * 0.3);
                         b.perched = false;
                         b.flapPhase = Math.random() * Math.PI * 2;
                     }
