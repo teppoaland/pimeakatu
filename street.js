@@ -6484,7 +6484,7 @@ const Street = (() => {
         /* Äidin lappu – 3 riviä (varoitus hampurilaisten kulutuksesta) */
         const hintLines = [
             'SEURAA HAMPURILAISTEN KULUTUSTA',
-            'MUISTA SYÖDÄ VILLE!',
+            'MUISTA SYÖDÄ MARKO!',
             'Tv. Äiti'
         ];
         const boxPad = 36;                    // laatikon sisämarginaali
