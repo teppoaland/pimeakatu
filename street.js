@@ -2728,7 +2728,7 @@ const Street = (() => {
             }
         } else {
             // Yöllä linnut poistetaan
-            if (birds.length) { birds = []; birdTargetCount = 0; }
+            if (birds.length) { birds = []; birdTargetCount = undefined; birdSpawnTimer = undefined; }
         }
     }
 
