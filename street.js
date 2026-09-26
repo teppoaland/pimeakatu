@@ -5937,7 +5937,7 @@ const Street = (() => {
         }
 
         // 6) Nukkumisen pimennys: ruutu tummuu mustaksi ~0,75 s aikana
-        //    (SLEEP_DARK_FRAMES), minkä jälkeen itse "Zzz…"-efekti näkyy ~3 s
+        //    (SLEEP_DARK_FRAMES), minkä jälkeen itse "ZZzzZZzzzZzzz…"-efekti näkyy ~3 s
         //    (SLEEP_ZZZ_FRAMES) – yhteensä ~3,75 s. Tila vaihtuu vasta lopussa.
         //    HUOM: pimennys lasketaan KULUNEESTA ajasta (ei jäljellä olevasta),
         //    muuten musta kerros ja Zzz ehtivät mukaan vasta aivan lopussa.
@@ -5951,7 +5951,7 @@ const Street = (() => {
                 ctx.textAlign = 'center';
                 ctx.font = 'bold ' + needPx(20, 16, 22) + 'px "Courier New", monospace';
                 ctx.fillStyle = '#ffe9a8';
-                ctx.fillText('Zzz…', 400, 250 + Math.round(Math.sin(now / 300) * 3));
+                ctx.fillText('ZZzzZZzzzZzzz…', 400, 250 + Math.round(Math.sin(now / 300) * 3));
                 ctx.textAlign = 'left';
                 ctx.globalAlpha = 1;
             }
@@ -6058,7 +6058,7 @@ const Street = (() => {
         const info = [];
         if (playing) {
             const tr = (curTrack > 0) ? JUKEBOX_TRACKS[curTrack - 1] : null;
-            const t = tr ? tr.title + ' (' + tr.duration + ')' : '';
+            const t = tr ? tr.title : '';
             info.push({ text: '🔊 SOI NYT: ' + t, color: '#ffdd88' });
             if (jukeQueue.length > 1) {
                 info.push({ text: '📋 Soittojonossa: ' + jukeQueue.length + ' kappaletta',
