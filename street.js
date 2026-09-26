@@ -6283,7 +6283,7 @@ const Street = (() => {
         ctx.beginPath(); ctx.arc(cx, recY, recR + 4, 0, Math.PI * 2); ctx.fill();
         const showCover = playing && !!cover && cover.ready;
         if (showCover) {
-            const box = recR * 2;                              // kuvan neliöalue
+            const box = (recR + 4) * 2;                        // koko tumman ympyrän kattava alue
             const iw  = cover.img.naturalWidth  || 1;
             const ih  = cover.img.naturalHeight || 1;
             const k   = Math.min(box / iw, box / ih);          // kuvasuhde säilyy
@@ -6292,13 +6292,13 @@ const Street = (() => {
             const dx  = Math.round(cx - dw / 2);
             const dy  = Math.round(recY - dh / 2);
             ctx.fillStyle = '#120e18';                         // taustalaatta
-            ctx.fillRect(cx - recR, recY - recR, box, box);
+            ctx.fillRect(cx - recR - 4, recY - recR - 4, box, box);
             ctx.imageSmoothingEnabled = true;                  // valokuva → pehmennetty
             ctx.drawImage(cover.img, dx, dy, dw, dh);
             ctx.imageSmoothingEnabled = false;
             ctx.strokeStyle = 'rgba(255,221,136,0.55)';        // ohut kehys
             ctx.lineWidth = 1;
-            ctx.strokeRect(cx - recR + 0.5, recY - recR + 0.5, box - 1, box - 1);
+            ctx.strokeRect(cx - recR - 4 + 0.5, recY - recR - 4 + 0.5, box - 1, box - 1);
         } else {
             ctx.fillStyle = '#171320';
             ctx.beginPath(); ctx.arc(cx, recY, recR, 0, Math.PI * 2); ctx.fill();
