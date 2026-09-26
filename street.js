@@ -541,7 +541,7 @@ const Street = (() => {
 
     /* ── Yölepakot (v4.93) ──────────────────────── */
     const BAT_COUNT_MAX   = 5;               // 0–5 lepakkoa, random
-    const BAT_Y_MIN       = 90;              // maksimi: korkein talo (210 px) + 10 px
+    const BAT_Y_MIN       = 45;              // ylin: kuun korkeudella (MOON_Y=60, R=30 → alareuna 90)
     const BAT_Y_MAX       = 245;             // minimi: lampun kupujen yläpuolella (bulbY = 257)
     const BAT_SPEED_MIN   = 0.25;            // hitain vauhti
     const BAT_SPEED_MAX   = 0.7;             // nopein vauhti
@@ -2169,6 +2169,7 @@ const Street = (() => {
         /* Vauhti riippuu 🍔-määrästä (hungerSpeedMult): nälkäisenä hitaampi,
            täydellä vatsalla nopeampi. PLAYER_SPEED (1.225) on normitaso. */
         const speedMult = hungerSpeedMult();
+        StreetAudio.setHungerTempo(speedMult);   // synkkaa syntikkatempo 🍔-vauhtiin (v4.93)
         const moveSpeed = PLAYER_SPEED * speedMult;
         let moveX = 0;
         if (keys['ArrowLeft'] || keys['a'] || keys['A'])  moveX = -1;
@@ -2251,7 +2252,6 @@ const Street = (() => {
                 coin.collected = true; coin.x = -100; coin.y = -100;
                 playCoin();
                 coinRespawnTimer = 7200;  // 120s @ 60fps
-                showNotification('💰 Löysit kolikon! (' + coinCount + ' kpl)');
                 spawnParticles(cx, cy, '#ffd700', 12);
                 updateHUD();
             }
@@ -2437,7 +2437,6 @@ const Street = (() => {
                     state.inventory.coinCount = coinCount;
                     GameState.save(state);
                     playCoin();
-                    showNotification('💰 Löysit kolikon! (' + coinCount + ' kpl)');
                     spawnParticles(kpx, kpy, '#ffd700', 12);
                     updateHUD();
                     kickCoin = null;
@@ -2538,8 +2537,8 @@ const Street = (() => {
 
             // ── Lepakot (vain yöllä) ────────────
             if (!bats.length) {
-                // Spawnaa 0–5 lepakkoa satunnaisella viiveellä
-                if (batSpawnTimer === undefined) batSpawnTimer = 1800 + Math.random() * 3600;
+                // Spawnaa 0–5 lepakkoa 30s välein
+                if (batSpawnTimer === undefined) batSpawnTimer = 1800;
                 batSpawnTimer -= dt;
                 if (batSpawnTimer <= 0) {
                     const count = Math.floor(Math.random() * (BAT_COUNT_MAX + 1)); // 0–5
@@ -2561,7 +2560,7 @@ const Street = (() => {
                             fadeDuration: 0
                         });
                     }
-                    batSpawnTimer = 1800 + Math.random() * 3600;
+                    batSpawnTimer = 1800;
                 }
             } else {
                 for (let i = bats.length - 1; i >= 0; i--) {

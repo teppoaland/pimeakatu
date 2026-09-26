@@ -51,6 +51,7 @@ const StreetAudio = (() => {
     const BPM_MAX = 142;
     let BPM = 138;
     let BEAT = 60 / BPM;
+    let hungerTempo = 1.0;         // 🍔-vauhtikerroin (2/3 / 1.0 / 2.0), asetetaan street.js:stä
     let S16 = BEAT / 4;
     let S8 = BEAT / 2;
     let BAR = BEAT * 4;
@@ -655,7 +656,14 @@ const StreetAudio = (() => {
         if (synthFadeTimer) { clearInterval(synthFadeTimer); synthFadeTimer = null; }
         if (synthGain) synthGain.gain.value = 1; // syntikka kuuluviin
         melodyReverse = Math.random() < 0.5;
-        BPM = BPM_MIN + Math.random() * (BPM_MAX - BPM_MIN);
+        // Tempo 🍔-vauhtiin (v4.93): hidas → minimi, normaali → keskiväli, nopea → maksimi
+        if (hungerTempo <= 0.7) {
+            BPM = BPM_MIN;
+        } else if (hungerTempo >= 1.5) {
+            BPM = BPM_MAX;
+        } else {
+            BPM = Math.round((BPM_MIN + BPM_MAX) / 2);   // 126 = keskiväli
+        }
         BEAT = 60 / BPM; S16 = BEAT / 4; S8 = BEAT / 2; BAR = BEAT * 4;
         LOOP = BAR * LOOP_BARS;
         scheduleAll(ctx.currentTime + 0.05);
@@ -794,8 +802,9 @@ const StreetAudio = (() => {
 
     function getCtx() { init(); return ctx; }
     function getDestination() { init(); return ctx ? ctx.destination : null; }
+    function setHungerTempo(mult) { hungerTempo = mult; }
 
     return { init, start, stop, playDeathGong, getCtx, getDestination,
              playJukebox, playJukeboxQueue, stopJukebox, isJukeboxPlaying,
-             getJukeboxQueuePos };
+             getJukeboxQueuePos, setHungerTempo };
 })();
