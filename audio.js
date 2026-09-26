@@ -256,7 +256,7 @@ const StreetAudio = (() => {
     /* Soittaa koko jonon alusta loppuun (v4.46): valitut kappaleet yksi
        kerrallaan (1 → 3). Palauttaa false jos ääntä ei saada lainkaan
        (kadun puoli voi silloin palauttaa kolikot). */
-    function playJukeboxQueue(urls) {
+    function playJukeboxQueue(urls, startPos = 0) {
         if (!urls || !urls.length) return false;
         init();
         if (!ctx) return false;
@@ -284,7 +284,7 @@ const StreetAudio = (() => {
         }
         try { jukeEl.volume = JUKEBOX_VOLUME; } catch (e) {}
         jukeQueue = urls.slice();
-        jukePos = 0;
+        jukePos = Math.max(0, Math.min(startPos, urls.length - 1));
         pendingJukeQueue = null;
         jukePlaying = true;
         if (!startJukeTrack()) {

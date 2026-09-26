@@ -252,6 +252,7 @@ const Street = (() => {
     let jukeSpaceHeld = false;     // Space/⚡/(o) reunanilmaisu (ota/poista)
     let jukeEnterHeld = false;     // Enter-reunanilmaisu (soita & poistu)
     let jukeQueue = [];            // soivat kappaleet numeroina (1..N), sama kuin audio-jono
+    let jukeSavedPos = -1;         // viimeksi tallennettu jukebox-positio (v4.92)
 
     /* ── Sanomalehti (v4.53) ──────────────────────────
        Kadulla lojuva lehti avataan toimintonapilla → peliohjeet.
@@ -1452,6 +1453,18 @@ const Street = (() => {
         applyMoonClock(DAY_FORCE ? 0 : (Number(state.moonClock) || 0));
         applySunClock(DAY_FORCE ? 0 : (Number(state.sunClock) || 0));
         spawnLampTimer = freshGame ? SPAWN_LAMP_DELAY : 0;  // 4 s → lamppushow vain uudessa pelissa (v4.90)
+        /* Jukebox-soitto palautetaan tallennuksesta (v4.92): F5 ei katkaise soittoa. */
+        if (state.jukeQueue && state.jukeQueue.length > 0 && state.jukePos !== undefined) {
+            const urls = [];
+            for (let i = 0; i < state.jukeQueue.length; i++) {
+                const idx = state.jukeQueue[i];
+                if (idx > 0 && idx <= JUKEBOX_TRACKS.length) urls.push(JUKEBOX_TRACKS[idx - 1].url);
+            }
+            if (urls.length > 0 && StreetAudio.playJukeboxQueue(urls, state.jukePos)) {
+                jukeQueue = state.jukeQueue.slice();
+                jukeSavedPos = state.jukePos;
+            }
+        }
         stars = [];
         for (let i = 0; i < 80; i++) {
             stars.push({
@@ -1800,6 +1813,23 @@ const Street = (() => {
             if (spawnLampTimer <= 0) {
                 startNightLampShow();                    // sytytä lamput yksi kerrallaan
             }
+        }
+
+        // ── Jukebox-soiton tallennus (v4.92): seuraa positiota ja päivitä state F5:n yli ──
+        if (StreetAudio.isJukeboxPlaying()) {
+            const qPos = StreetAudio.getJukeboxQueuePos();
+            if (qPos !== jukeSavedPos && qPos >= 0) {
+                jukeSavedPos = qPos;
+                state.jukePos = qPos;
+                state.jukeQueue = jukeQueue.slice();
+                GameState.save(state);
+            }
+        } else if (state.jukeQueue && state.jukeQueue.length > 0 && !iframeOpen && !sleepRoom && !barRoom && !jukeboxRoom && !newsRoom) {
+            // Soitto loppui, tyhjennä tallennettu tila
+            state.jukeQueue = [];
+            state.jukePos = 0;
+            GameState.save(state);
+            jukeSavedPos = -1;
         }
 
         // ── Yö/päivä -kierto (v4.89): kuu liukuu yöllä, aurinko päivällä ──
@@ -2820,6 +2850,10 @@ const Street = (() => {
                 for (let i = 0; i < play.length; i++) urls.push(JUKEBOX_TRACKS[play[i] - 1].url);
                 if (StreetAudio.playJukeboxQueue(urls)) {
                     jukeQueue = play.slice();
+                    state.jukeQueue = jukeQueue.slice();  // talleta jukebox-soitto F5:n yli (v4.92)
+                    state.jukePos = 0;
+                    GameState.save(state);
+                    jukeSavedPos = 0;
                     playCoin();
                     if (play.length < picks.length) {
                         showNotification('💰 Ei kolikoita kaikkiin – soitetaan ' +
