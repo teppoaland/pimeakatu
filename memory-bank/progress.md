@@ -1,6 +1,6 @@
 # 📊 Projektin edistyminen
 
-> **v4.97 – 1.10.2026** · Kompaktoitu 23.9.2026 (täysi historia git-historiassa: viimeisin täysi versio
+> **v4.99 – 1.10.2026** · Kompaktoitu 23.9.2026 (täysi historia git-historiassa: viimeisin täysi versio
 > `ffb1dd9`, HEAD `44db9e7`)
 
 ## 🏮 Pääportaali – Pimeä Katu
@@ -94,4 +94,5 @@ laatikot tarkalleen kohdakkain) ja `np-verify` (tarkistaa piirroksen rivipituude
 | | SPAWN-LAMPUSHOW | **v4.90/91** - 4 s viive, vain freshGame + !isDay.
 | | JUKEBOX F5 | **v4.92** - jukeQueue ja jukePos talteen, soitto jatkuu.
 | | JUKEBOX 9 RAITAA | **v4.97** - raidat 7-9: Alex Morgan + 2x NickPanek. Uusi nimeamiskaytanto: 7_tiedosto.mp3 = covers/7_tiedosto.png.
+| | JUKEBOX AINA VAPAA | **v4.99** - jukebox ei lukkiudu soiton ajaksi; soivan kappaleen aikana voi valita lisää kappaleita, jotka lisätään jonon perään (numerojärjestyksessä 1→N)
 | Kuun ulkoasu

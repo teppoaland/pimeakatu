@@ -1,6 +1,6 @@
 # 🎵 Jukebox – memo (talo 5)
 
-> Päivitetty 1.10.2026 – versio **v4.97**. Talo 5 (`buildings[4]`) on jukebox-huone,
+> Päivitetty 1.10.2026 – versio **v4.99**. Talo 5 (`buildings[4]`) on jukebox-huone,
 > josta voi valita **useamman kappaleen** (1 🪙 / kappale) ja valitut soitetaan
 > poistuttaessa yksi kerrallaan (1 → 3). Kappaleet ovat `jukebox/`-kansiossa.
 > **Aukiolo (v4.34): auki vain öisin (klo 20–06)** – päivällä ovesta tulee teksti-popup.
@@ -45,7 +45,7 @@
 | 1–3 valintaa + poistuminen | **−1 🪙 / valittu kappale** + valitut soivat jonossa 1 → 3 |
 | Valintoja enemmän kuin kolikoita | soitetaan niin monta kuin kolikoilla saa (esim. 2/3) + `💰 Ei kolikoita kaikkiin – soitetaan 2/3` |
 | Valintoja, 0 kolikkoa | ilmoitus `💰 Ei kolikoita!`, ei veloitusta, poistuminen onnistuu |
-| Jono soi jo | valinta lukossa (`🔊 SOI NYT: <nimi> (i/n)` + rivi `Soi loppuun asti – valinta lukossa`), ei tuplaveloitusta; **Space/(o)/⚡ ja Enter vain poistuvat** huoneesta |
+| Jono soi jo | valinta vapaana – uudet valinnat lisätään jonon perään (`🔊 SOI NYT: <nimi> (i/n)` + rivi `Valitse lisää => poistu = lisää jonoon`); **Space/(o)/⚡** togglaa kappaletta, **Enter** poistuu ja lisää valinnat jonoon |
 | Ääntä ei saada lainkaan | **kaikki veloitetut kolikot palautetaan** + `🔇 Ääntä ei saatu – kolikot palautettiin.` |
 
 - Kappaleet soitetaan **aina kokonaan loppuun** (`loop = false`, ei katkaisua) ja
@@ -59,9 +59,9 @@
   action-näppäintä, joten muualla kadulla `(o)` ei tee mitään). Valittu rivi
   näkyy violetilla reunuksella (`#241a3a` / `#ffd700`) ja `✓ 1 🪙`-merkinnällä.
 - **Poistu ja soita valitut:** rivillä 0 sama nappi (**o / Space / ⚡**) **tai Enter**
-  mistä tahansa riviltä. **Kun jono soi jo** (valinta lukossa), **Space/(o)/⚡ ja Enter
-  vain poistuvat** huoneesta – ei veloitusta eikä uutta soittoa (PC:llä Space on
-  luontevin tapa poistua). **✕-nappi (`#reset-btn` → `Street.closeRoom()`) = peruuta:**
+  mistä tahansa riviltä. **Kun jono soi jo** (valinta vapaana), **Space/(o)/⚡** togglaa
+  kappaletta (kuten normaalisti) ja **Enter** poistuu lisäten valinnat jonon perään.
+  **✕-nappi (`#reset-btn` → `Street.closeRoom()`) = peruuta:**
   valinnat pois ilman veloitusta.
 - Uusi vierailu alkaa aina tyhjältä listalta (kursori rivillä 0, `jukePick` nollataan).
 - Jono soi myös alapelien (iframe) aikana; kuolema (`StreetAudio.stop()`) hiljentää sen.
@@ -94,7 +94,7 @@ koko asettelu sovitetaan näkyvään ikkunaan:
   - ei valintoja: `Ei valintaa – poistuminen ei maksa mitään`
   - valintoja: `Valittu: N kpl – N 🪙` + `Poistu (⚡/Space/Enter) = soita valitut`
     (jos kolikot eivät riitä: `💰 Ei kolikoita kaikkiin – soitetaan i/N`, 0 🪙 → `💰 Ei kolikoita!`)
-  - soidessa: `🔊 SOI NYT: <nimi> (i/n)` + `Soi loppuun asti – valinta lukossa`
+  - soidessa (vain nykyinen kappale): `🔊 SOI NYT: <nimi>` + `📋 Soittojonossa: X kappaletta` (vain jos >1) + `Valitse lisää => poistu = lisää jonoon`
 - Rivien oikea sarake: soitossa `♪ SOI`, valitulla `✓ 1 🪙`, muilla `1 🪙`,
   Poistu-rivillä valittujen määrä `▶ N kpl` (tai `–`). Hintasarake on hieman
   leveämpi kuin ennen (`priceW = max(52, rowW · 0.16)`), jotta `✓ 1 🪙` mahtuu.

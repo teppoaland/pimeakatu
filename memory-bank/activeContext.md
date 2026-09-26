@@ -16,7 +16,8 @@
 
 ## 📍 Nyt (30.9.2026)
 
-- **Versio:** `v4.98` (`index.html` → `#version-tag`).
+- **Versio:** `v4.99` (`index.html` → `#version-tag`).
+- **🎵 Jukebox aina vapaa (v4.99):** jukebox ei enää lukkiudu soiton ajaksi. Soivan kappaleen aikana voi valita lisää kappaleita, jotka lisätään jonon perään (numerojärjestyksessä 1→N).
 - **💿 Jukebox-levynkuvan koko korjattu (v4.98):** `box = recR*2` → `(recR+4)*2`, jotta kansi peittää koko levypesän eikä tumma reunaympyrä pilkistä nurkista.
 - **🎵 Jukebox 9 raitaa (v4.97):** raidat 7–9 lisätty (Alex Morgan + 2× NickPanek). Uusi nimeämiskäytäntö: `7_tiedostonimi.mp3` + `covers/7_tiedostonimi.png` – sama etuliite ja nimi pitää parin synkassa. Vanhat raidat 1–6 ennallaan.
 - **🏮 Laivanupotus-lamppu poistettu (v4.96):** `lamps[5]` (x=193, bldgIdx:2) poistettu – talo 2 toimii nyt kuten jukebox: 1. potku sytyttää ikkunat 20s, 2. potku avaa oven. Aina auki yöllä ja päivällä (ei `nightOnlyClosed`). Muutettu `handleAction()`, `drawDoor()`, `drawThresholdPaths()`. `gameState.js` `litLamps` 6→5. Migraatio vanhoille tallennuksille initissä.

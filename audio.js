@@ -254,6 +254,40 @@ const StreetAudio = (() => {
         return true;
     }
 
+    /* Liittää uudet kappaleet nykyisen jonon perään (v4.99): soivan kappaleen
+       jälkeen. Palauttaa false jos ääntä ei saada lainkaan. */
+    function appendJukeboxQueue(urls) {
+        if (!urls || !urls.length) return false;
+        init();
+        if (!ctx) return false;
+        try { if (ctx.state === 'suspended') ctx.resume(); } catch (e) {}
+        if (!jukeEl) {
+            // Ei ole jukebox-oliota → käynnistä uusi soitto
+            return playJukeboxQueue(urls, 0);
+        }
+        cancelCycle();
+        phase = 'jukebox';
+        /* Lisätään nykyisen position jälkeen: kaikki ennen sitä on jo soitettu.
+           Jos jukePos on -1 (ei soimassa), lisätään jonon loppuun. */
+        const before = (jukePos >= 0) ? jukeQueue.slice(0, jukePos + 1) : [];
+        const after = (jukePos >= 0) ? jukeQueue.slice(jukePos + 1) : jukeQueue;
+        jukeQueue = before.concat(urls).concat(after);
+        pendingJukeQueue = null;
+        // Jos ei soimassa, käynnistä soitto
+        if (!jukePlaying || jukePos < 0) {
+            jukePos = jukeQueue.length - urls.length - 1;
+            if (jukePos < 0) jukePos = 0;
+            jukePlaying = true;
+            if (!startJukeTrack()) {
+                jukePlaying = false;
+                jukeQueue = [];
+                jukePos = -1;
+                return false;
+            }
+        }
+        return true;
+    }
+
     /* Soittaa koko jonon alusta loppuun (v4.46): valitut kappaleet yksi
        kerrallaan (1 → 3). Palauttaa false jos ääntä ei saada lainkaan
        (kadun puoli voi silloin palauttaa kolikot). */
@@ -805,6 +839,6 @@ const StreetAudio = (() => {
     function setHungerTempo(mult) { hungerTempo = mult; }
 
     return { init, start, stop, playDeathGong, getCtx, getDestination,
-             playJukebox, playJukeboxQueue, stopJukebox, isJukeboxPlaying,
-             getJukeboxQueuePos, setHungerTempo };
+             playJukebox, playJukeboxQueue, appendJukeboxQueue, stopJukebox,
+             isJukeboxPlaying, getJukeboxQueuePos, setHungerTempo };
 })();

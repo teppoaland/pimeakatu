@@ -212,20 +212,20 @@ const Street = (() => {
        lisätty (Alex Morgan + 2× NickPanek). Hinta ja veloitus ennallaan:
        1 🪙 / kappale (sääntö 04). */
     const JUKEBOX_TRACKS = [
-        { url: 'jukebox/Knived_Our_song.mp3',              title: 'Knived - Our Song' },
-        { url: 'jukebox/Knived_Unafraid.mp3',              title: 'Knived - Unafraid' },
-        { url: 'jukebox/Knived_Unafraid_instrumental.mp3', title: 'Knived - Unafraid (inst.)' },
-        { url: 'jukebox/alec_koff-heavy-doom-dark-metal-493397.mp3', title: 'Alec Koff - Heavy Doom',
+        { url: 'jukebox/Knived_Our_song.mp3',              title: 'Knived - Our Song',          duration: '4:24' },
+        { url: 'jukebox/Knived_Unafraid.mp3',              title: 'Knived - Unafraid',          duration: '4:43' },
+        { url: 'jukebox/Knived_Unafraid_instrumental.mp3', title: 'Knived - Unafraid (inst.)',  duration: '2:08' },
+        { url: 'jukebox/alec_koff-heavy-doom-dark-metal-493397.mp3', title: 'Alec Koff - Heavy Doom',        duration: '1:53',
           cover: 'jukebox/covers/4.png' },
-        { url: 'jukebox/alec_koff-in-heavy-metal-492175.mp3',        title: 'Alec Koff - In Heavy Metal',
+        { url: 'jukebox/alec_koff-in-heavy-metal-492175.mp3',        title: 'Alec Koff - In Heavy Metal',    duration: '2:45',
           cover: 'jukebox/covers/5.png' },
-        { url: 'jukebox/mrclaps-this-heavy-metal-492569.mp3',        title: 'MrClaps - This Heavy Metal',
+        { url: 'jukebox/mrclaps-this-heavy-metal-492569.mp3',        title: 'MrClaps - This Heavy Metal',    duration: '2:09',
           cover: 'jukebox/covers/6.png' },
-        { url: 'jukebox/7_alex-morgan-thrash-metal-591343.mp3',                     title: 'Alex Morgan - Thrash Metal',
+        { url: 'jukebox/7_alex-morgan-thrash-metal-591343.mp3',                     title: 'Alex Morgan - Thrash Metal',         duration: '3:02',
           cover: 'jukebox/covers/7_alex-morgan-thrash-metal-591343.png' },
-        { url: 'jukebox/8_nickpanek-coffee-first-heavy-grunge-metal-instrumental-391308.mp3', title: 'NickPanek - Coffee First Heavy Grunge Metal (inst.)',
+        { url: 'jukebox/8_nickpanek-coffee-first-heavy-grunge-metal-instrumental-391308.mp3', title: 'NickPanek - Coffee First Heavy Grunge Metal (inst.)', duration: '3:04',
           cover: 'jukebox/covers/8_nickpanek-coffee-first-heavy-grunge-metal-instrumental-391308.png' },
-        { url: 'jukebox/9_nickpanek-heavy-doom-metal-instrumental-288971.mp3',                title: 'NickPanek - Heavy Doom Metal (inst.)',
+        { url: 'jukebox/9_nickpanek-heavy-doom-metal-instrumental-288971.mp3',                title: 'NickPanek - Heavy Doom Metal (inst.)',                duration: '3:02',
           cover: 'jukebox/covers/9_nickpanek-heavy-doom-metal-instrumental-288971.png' }
     ];
     /* Kansikuvat (22.9.2026): raidoilla 4–6 on kansikuva, joka näytetään
@@ -2069,7 +2069,7 @@ const Street = (() => {
         //   (o) / Space / ⚡ = ota kappale listalle tai poista se
         //   (o) / Space / ⚡ rivillä 0 = soita valitut & poistu
         //   Enter = soita valitut & poistu mistä tahansa
-        //   Kun jono soi (valinta lukossa) Space/(o)/⚡ ja Enter vain poistuvat
+        //   Kun jono soi (valinta vapaana) Space/(o)/⚡ lisää jonoon, Enter = lisää & poistu
         //   Ei valintoja → poistuminen ei veloita eikä soita mitään
         //   Valitut soitetaan poistuttaessa yksi kerrallaan (1 → N), 1 🪙 / kappale
         if (jukeboxRoom) {
@@ -2084,29 +2084,26 @@ const Street = (() => {
             const selUp = !!(keys['ArrowUp'] || keys['w'] || keys['W']);
             const selDown = !!(keys['ArrowDown'] || keys['s'] || keys['S']);
             const trackCount = JUKEBOX_TRACKS.length;
-            const songPlaying = StreetAudio.isJukeboxPlaying();
             // Space ja ⚡ asettavat saman keyn (' ') → sama reuna molemmille
             const toggleDown = !!(keys[' '] || keys['o'] || keys['O']);
             const enterDown = !!keys['Enter'];
 
-            // Kursori on lukossa kun jono soi (kappaleet soivat aina loppuun asti)
-            if (!songPlaying) {
-                if (selUp && !jukeHeldUp) jukeSel = Math.max(0, jukeSel - 1);
-                if (selDown && !jukeHeldDown) jukeSel = Math.min(trackCount, jukeSel + 1);
-            }
+            // Kursori aina vapaana (v4.99): valinta onnistuu myös soiton aikana,
+            // jolloin uudet valinnat lisätään soivan jonon perään.
+            if (selUp && !jukeHeldUp) jukeSel = Math.max(0, jukeSel - 1);
+            if (selDown && !jukeHeldDown) jukeSel = Math.min(trackCount, jukeSel + 1);
             jukeHeldUp = selUp;
             jukeHeldDown = selDown;
 
-            // Ota / poista kappale (rivi 0 = Poistu: soita valitut & poistu).
-            // Kun jono soi jo, valinta on lukossa → Space/(o)/⚡ vain poistuu
-            // huoneesta (ei veloitusta eikä uutta soittoa, sama kuin Enter).
+            // Ota / poista kappale (rivi 0 = Poistu: lisää valinnat jonoon & poistu).
+            // Soiton aikana Space/(o)/⚡ kappalerivillä togglaa valintaa (kuten normaalisti).
             if (toggleDown && !jukeSpaceHeld) {
-                if (songPlaying || jukeSel === 0) jukeboxExitAndPlay();
+                if (jukeSel === 0) jukeboxExitAndPlay();
                 else jukePick[jukeSel - 1] = !jukePick[jukeSel - 1];
             }
             jukeSpaceHeld = toggleDown;
 
-            // Enter: soita valitut & poistu mistä tahansa riviltä
+            // Enter: lisää valinnat jonoon & poistu mistä tahansa riviltä
             if (enterDown && !jukeEnterHeld) jukeboxExitAndPlay();
             jukeEnterHeld = enterDown;
 
@@ -2957,44 +2954,76 @@ const Street = (() => {
         return out;
     }
 
-    /* Poistu ja soita valitut: veloitus 1 🪙 / kappale, soitto yhtenä jonona. */
+    /* Poistu ja soita valitut: veloitus 1 🪙 / kappale.
+       Jos jono soi jo → valinnat lisätään jonon perään (v4.99).
+       Jos ei → uusi soitto alkaa valituista. */
     function jukeboxExitAndPlay() {
         const picks = jukePickedTracks();
-        // Jos jono soi jo, valinta on lukossa eikä tuplaveloitusta tehdä
-        if (picks.length > 0 && !StreetAudio.isJukeboxPlaying()) {
-            // Veloitus vain niistä kappaleista, joihin kolikot riittävät
-            const play = [];
-            for (let i = 0; i < picks.length && coinCount > 0; i++) {
-                coinCount--;
-                play.push(picks[i]);
-            }
-            if (play.length > 0) {
+        if (picks.length === 0) { resetJukeboxRoom(); return; }
+
+        // Veloitus vain niistä kappaleista, joihin kolikot riittävät
+        const play = [];
+        for (let i = 0; i < picks.length && coinCount > 0; i++) {
+            coinCount--;
+            play.push(picks[i]);
+        }
+        if (play.length === 0) {
+            showNotification('💰 Ei kolikoita!');
+            resetJukeboxRoom();
+            return;
+        }
+        state.inventory.coinCount = coinCount;
+        GameState.save(state);
+        updateHUD();
+
+        const urls = [];
+        for (let i = 0; i < play.length; i++) urls.push(JUKEBOX_TRACKS[play[i] - 1].url);
+
+        const alreadyPlaying = StreetAudio.isJukeboxPlaying();
+
+        if (alreadyPlaying) {
+            // Liitetään soivan jonon perään
+            if (StreetAudio.appendJukeboxQueue(urls)) {
+                // Päivitä street.js:n jukeQueue: lisää uudet nykyisen perään
+                const qPos = StreetAudio.getJukeboxQueuePos();
+                const before = (qPos >= 0) ? jukeQueue.slice(0, qPos + 1) : [];
+                const after = (qPos >= 0) ? jukeQueue.slice(qPos + 1) : jukeQueue;
+                jukeQueue = before.concat(play).concat(after);
+                state.jukeQueue = jukeQueue.slice();
+                state.jukePos = qPos;
+                GameState.save(state);
+                playCoin();
+                if (play.length < picks.length) {
+                    showNotification('💰 Ei kolikoita kaikkiin – soitetaan ' +
+                                     play.length + '/' + picks.length);
+                }
+            } else {
+                // Ääntä ei saatu → kolikot takaisin
+                coinCount += play.length;
                 state.inventory.coinCount = coinCount;
                 GameState.save(state);
                 updateHUD();
-                const urls = [];
-                for (let i = 0; i < play.length; i++) urls.push(JUKEBOX_TRACKS[play[i] - 1].url);
-                if (StreetAudio.playJukeboxQueue(urls)) {
-                    jukeQueue = play.slice();
-                    state.jukeQueue = jukeQueue.slice();  // talleta jukebox-soitto F5:n yli (v4.92)
-                    state.jukePos = 0;
-                    GameState.save(state);
-                    jukeSavedPos = 0;
-                    playCoin();
-                    if (play.length < picks.length) {
-                        showNotification('💰 Ei kolikoita kaikkiin – soitetaan ' +
-                                         play.length + '/' + picks.length);
-                    }
-                } else {
-                    // Ääntä ei saatu lainkaan → kolikot takaisin
-                    coinCount += play.length;
-                    state.inventory.coinCount = coinCount;
-                    GameState.save(state);
-                    updateHUD();
-                    showNotification('🔇 Ääntä ei saatu – kolikot palautettiin.');
+                showNotification('🔇 Ääntä ei saatu – kolikot palautettiin.');
+            }
+        } else {
+            // Uusi soitto
+            if (StreetAudio.playJukeboxQueue(urls)) {
+                jukeQueue = play.slice();
+                state.jukeQueue = jukeQueue.slice();
+                state.jukePos = 0;
+                GameState.save(state);
+                jukeSavedPos = 0;
+                playCoin();
+                if (play.length < picks.length) {
+                    showNotification('💰 Ei kolikoita kaikkiin – soitetaan ' +
+                                     play.length + '/' + picks.length);
                 }
             } else {
-                showNotification('💰 Ei kolikoita!');
+                coinCount += play.length;
+                state.inventory.coinCount = coinCount;
+                GameState.save(state);
+                updateHUD();
+                showNotification('🔇 Ääntä ei saatu – kolikot palautettiin.');
             }
         }
         resetJukeboxRoom();
@@ -6028,11 +6057,14 @@ const Street = (() => {
            katkea keskeltä (luettavuus + testit nojaavat kokonaisiin riveihin) */
         const info = [];
         if (playing) {
-            const t = (curTrack > 0) ? JUKEBOX_TRACKS[curTrack - 1].title : '';
-            const total = jukeQueue.length;
-            const posTxt = (total > 1) ? '  (' + (qPos + 1) + '/' + total + ')' : '';
-            info.push({ text: '🔊 SOI NYT: ' + t + posTxt, color: '#ffdd88' });
-            info.push({ text: 'Soittolista lukittu!', color: '#c9a95f' });
+            const tr = (curTrack > 0) ? JUKEBOX_TRACKS[curTrack - 1] : null;
+            const t = tr ? tr.title + ' (' + tr.duration + ')' : '';
+            info.push({ text: '🔊 SOI NYT: ' + t, color: '#ffdd88' });
+            if (jukeQueue.length > 1) {
+                info.push({ text: '📋 Soittojonossa: ' + jukeQueue.length + ' kappaletta',
+                            color: '#8ce88c' });
+            }
+            info.push({ text: 'Valitse lisää => poistu = lisää jonoon', color: '#8ce88c' });
         } else if (pickCount > 0) {
             info.push({ text: 'Valittu: ' + pickCount + ' kpl – ' + pickCount + ' 🪙',
                         color: '#ffffff' });
@@ -6146,12 +6178,16 @@ const Street = (() => {
                        'px "Press Start 2P", monospace';
             ctx.fillText(String(i), rowX + 10, cy);
 
-            // Kappaleen nimi (leikataan vain jos ei mahdu sarakkeeseen)
+            // Kappaleen nimi + kesto (leikataan nimi, jos ei mahdu)
             let trackName = (i === 0) ? 'Poistu' : JUKEBOX_TRACKS[i - 1].title;
+            const durStr = (i > 0) ? ' (' + JUKEBOX_TRACKS[i - 1].duration + ')' : '';
             ctx.font = nameFs + 'px "Courier New", monospace';
-            while (trackName.length > 4 && ctx.measureText(trackName).width > nameMaxW) {
+            const durW = ctx.measureText(durStr).width;
+            const maxW = Math.max(20, nameMaxW - durW);
+            while (trackName.length > 4 && ctx.measureText(trackName).width > maxW) {
                 trackName = trackName.slice(0, -2) + '…';
             }
+            trackName += durStr;
             ctx.fillStyle = fg;
             ctx.fillText(trackName, rowX + 10 + numW, cy);
 
@@ -6183,13 +6219,13 @@ const Street = (() => {
         ctx.strokeStyle = '#4a4160';
         ctx.lineWidth = 1;
         ctx.strokeRect(rowX + 0.5, infoTop + 0.5, rowW - 1, infoH - 1);
-        ctx.textAlign = 'center';
+        ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         for (let i = 0; i < info.length; i++) {
             const it = info[i];
             setFitFont(it.text, rowW - 16, infoFs, 9, '"Courier New", monospace');
             ctx.fillStyle = it.color;
-            ctx.fillText(it.text, 400, Math.round(infoTop + infoH / 2 +
+            ctx.fillText(it.text, rowX + 8, Math.round(infoTop + infoH / 2 +
                          (i - (info.length - 1) / 2) * infoLineH));
         }
         ctx.textBaseline = 'alphabetic';

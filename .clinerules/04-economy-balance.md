@@ -39,7 +39,7 @@
 | Kolikko potkusta | **1/5** (`Math.random() < 0.2`) + **30 s cooldown** (`kickCoinCooldown = 1800`) | `street.js` |
 | Hampurilaiset (elämät) | alussa **5**, +1 / **40 s** (`hamburgerTimer = 2400`), katto BAR:sta **10** | `street.js`, `gameState.js` |
 | BAR | **1 kolikko = 1 🍔**, katto 10, peruutus (▼) vain vierailun ostot | `street.js`, `docs/` |
-| Jukebox | **1 kolikko = 1 koko kappale** · v4.46: kappaleita voi valita **useamman** (max 3, järjestys 1 → 3); veloitus tehdään poistuttaessa **1 🪙 / valittu kappale**, valitut soitetaan peräkkäin | `street.js`, `docs/jukebox-memo.md` |
+| Jukebox | **1 kolikko = 1 koko kappale** · v4.46: kappaleita voi valita **useamman** (järjestys 1 → N); veloitus tehdään poistuttaessa **1 🪙 / valittu kappale**, valitut soitetaan peräkkäin · **v4.99:** jukebox **ei lukkiudu** soiton ajaksi – soivan kappaleen aikana voi valita lisää kappaleita, jotka lisätään jonon perään | `street.js`, `docs/jukebox-memo.md` |
 | Jukebox / Hedelmäpeli: aukiolo | **Vain öisin** (klo 20–06); päivällä (`dayT >= 0.5`) ovesta teksti-popup `Avoinna` / `Klo 20 - 06` – ei potkua, ei valoja, ei sisään (v4.34) | `street.js` (`CLOSED_SIGN`, `CLOSED_AT_DAYT`) |
 | Makuuhuone (ex-palkintohuone, talo 7) | **Aina auki, ei lukkoa** (v4.43: ei avaimia eikä lamppua – pelaaja päättää itse, milloin nukkuu; kolikkoreitti **poistettu** 20.9.2026/v4.33) · Nuku → **+1 🍔** (katto 10, v4.44) · Poistu = **ilmainen** | `street.js` |
 | Nukkuminen: nälkä jäissä (v4.41) | Nälkäajastin **ei tikitä** makuuhuoneessa eikä Zzz-pimennyksen aikana → pelaaja ei voi kuolla nukkuessaan; herätessä ajastimelle jää vähintään **10 s** (`HUNGER_WAKE_GRACE = 600`). Tahti (1/40 s, 2400 framet) ja katto 10 **ennallaan** | `street.js` (`hungerOnHold()`) |
