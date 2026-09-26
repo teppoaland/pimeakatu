@@ -439,7 +439,7 @@ const Street = (() => {
     const SUN_Y = 62, SUN_R = 26;       // auringon korkeus ja koko
     const SUN_X = -SUN_R * 3;              // auringon alku = ulos vasemmalta (v4.89), laskeutuu oikealle
     const MOON_Y = 60, MOON_R = 30;               // kuun korkeus ja koko
-    const DAY_CYCLE_FRAMES = 7200;                // ~2 min: testi (tuotanto 57600 = 16 min)
+    const DAY_CYCLE_FRAMES = 10800;               // ~3 min: yhden yön TAI päivän kesto (@ 60 fps)
     const MOON_X_MIN = -MOON_R * 3;               // kuun alku = ulos vasemmalta (v4.89), laskeutuu oikealle
     const MOON_SET_X = WORLD_W + MOON_R * 3;      // laskeuma ≈ 890 → kokonaan pois
     const MOON_NIGHT_FRAMES = DAY_CYCLE_FRAMES;   // kuun liukuaika (sama kuin sykli)
@@ -558,6 +558,8 @@ const Street = (() => {
     let nightShowArmed = (DAY_FORCE === 'night');  // laukeaa vain aidosta päivä→yö-siirtymästä
     let nightShowQueue = [];             // syttymättömien lamppujen indeksit
     let nightShowTimer = 0;              // frameä seuraavaan lamppuun
+    const SPAWN_LAMP_DELAY = 240;        // 4 s viive ennen lamppushowta spawnissa (v4.90)
+    let spawnLampTimer = 0;              // laskuri spawn-lamppushow'lle
 
     /* Saako yön lamppushow laueta? Vain kun päivä/yö on jo ratkaistu
        (pelaaja on edennyt). Testityökalu ?day=0 ohittaa portin. */
@@ -1449,6 +1451,7 @@ const Street = (() => {
            Testityökalut ?day=0/1 näyttävät kuun lähtöasemasta kuten ennen. */
         applyMoonClock(DAY_FORCE ? 0 : (Number(state.moonClock) || 0));
         applySunClock(DAY_FORCE ? 0 : (Number(state.sunClock) || 0));
+        spawnLampTimer = SPAWN_LAMP_DELAY;              // 4 s → lamppushow (v4.90)
         stars = [];
         for (let i = 0; i < 80; i++) {
             stars.push({
@@ -1787,6 +1790,15 @@ const Street = (() => {
                     playLampOn();
                     nightShowTimer = NIGHT_LAMP_INTERVAL;
                 }
+            }
+        }
+
+        // ── Spawn-lamppushow (v4.90): pelin alussa/kuoleman jälkeen 4 s → lamput syttyvät ──
+        // Käyttää samaa startNightLampShow()-mekaniikkaa kuin yön tullessa.
+        if (spawnLampTimer > 0 && !playerDead && !iframeOpen && !sleepRoom && !barRoom && !jukeboxRoom) {
+            spawnLampTimer -= dt;
+            if (spawnLampTimer <= 0) {
+                startNightLampShow();                    // sytytä lamput yksi kerrallaan
             }
         }
 
