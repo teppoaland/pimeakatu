@@ -233,6 +233,13 @@ canvas {
     line-height: 1.55;
 }
 
+#overlay-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 8px;
+}
+
 #overlay-content button {
     font-family: 'Press Start 2P', monospace;
     font-size: 0.6rem;

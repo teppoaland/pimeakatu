@@ -9,7 +9,7 @@ const GameState = (() => {
 
     // Oletustila
     const defaultState = {
-        litLamps: [false, false, false, false, false],
+        litLamps: [false, false, false, false, false, false],
         inventory: {
             coin: false,
             // Syntymäpaketti: uusi peli (tai reset) alkaa 2 kolikolla

@@ -74,7 +74,8 @@ const Street = (() => {
         { x: 255, bldgIdx: 3, lit: false, label: 'DIG\nDÄSH', gameUrl: 'digGame2/game_main.html' },
         { x: 445, bldgIdx: 5, lit: false, label: 'BLUE\nMÄX',     gameUrl: 'bm/game_main.html' },
         { x: 625, bldgIdx: 7, lit: false, label: 'COM-\nMANDO',   gameUrl: null },
-        { x: 720, bldgIdx: 8, lit: false, label: 'BAR',   gameUrl: null }
+        { x: 720, bldgIdx: 8, lit: false, label: 'BAR',   gameUrl: null },
+        { x: 193, bldgIdx: 2, lit: false, label: 'LAIVA\nUPOTUS', gameUrl: 'sinkship/game_main.html' }
     ];
 
     const LAMP_POST_H = 75;

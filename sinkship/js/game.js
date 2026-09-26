@@ -211,7 +211,9 @@ function endGame(won) {
         '<br>Iskujasi: <b>' + state.shots + '</b> – ' +
         'sinkittyjä: <b>' + state.enemy.sunk + ' / 5</b>.' +
         '<br><br>Pelaatko uudelleen?';
-    g('overlay-button').textContent = 'Pelaa uudelleen';
+    g('overlay-action-btn').textContent = 'Pelaa';
+    g('overlay-exit-btn').textContent = 'Poistu';
+    g('overlay-exit-btn').style.display = '';
     if (won) SoundFX.playWin(); else SoundFX.playLose();
 }
 
@@ -297,6 +299,22 @@ function onKey(e) {
     const AUTO  = c === 'KEYA' || c === 'A' || c === 'KEYE' || c === 'E';
     const UNDO  = c === 'BACKSPACE' || c === 'KEYU' || c === 'U' || c === 'KEYZ' || c === 'Z';
     if (UP || DOWN || LEFT || RIGHT || ACT || ROT || AUTO || UNDO) e.preventDefault();
+    if (st === 'over') {
+        if (ACT) { g('overlay').classList.add('hidden'); resetGame(); }
+        else if (c === 'ESCAPE' || c === 'BACKSPACE') {
+            try { window.parent.postMessage('RETURN_TO_STREET', '*'); } catch(e) {}
+        }
+        return;
+    }
+    if (st === 'title') {
+        if (ACT) {
+            g('overlay').classList.add('hidden');
+            const ob = g('overlay-action-btn');
+            if (ob && typeof ob.blur === 'function') ob.blur();
+            resetGame();
+        }
+        return;
+    }
     if (UP) mv([-1, 0]);
     else if (DOWN) mv([1, 0]);
     else if (LEFT) mv([0, -1]);
@@ -331,7 +349,7 @@ function doAuto() {
     if (st !== 'place' || ready) return;
     if (autoPlace(state.player, state.placeIdx)) {
         ready = true;
-        msg = ''; msgT = 0;
+        ntf('Automaatti: laivat asetettu!', 240);
         battleStartAt = performance.now() + BATTLE_START_DELAY;
         updateHUD();
     }
@@ -357,7 +375,8 @@ function pressDir(dr) {
     cur.c = Math.max(0, Math.min(N - 1, cur.c + dr[1]));
 }
 function pressAct() {
-    if (st === 'place') { if (ready) startBattle(); else tryPlace(); }
+    if (st === 'over') { g('overlay').classList.add('hidden'); resetGame(); }
+    else if (st === 'place') { if (ready) startBattle(); else tryPlace(); }
     else if (st === 'battle') playerFire(cur.r, cur.c);
 }
 
@@ -968,20 +987,22 @@ function drawBattleDialog(L) {
 function drawMsg(L) {
     if (msgT <= 0 || !msg) return;
     const a = Math.min(1, msgT / 16);
-    font(fitFs(msg, W - 60, 11, 17), false);
+    const fontSize = fitFs(msg, W - 60, 11, 17);
+    font(fontSize, false);
     const tw = ctx.measureText(msg).width + 24;
+    const boxH = Math.max(36, Math.round(fontSize * 2.4));
     const x0 = Math.round((W - tw) / 2), y0 = Math.round(L.hudH * 0.22);
     ctx.fillStyle = 'rgba(8,12,24,' + (0.72 * a).toFixed(3) + ')';
-    rr(x0, y0, tw, 26, 8);
+    rr(x0, y0, tw, boxH, 8);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255,215,0,' + (0.85 * a).toFixed(3) + ')';
     ctx.lineWidth = 1;
-    rr(x0 + 0.5, y0 + 0.5, tw - 1, 25, 8);
+    rr(x0 + 0.5, y0 + 0.5, tw - 1, boxH - 1, 8);
     ctx.stroke();
     ctx.fillStyle = 'rgba(255,225,140,' + a.toFixed(3) + ')';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(msg, W / 2, y0 + 14);
+    ctx.fillText(msg, W / 2, y0 + Math.round(boxH / 2));
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
 }
@@ -1158,11 +1179,14 @@ function init(canvas) {
     const tc = document.querySelector('#touch-controls');
     if (tc) tc.classList.add(touch ? 'force-show' : 'hidden-tc');
 
-    g('overlay-button').addEventListener('click', () => {
+    g('overlay-action-btn').addEventListener('click', () => {
         g('overlay').classList.add('hidden');
-        const ob = g('overlay-button');
+        const ob = g('overlay-action-btn');
         if (ob && typeof ob.blur === 'function') ob.blur();   // focus pois napista → Enter/Space ei toista resetia
         resetGame();
+    });
+    g('overlay-exit-btn').addEventListener('click', () => {
+        try { window.parent.postMessage('RETURN_TO_STREET', '*'); } catch(e) {}
     });
 
     rs();
